@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from engine.grid import GridState
 from engine.models import SimulationParams
+from app.config import settings
 
 
 def build_query(params: SimulationParams, final_metrics: dict[str, Any]) -> str:
@@ -20,8 +22,7 @@ def build_query(params: SimulationParams, final_metrics: dict[str, Any]) -> str:
         parts.append(f"Public works in {zone_type.lower()}")
     parts.append(f"{params.horizonMonths}-month horizon")
 
-    query = ", ".join(parts)
-    return query
+    return ", ".join(parts)
 
 
 def build_prompt(
@@ -70,7 +71,7 @@ The simulation completed successfully. Key observations:
 - **Sector vulnerability**: Check FDI-specific sector deltas in the map view
 - **Geographic spread**: Higher color intensity indicates greater impact areas
 
-*Detailed AI-powered case synthesis requires an LLM API key to be configured.*"""
+*Detailed AI-powered case synthesis requires an LLM provider to be configured.*"""
 
 
 async def synthesize(
@@ -97,7 +98,19 @@ async def synthesize(
 
 
 async def _call_llm(prompt: str) -> str:
-    api_key = __import__("os").environ.get("OPENAI_API_KEY")
+    provider = settings.llm_provider
+    model = settings.resolved_llm_model
+
+    if provider == "gemini":
+        return await _call_gemini(prompt, model)
+    elif provider == "ollama":
+        return await _call_ollama(prompt, model)
+    else:
+        return await _call_openai(prompt, model)
+
+
+async def _call_openai(prompt: str, model: str) -> str:
+    api_key = settings.openai_api_key or os.environ.get("OPENAI_API_KEY")
     if not api_key:
         return FALLBACK_INSIGHT
 
@@ -105,10 +118,45 @@ async def _call_llm(prompt: str) -> str:
 
     client = AsyncOpenAI(api_key=api_key)
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1000,
         temperature=0.7,
     )
 
     return response.choices[0].message.content or FALLBACK_INSIGHT
+
+
+async def _call_gemini(prompt: str, model: str) -> str:
+    api_key = settings.gemini_api_key or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return FALLBACK_INSIGHT
+
+    import google.generativeai as genai
+
+    genai.configure(api_key=api_key)
+    client = genai.GenerativeModel(model)
+    response = await client.generate_content_async(prompt)
+
+    return response.text or FALLBACK_INSIGHT
+
+
+async def _call_ollama(prompt: str, model: str) -> str:
+    import httpx
+
+    base_url = settings.ollama_base_url
+    timeout = settings.llm_timeout_ms / 1000.0
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(
+            f"{base_url}/api/chat",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "options": {"temperature": 0.7, "num_predict": 1000},
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("message", {}).get("content", "") or FALLBACK_INSIGHT

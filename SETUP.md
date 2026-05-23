@@ -5,7 +5,7 @@
 - **Python 3.11+** — https://python.org
 - **Node.js 20+** — https://nodejs.org
 - **Mapbox token** — https://account.mapbox.com (free public token)
-- **OpenAI API key** (optional) — for AI insight; fallback works without it
+- **LLM provider** (optional) — one of: OpenAI key, Google Gemini key, or [Ollama](https://ollama.com) running locally. Fallback works without any.
 
 ---
 
@@ -21,9 +21,28 @@ pip install -r requirements.txt
 Create `backend\.env`:
 
 ```env
+# LLM Provider: "openai", "gemini", or "ollama"
+LLM_PROVIDER=openai
+LLM_MODEL=
+
+# OpenAI (used when LLM_PROVIDER=openai)
+OPENAI_API_KEY=sk-your-key
+
+# Google Gemini (used when LLM_PROVIDER=gemini)
+GEMINI_API_KEY=your-gemini-key
+
+# Ollama (used when LLM_PROVIDER=ollama)
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Embedding provider (defaults to LLM_PROVIDER)
+EMBEDDING_PROVIDER=
+EMBEDDING_MODEL=
+
+# Supabase
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-service-role-key
-OPENAI_API_KEY=sk-your-key
+
+# App
 ENVIRONMENT=development
 LOG_LEVEL=INFO
 CORS_ORIGINS=http://localhost:3000
@@ -110,7 +129,7 @@ npm run type-check
 | WebSocket connection refused | Backend not running on port 8000 |
 | `npm install` peer dep errors | Use `npm install --legacy-peer-deps` |
 | `pip install h3` fails | Install cmake first or use a pre-built wheel |
-| AI Insight says "requires LLM API key" | Set `OPENAI_API_KEY` in backend `.env`, or this is the normal fallback |
+| AI Insight shows fallback text | No LLM provider configured. Set `LLM_PROVIDER` + matching API key, or ensure Ollama is running |
 | CORS errors | Ensure `CORS_ORIGINS=http://localhost:3000` in backend `.env` |
 
 ---

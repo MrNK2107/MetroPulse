@@ -1,6 +1,7 @@
 # MetroPulse — Project Status
 
-**Last Updated:** 2026-05-25
+**Last Updated:** 2026-05-25  
+**LLM Support:** OpenAI, Google Gemini, Ollama (configurable via `LLM_PROVIDER`)
 
 ---
 
