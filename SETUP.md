@@ -4,8 +4,8 @@
 
 - **Python 3.11+** — https://python.org
 - **Node.js 20+** — https://nodejs.org
-- **Mapbox token** — https://account.mapbox.com (free public token)
 - **LLM provider** (optional) — one of: OpenAI key, Google Gemini key, or [Ollama](https://ollama.com) running locally. Fallback works without any.
+- **No map API key needed** — uses MapLibre GL JS with free CARTO tiles (no credit card required)
 
 ---
 

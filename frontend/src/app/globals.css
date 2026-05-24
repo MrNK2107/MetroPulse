@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --mapbox-access-token: "";
-}
-
 * {
   box-sizing: border-box;
 }
@@ -18,22 +14,16 @@ body {
   overflow: hidden;
 }
 
-/* Mapbox overrides for dark theme */
-.mapboxgl-ctrl-logo {
-  opacity: 0.3;
-  filter: invert(1);
-}
-
-.mapboxgl-ctrl-attrib {
+.maplibregl-ctrl-attrib {
   background: rgba(0, 0, 0, 0.5) !important;
   color: #666 !important;
+  font-size: 10px !important;
 }
 
-.mapboxgl-ctrl-attrib a {
+.maplibregl-ctrl-attrib a {
   color: #888 !important;
 }
 
-/* Range slider styling */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -67,7 +57,6 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid #1e293b;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -85,7 +74,6 @@ input[type="range"]::-moz-range-thumb {
   background: #555;
 }
 
-/* Prose overrides for dark theme */
 .prose {
   --tw-prose-body: #d1d5db;
   --tw-prose-headings: #f3f4f6;

@@ -8,5 +8,7 @@ export const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-export const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
+export const MAP_STYLE =
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
 export const H3_RESOLUTION = 8;

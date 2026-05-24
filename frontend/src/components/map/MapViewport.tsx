@@ -1,15 +1,15 @@
 "use client";
 
 import { useRef, useMemo, useCallback } from "react";
-import Map, { MapRef, NavigationControl } from "react-map-gl";
+import Map, { NavigationControl } from "react-map-gl/maplibre";
 import DeckGL from "@deck.gl/react";
 import { MapView } from "@deck.gl/core";
 import { INITIAL_VIEW_STATE, MAP_STYLE } from "@/lib/mapConfig";
 import { HexLayer } from "./HexLayer";
 import { useSimulationStore } from "@/store/simulationStore";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 export function MapViewport() {
-  const mapRef = useRef<MapRef>(null);
   const deckRef = useRef<any>(null);
   const frames = useSimulationStore((s) => s.frames);
   const status = useSimulationStore((s) => s.status);
@@ -41,9 +41,7 @@ export function MapViewport() {
         views={new MapView({ id: "map", controller: true })}
       >
         <Map
-          ref={mapRef}
           mapStyle={MAP_STYLE}
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
           reuseMaps
           style={{ width: "100%", height: "100%" }}
         >
@@ -53,9 +51,7 @@ export function MapViewport() {
 
       {status === "running" && currentFrame && (
         <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1.5 rounded text-sm font-mono">
-          Frame {currentFrame.month} / {frames.length > 0 && currentFrame
-            ? currentFrame.month
-            : "?"}
+          Frame {currentFrame.month} / {currentFrame.month}
         </div>
       )}
     </div>
