@@ -1,0 +1,49 @@
+name: Jaipur
+state: Rajasthan
+country: India
+center: [26.9124, 75.7873]
+zoom: 11
+boundary_source: "jaipur.geojson"
+population: 4000000
+city_type: tourism_handicrafts
+port_city: false
+monsoon_season: [7, 8, 9]
+metro_system: false
+
+baselines:
+  employment_formal: 900000
+  employment_informal: 1800000
+  gdp_estimate_crores: 80000
+  slum_population_pct: 0.18
+  unemployment_rate: 0.055
+  literacy_rate: 0.76
+
+sector_weights:
+  it_ites: 0.08
+  manufacturing: 0.18
+  real_estate: 0.16
+  trade_hospitality: 0.22
+  transport_logistics: 0.08
+  informal: 0.18
+  public_admin: 0.10
+
+constants:
+  alpha_default: 0.50
+  beta_informal: 0.48
+  gamma_realestate: 0.10
+  delta_congestion: 0.10
+  lambda_cbd_employment: 3.5
+  lambda_road_boost: 1.3
+  lambda_realestate_cascade: 2.8
+  flood_impact: 0.08
+  flood_congestion_bonus: 0.12
+  slum_upgrade_rate: 0.01
+  migration_eta: 0.05
+  housing_xi: 0.08
+
+special_zones: []
+policies:
+  smart_city: true
+  mission_name: "Jaipur Smart City"
+  amrut: true
+  metro_phase: 0

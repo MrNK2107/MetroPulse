@@ -1,0 +1,60 @@
+name: Chennai
+state: Tamil Nadu
+country: India
+center: [13.0827, 80.2707]
+zoom: 11
+boundary_source: "chennai.geojson"
+population: 11000000
+city_type: auto_it_port
+port_city: true
+monsoon_season: [10, 11, 12]
+metro_system: true
+
+baselines:
+  employment_formal: 2800000
+  employment_informal: 4000000
+  gdp_estimate_crores: 380000
+  slum_population_pct: 0.20
+  unemployment_rate: 0.042
+  literacy_rate: 0.87
+
+sector_weights:
+  it_ites: 0.22
+  manufacturing: 0.25
+  real_estate: 0.15
+  trade_hospitality: 0.14
+  transport_logistics: 0.10
+  informal: 0.08
+  public_admin: 0.06
+
+constants:
+  alpha_default: 0.53
+  beta_informal: 0.42
+  gamma_realestate: 0.12
+  delta_congestion: 0.11
+  lambda_cbd_employment: 4.2
+  lambda_road_boost: 1.4
+  lambda_realestate_cascade: 3.2
+  flood_impact: 0.22
+  flood_congestion_bonus: 0.25
+  slum_upgrade_rate: 0.011
+  migration_eta: 0.05
+  housing_xi: 0.09
+
+special_zones:
+  - type: sez
+    name: "Siruseri IT SEZ"
+    file: "data/sez/siruseri.geojson"
+    sectors: ["it_ites"]
+    boost: 0.20
+  - type: sez
+    name: "Chennai Port Industrial Corridor"
+    file: "data/sez/chennai_port.geojson"
+    sectors: ["manufacturing", "transport_logistics"]
+    boost: 0.18
+
+policies:
+  smart_city: true
+  mission_name: "Chennai Smart City"
+  amrut: true
+  metro_phase: 2

@@ -1,0 +1,60 @@
+name: Delhi NCR
+state: Delhi
+country: India
+center: [28.6139, 77.2090]
+zoom: 10
+boundary_source: "delhi_ncr.geojson"
+population: 28000000
+city_type: capital_region
+port_city: false
+monsoon_season: [7, 8, 9]
+metro_system: true
+
+baselines:
+  employment_formal: 6000000
+  employment_informal: 9000000
+  gdp_estimate_crores: 950000
+  slum_population_pct: 0.18
+  unemployment_rate: 0.045
+  literacy_rate: 0.86
+
+sector_weights:
+  it_ites: 0.18
+  manufacturing: 0.22
+  real_estate: 0.20
+  trade_hospitality: 0.16
+  transport_logistics: 0.10
+  informal: 0.08
+  public_admin: 0.06
+
+constants:
+  alpha_default: 0.52
+  beta_informal: 0.42
+  gamma_realestate: 0.13
+  delta_congestion: 0.15
+  lambda_cbd_employment: 5.0
+  lambda_road_boost: 1.8
+  lambda_realestate_cascade: 3.5
+  flood_impact: 0.18
+  flood_congestion_bonus: 0.22
+  slum_upgrade_rate: 0.01
+  migration_eta: 0.07
+  housing_xi: 0.09
+
+special_zones:
+  - type: sez
+    name: "Noida SEZ"
+    file: "data/sez/noida.geojson"
+    sectors: ["it_ites", "manufacturing"]
+    boost: 0.22
+  - type: sez
+    name: "Gurugram Cyber City"
+    file: "data/sez/gurugram.geojson"
+    sectors: ["it_ites"]
+    boost: 0.25
+
+policies:
+  smart_city: true
+  mission_name: "Delhi Smart City"
+  amrut: true
+  metro_phase: 4

@@ -1,0 +1,60 @@
+name: Pune
+state: Maharashtra
+country: India
+center: [18.5204, 73.8567]
+zoom: 11
+boundary_source: "pune.geojson"
+population: 6500000
+city_type: auto_it_education
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: true
+
+baselines:
+  employment_formal: 1800000
+  employment_informal: 2500000
+  gdp_estimate_crores: 250000
+  slum_population_pct: 0.25
+  unemployment_rate: 0.038
+  literacy_rate: 0.89
+
+sector_weights:
+  it_ites: 0.25
+  manufacturing: 0.28
+  real_estate: 0.15
+  trade_hospitality: 0.12
+  transport_logistics: 0.06
+  informal: 0.08
+  public_admin: 0.06
+
+constants:
+  alpha_default: 0.55
+  beta_informal: 0.40
+  gamma_realestate: 0.12
+  delta_congestion: 0.10
+  lambda_cbd_employment: 4.0
+  lambda_road_boost: 1.5
+  lambda_realestate_cascade: 3.0
+  flood_impact: 0.12
+  flood_congestion_bonus: 0.18
+  slum_upgrade_rate: 0.012
+  migration_eta: 0.05
+  housing_xi: 0.08
+
+special_zones:
+  - type: sez
+    name: "Hinjewadi IT Park"
+    file: "data/sez/hinjewadi.geojson"
+    sectors: ["it_ites"]
+    boost: 0.22
+  - type: sez
+    name: "Chakan Auto Cluster"
+    file: "data/sez/chakan.geojson"
+    sectors: ["manufacturing"]
+    boost: 0.20
+
+policies:
+  smart_city: true
+  mission_name: "Pune Smart City"
+  amrut: true
+  metro_phase: 2

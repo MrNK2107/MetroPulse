@@ -1,0 +1,65 @@
+name: Bengaluru
+state: Karnataka
+country: India
+center: [12.9716, 77.5946]
+zoom: 11
+boundary_source: "bengaluru.geojson"
+population: 13000000
+city_type: tech_hub
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: true
+
+baselines:
+  employment_formal: 3500000
+  employment_informal: 5000000
+  gdp_estimate_crores: 550000
+  slum_population_pct: 0.15
+  unemployment_rate: 0.035
+  literacy_rate: 0.88
+
+sector_weights:
+  it_ites: 0.35
+  manufacturing: 0.12
+  real_estate: 0.18
+  trade_hospitality: 0.14
+  transport_logistics: 0.07
+  informal: 0.08
+  public_admin: 0.06
+
+constants:
+  alpha_default: 0.55
+  beta_informal: 0.4
+  gamma_realestate: 0.12
+  delta_congestion: 0.10
+  lambda_cbd_employment: 4.5
+  lambda_road_boost: 1.5
+  lambda_realestate_cascade: 3.0
+  flood_impact: 0.15
+  flood_congestion_bonus: 0.20
+  slum_upgrade_rate: 0.01
+  migration_eta: 0.05
+  housing_xi: 0.08
+
+special_zones:
+  - type: sez
+    name: "Electronic City"
+    file: "data/sez/electronic_city.geojson"
+    sectors: ["it_ites", "manufacturing"]
+    boost: 0.25
+  - type: sez
+    name: "Whitefield IT Corridor"
+    file: "data/sez/whitefield.geojson"
+    sectors: ["it_ites"]
+    boost: 0.20
+  - type: sez
+    name: "Manyata Tech Park"
+    file: "data/sez/manyata.geojson"
+    sectors: ["it_ites"]
+    boost: 0.18
+
+policies:
+  smart_city: true
+  mission_name: "Bengaluru Smart City"
+  amrut: true
+  metro_phase: 3

@@ -1,0 +1,55 @@
+name: Bhubaneswar
+state: Odisha
+country: India
+center: [20.2961, 85.8245]
+zoom: 12
+boundary_source: "bhubaneswar.geojson"
+population: 1100000
+city_type: admin_education_it
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  employment_formal: 350000
+  employment_informal: 500000
+  gdp_estimate_crores: 28000
+  slum_population_pct: 0.15
+  unemployment_rate: 0.048
+  literacy_rate: 0.85
+
+sector_weights:
+  it_ites: 0.15
+  manufacturing: 0.10
+  real_estate: 0.16
+  trade_hospitality: 0.15
+  transport_logistics: 0.06
+  informal: 0.14
+  public_admin: 0.24
+
+constants:
+  alpha_default: 0.52
+  beta_informal: 0.45
+  gamma_realestate: 0.10
+  delta_congestion: 0.08
+  lambda_cbd_employment: 3.0
+  lambda_road_boost: 1.2
+  lambda_realestate_cascade: 2.5
+  flood_impact: 0.20
+  flood_congestion_bonus: 0.25
+  slum_upgrade_rate: 0.014
+  migration_eta: 0.05
+  housing_xi: 0.07
+
+special_zones:
+  - type: sez
+    name: "Infocity Bhubaneswar"
+    file: "data/sez/infocity.geojson"
+    sectors: ["it_ites"]
+    boost: 0.20
+
+policies:
+  smart_city: true
+  mission_name: "Bhubaneswar Smart City"
+  amrut: true
+  metro_phase: 0
