@@ -3,50 +3,40 @@
 import { useCallback, useRef } from "react";
 import { WebSocketClient } from "@/lib/ws";
 import { useSimulationStore } from "@/store/simulationStore";
-import type { SimulationParams } from "@/types/simulation";
 
 export function useWebSocket() {
   const clientRef = useRef<WebSocketClient | null>(null);
-  const {
-    addFrame,
-    setInsight,
-    setStatus,
-    setError,
-    setSimulationId,
-    reset,
-  } = useSimulationStore();
 
   const startSimulation = useCallback(
-    (params: SimulationParams, wsUrl: string) => {
-      reset();
-
+    (scenario: string, wsUrl: string) => {
+      const store = useSimulationStore.getState();
+      store.resetRun();
       const client = new WebSocketClient(wsUrl, {
-        onFrame: (msg) => {
-          addFrame(msg.payload);
+        onStage: (msg) => useSimulationStore.getState().setStage(msg.stage, msg.message),
+        onParsed: (msg) => {
+          useSimulationStore.getState().setParsedScenario(msg.params);
+          if (msg.boundary) {
+            useSimulationStore.getState().setRegionBoundary(msg.boundary);
+          }
         },
-        onInsight: (msg) => {
-          setInsight(msg.markdown);
-        },
-        onError: (msg) => {
-          setError(msg.message);
-        },
-        onDone: (msg) => {
-          setStatus("done");
-          setSimulationId(msg.simulationId);
-        },
+        onPrediction: (msg) => useSimulationStore.getState().setPrediction(msg.prediction),
+        onFrame: (msg) => useSimulationStore.getState().addFrame(msg.payload),
+        onCaseStudies: (msg) => useSimulationStore.getState().setCaseStudies(msg.studies),
+        onEvidence: (msg) => useSimulationStore.getState().setEvidence(msg.evidence),
+        onError: (msg) => useSimulationStore.getState().setError(msg.message, msg.stage as any),
+        onDone: (msg) => useSimulationStore.getState().setSimulationId(msg.simulationId),
       });
 
       clientRef.current = client;
-      setStatus("running");
-      client.connect(params);
+      client.connect(scenario);
     },
-    [addFrame, setInsight, setStatus, setError, setSimulationId, reset]
+    []
   );
 
   const stopSimulation = useCallback(() => {
     clientRef.current?.disconnect();
-    setStatus("idle");
-  }, [setStatus]);
+    useSimulationStore.getState().setError("Simulation stopped by user.");
+  }, []);
 
   return { startSimulation, stopSimulation };
 }

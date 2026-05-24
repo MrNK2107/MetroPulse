@@ -1,9 +1,9 @@
 import type { MapViewState } from "@deck.gl/core";
 
 export const INITIAL_VIEW_STATE: MapViewState = {
-  longitude: -73.935242,
-  latitude: 40.73061,
-  zoom: 11,
+  longitude: 78.4867,
+  latitude: 17.385,
+  zoom: 10,
   pitch: 45,
   bearing: 0,
 };

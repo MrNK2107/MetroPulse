@@ -1,69 +1,75 @@
-import type { SimulationParams, WSMessage } from "@/types/simulation";
-
-export type FrameCallback = (frame: WSMessage & { type: "FRAME" }) => void;
-export type InsightCallback = (insight: WSMessage & { type: "INSIGHT" }) => void;
-export type ErrorCallback = (error: WSMessage & { type: "ERROR" }) => void;
-export type DoneCallback = (done: WSMessage & { type: "DONE" }) => void;
+import type {
+  WSCaseStudiesMessage,
+  WSDoneMessage,
+  WSErrorMessage,
+  WSEvidenceMessage,
+  WSFrameMessage,
+  WSParsedMessage,
+  WSPredictionMessage,
+  WSStageMessage,
+  WSMessage,
+} from "@/types/simulation";
 
 export interface WSCallbacks {
-  onFrame?: FrameCallback;
-  onInsight?: InsightCallback;
-  onError?: ErrorCallback;
-  onDone?: DoneCallback;
+  onStage?: (stage: WSStageMessage) => void;
+  onParsed?: (parsed: WSParsedMessage) => void;
+  onPrediction?: (prediction: WSPredictionMessage) => void;
+  onFrame?: (frame: WSFrameMessage) => void;
+  onCaseStudies?: (studies: WSCaseStudiesMessage) => void;
+  onEvidence?: (evidence: WSEvidenceMessage) => void;
+  onError?: (error: WSErrorMessage) => void;
+  onDone?: (done: WSDoneMessage) => void;
 }
 
 export class WebSocketClient {
   private ws: WebSocket | null = null;
-  private url: string;
-  private callbacks: WSCallbacks;
   private reconnectAttempts = 0;
-  private maxRetries = 5;
+  private readonly maxRetries = 5;
   private shouldReconnect = false;
 
-  constructor(url: string, callbacks: WSCallbacks) {
-    this.url = url;
-    this.callbacks = callbacks;
-  }
+  constructor(private readonly url: string, private readonly callbacks: WSCallbacks) {}
 
-  connect(params: SimulationParams): void {
+  connect(scenario: string): void {
     this.shouldReconnect = true;
     this.reconnectAttempts = 0;
 
     try {
       this.ws = new WebSocket(this.url);
-    } catch (err) {
+    } catch {
       this.callbacks.onError?.({
         type: "ERROR",
+        stage: "error",
         code: "CONNECTION_FAILED",
-        message: "Failed to create WebSocket connection",
+        message: "Failed to create WebSocket connection.",
       });
       return;
     }
 
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
-      const startMsg = { type: "START", params };
-      this.ws?.send(JSON.stringify(startMsg));
+      this.ws?.send(JSON.stringify({ type: "START", scenario }));
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data) as WSMessage;
-        this.handleMessage(data);
+        this.handleMessage(JSON.parse(event.data) as WSMessage);
       } catch {
-        console.warn("Failed to parse WS message");
+        this.callbacks.onError?.({
+          type: "ERROR",
+          stage: "error",
+          code: "BAD_MESSAGE",
+          message: "Backend sent a message the UI could not parse.",
+        });
       }
     };
 
     this.ws.onclose = () => {
-      if (this.shouldReconnect) {
-        this.attemptReconnect(params);
-      }
+      if (this.shouldReconnect) this.attemptReconnect(scenario);
     };
 
     this.ws.onerror = () => {
       if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
-        this.attemptReconnect(params);
+        this.attemptReconnect(scenario);
       }
     };
   }
@@ -76,13 +82,26 @@ export class WebSocketClient {
 
   private handleMessage(data: WSMessage): void {
     switch (data.type) {
+      case "STAGE":
+        this.callbacks.onStage?.(data);
+        break;
+      case "PARSED":
+        this.callbacks.onParsed?.(data);
+        break;
+      case "PREDICTION":
+        this.callbacks.onPrediction?.(data);
+        break;
       case "FRAME":
         this.callbacks.onFrame?.(data);
         break;
-      case "INSIGHT":
-        this.callbacks.onInsight?.(data);
+      case "CASE_STUDIES":
+        this.callbacks.onCaseStudies?.(data);
+        break;
+      case "EVIDENCE":
+        this.callbacks.onEvidence?.(data);
         break;
       case "ERROR":
+        this.shouldReconnect = false;
         this.callbacks.onError?.(data);
         break;
       case "DONE":
@@ -92,23 +111,21 @@ export class WebSocketClient {
     }
   }
 
-  private attemptReconnect(params: SimulationParams): void {
+  private attemptReconnect(scenario: string): void {
     if (this.reconnectAttempts >= this.maxRetries) {
       this.callbacks.onError?.({
         type: "ERROR",
+        stage: "error",
         code: "RECONNECT_FAILED",
-        message: "Failed to reconnect after 5 attempts",
+        message: "Failed to reconnect after 5 attempts.",
       });
       return;
     }
 
-    this.reconnectAttempts++;
+    this.reconnectAttempts += 1;
     const delay = Math.min(1000 * 2 ** (this.reconnectAttempts - 1), 30000);
-
-    setTimeout(() => {
-      if (this.shouldReconnect) {
-        this.connect(params);
-      }
+    window.setTimeout(() => {
+      if (this.shouldReconnect) this.connect(scenario);
     }, delay);
   }
 }
