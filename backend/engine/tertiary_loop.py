@@ -79,7 +79,7 @@ async def synthesize(
     state: GridState,
     db: Any = None,
 ) -> str:
-    from secondary_loop import compute_aggregate_metrics
+    from engine.secondary_loop import compute_aggregate_metrics
 
     final_metrics = compute_aggregate_metrics(state)
     case_studies: list[dict[str, Any]] = []
@@ -132,11 +132,12 @@ async def _call_gemini(prompt: str, model: str) -> str:
     if not api_key:
         return FALLBACK_INSIGHT
 
-    import google.generativeai as genai
+    from google import genai
 
-    genai.configure(api_key=api_key)
-    client = genai.GenerativeModel(model)
-    response = await client.generate_content_async(prompt)
+    client = genai.Client(api_key=api_key)
+    response = await client.aio.models.generate_content(
+        model=model, contents=prompt
+    )
 
     return response.text or FALLBACK_INSIGHT
 

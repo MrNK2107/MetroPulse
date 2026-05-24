@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import h3
 import numpy as np
 
 from engine.grid import GridState
@@ -40,7 +41,7 @@ def step(state: GridState, params: SimulationParams) -> GridState:
 
         if zone_idx_set:
             zone_centers = [
-                (i, __import__("h3").h3_to_geo(state.h3_indices[i]))
+                (i, h3.cell_to_latlng(state.h3_indices[i]))
                 for i in zone_idx_set
             ]
             if zone_centers:
@@ -48,7 +49,7 @@ def step(state: GridState, params: SimulationParams) -> GridState:
                 centroid_lon = np.mean([c[1][1] for c in zone_centers])
 
                 for i in range(state.n_cells):
-                    lat, lon = __import__("h3").h3_to_geo(state.h3_indices[i])
+                    lat, lon = h3.cell_to_latlng(state.h3_indices[i])
                     dlat = np.radians(lat - centroid_lat)
                     dlon = np.radians(lon - centroid_lon)
                     a = (

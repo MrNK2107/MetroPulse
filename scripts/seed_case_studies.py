@@ -112,11 +112,11 @@ DEFAULT_MODELS = {
 
 def get_embedding(text: str, provider: str, model: str) -> list[float]:
     if provider == "gemini":
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        result = genai.embed_content(model=model, content=text)
-        return result["embedding"]
+        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        result = client.models.embed_content(model=model, contents=text)
+        return result.embeddings[0].values
 
     elif provider == "ollama":
         import httpx

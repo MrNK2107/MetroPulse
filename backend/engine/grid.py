@@ -29,8 +29,8 @@ class GridState:
     @classmethod
     def initialize(cls, region_boundary: dict[str, Any], params: dict[str, Any]) -> GridState:
         resolution = 8
-        boundary_coords = region_boundary["coordinates"][0]
-        h3_indices = list(h3.polyfill(boundary_coords, resolution))
+        shape = h3.geo_to_h3shape(region_boundary)
+        h3_indices = list(h3.h3shape_to_cells(shape, resolution))
 
         if not h3_indices:
             h3_indices = ["882a100d2dfffff"]
@@ -62,9 +62,10 @@ class GridState:
         zone_type = zone_geojson.get("type")
         if zone_type == "Point":
             coords = zone_geojson["coordinates"]
-            return [h3.geo_to_h3(coords[1], coords[0], 8)]
+            return [h3.latlng_to_cell(coords[1], coords[0], 8)]
         elif zone_type == "Polygon":
-            return list(h3.polyfill(zone_geojson["coordinates"][0], 8))
+            shape = h3.geo_to_h3shape(zone_geojson)
+            return list(h3.h3shape_to_cells(shape, 8))
         return []
 
     def get_neighbor_distances(self) -> list[tuple[int, int, float]]:
@@ -73,11 +74,11 @@ class GridState:
 
         pairs: list[tuple[int, int, float]] = []
         for i, idx in enumerate(self.h3_indices):
-            neighbors = h3.k_ring(idx, 1)
+            neighbors = h3.grid_disk(idx, 1)
             for j, jdx in enumerate(self.h3_indices):
                 if jdx in neighbors and jdx != idx:
-                    center_i = h3.h3_to_geo(idx)
-                    center_j = h3.h3_to_geo(jdx)
+                    center_i = h3.cell_to_latlng(idx)
+                    center_j = h3.cell_to_latlng(jdx)
                     d = self._haversine(center_i, center_j)
                     pairs.append((i, j, d))
         self._neighbor_pairs = pairs

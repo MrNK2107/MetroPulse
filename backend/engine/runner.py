@@ -15,6 +15,14 @@ class SimulationTimeoutError(Exception):
     pass
 
 
+_deadline: float | None = None
+
+
+def set_deadline(timeout_ms: int = SIMULATION_TIMEOUT_MS) -> None:
+    global _deadline
+    _deadline = asyncio.get_running_loop().time() + timeout_ms / 1000.0
+
+
 async def run_simulation(
     params: SimulationParams,
     region_boundary: dict[str, Any],
@@ -22,8 +30,10 @@ async def run_simulation(
 ) -> AsyncGenerator[dict[str, Any], None]:
     state = GridState.initialize(region_boundary, params.model_dump())
 
+    last_frame: dict[str, Any] | None = None
+
     for month in range(1, params.horizonMonths + 1):
-        if asyncio.get_running_loop().time() > _deadline:
+        if _deadline is not None and asyncio.get_running_loop().time() > _deadline:
             raise SimulationTimeoutError("Simulation exceeded deadline")
 
         delta_K_before = state.K.copy()
@@ -32,10 +42,10 @@ async def run_simulation(
         delta_K_step = state.K - delta_K_before
         state = secondary_loop.step(state, params, delta_K_prev=delta_K_step)
 
-        frame = serializer.to_frame(state, month)
-        yield frame
+        last_frame = serializer.to_frame(state, month)
+        yield last_frame
 
-    if db is not None:
+    if db is not None and last_frame is not None:
         try:
             final_metrics = secondary_loop.compute_aggregate_metrics(state)
             await db.save_simulation(
@@ -43,18 +53,10 @@ async def run_simulation(
                 params=params.model_dump(),
                 horizon_months=params.horizonMonths,
                 result_summary=final_metrics,
-                cell_states=frame["cells"],
+                cell_states=last_frame["cells"],
             )
         except Exception:
             pass
 
     insight = await tertiary_loop.synthesize(params, state, db=db)
     yield {"type": "INSIGHT", "markdown": insight}
-
-
-_deadline: float = 0.0
-
-
-def set_deadline(timeout_ms: int = SIMULATION_TIMEOUT_MS) -> None:
-    global _deadline
-    _deadline = asyncio.get_running_loop().time() + timeout_ms / 1000.0

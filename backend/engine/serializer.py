@@ -1,10 +1,7 @@
 from datetime import datetime, timezone
 
-import numpy as np
-import h3 as h3_lib
-
 from engine.grid import GridState
-from secondary_loop import compute_aggregate_metrics
+from engine.secondary_loop import compute_aggregate_metrics
 
 
 def to_frame(state: GridState, month: int) -> dict:
@@ -27,8 +24,10 @@ def to_frame(state: GridState, month: int) -> dict:
 
     metrics = compute_aggregate_metrics(state)
 
+    year = 2025 + (month - 1) // 12
+    m = ((month - 1) % 12) + 1
     timestamp = datetime(
-        year=2025, month=month, day=1,
+        year=year, month=m, day=1,
         tzinfo=timezone.utc,
     ).isoformat()
 
