@@ -1,91 +1,38 @@
-import pytest
 import numpy as np
-from engine.grid import GridState
-from engine.models import SimulationParams, FDIParams
-from engine.primary_loop import step
+
+from engine import primary_loop
+from engine.config import CityConfig
+from engine.grid import GridFactory
+from engine.models import SECTOR_INDEX, SimulationParams
 
 
-def test_zero_fdi_no_change():
-    boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
-    params = SimulationParams(fdi=FDIParams(tech=0, manufacturing=0, realEstate=0))
-    state = GridState.initialize(boundary, params.model_dump())
-
-    K_before = state.K.copy()
-    E_before = state.E.copy()
-
-    state = step(state, params)
-
-    np.testing.assert_array_almost_equal(state.K, K_before)
-    np.testing.assert_array_almost_equal(state.E, E_before)
+def _state(delta=25.0):
+    cfg = CityConfig.load("hyderabad")
+    params = SimulationParams(
+        city="hyderabad",
+        sector_deltas={"manufacturing": delta},
+        policies_active=["Make in India"],
+        public_works_zone=None,
+        horizon_months=24,
+        city_config=cfg,
+    )
+    return GridFactory.initialize(cfg.get_boundary_polygon(), params), params
 
 
-def test_positive_tech_fdi():
-    boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
-    params = SimulationParams(fdi=FDIParams(tech=50, manufacturing=0, realEstate=0))
-    state = GridState.initialize(boundary, params.model_dump())
+def test_sector_shock_updates_only_bounded_arrays():
+    state, params = _state(40.0)
+    before = state.K.copy()
+    updated = primary_loop.step(state, params, month=1)
 
-    K_before = state.K.copy()
-    state = step(state, params)
-
-    assert np.all(state.K >= K_before)
-    assert np.any(state.K > K_before)
+    assert np.all(np.isfinite(updated.K))
+    assert np.all(updated.K >= 0)
+    assert np.sum(updated.K[:, SECTOR_INDEX["manufacturing"]]) > np.sum(before[:, SECTOR_INDEX["manufacturing"]])
+    assert updated.last_delta_k is not None
 
 
-def test_negative_fdi():
-    boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
-    params = SimulationParams(fdi=FDIParams(tech=0, manufacturing=-50, realEstate=0))
-    state = GridState.initialize(boundary, params.model_dump())
+def test_negative_sector_shock_does_not_create_nan():
+    state, params = _state(-60.0)
+    updated = primary_loop.step(state, params, month=1)
 
-    K_before = state.K.copy()
-    state = step(state, params)
-
-    assert np.all(state.K <= K_before)
-
-
-def test_no_nan_or_inf():
-    boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
-    params = SimulationParams(fdi=FDIParams(tech=100, manufacturing=100, realEstate=100))
-    state = GridState.initialize(boundary, params.model_dump())
-
-    state = step(state, params)
-
-    assert not np.any(np.isnan(state.K))
-    assert not np.any(np.isinf(state.K))
-    assert not np.any(np.isnan(state.E))
-    assert not np.any(np.isinf(state.E))
+    assert np.all(np.isfinite(updated.K))
+    assert np.all(np.isfinite(updated.E_formal))

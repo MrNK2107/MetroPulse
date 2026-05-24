@@ -16,11 +16,7 @@ class SimulationUser(FastHttpUser):
     def run_simulation(self):
         payload = {
             "type": "START",
-            "params": {
-                "fdi": {"tech": -20, "manufacturing": 10, "realEstate": -5},
-                "publicWorksZone": None,
-                "horizonMonths": 6,
-            },
+            "scenario": "Hyderabad pharma FDI drops 30% for 6 months with Smart City Mission",
         }
 
         start = time.time()

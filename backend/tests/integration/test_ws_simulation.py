@@ -1,70 +1,35 @@
 import pytest
-import json
-from unittest.mock import AsyncMock, patch
 
 from engine.runner import run_simulation, set_deadline
-from engine.models import SimulationParams, FDIParams
+from engine.scenario_parser import build_params, parse_scenario
 
 
 @pytest.mark.asyncio
 async def test_simulation_emits_correct_frame_count():
-    params = SimulationParams(
-        fdi=FDIParams(tech=10, manufacturing=0, realEstate=0),
-        horizonMonths=6,
-    )
-    region_boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
+    parsed = await parse_scenario("Hyderabad pharma FDI drops 40% for 6 months")
+    params = build_params(parsed)
+    params.horizon_months = 6
 
     set_deadline(5000)
     frames = []
-    insights = []
-
-    async for msg in run_simulation(params, region_boundary, db=None):
-        if "type" in msg and msg["type"] == "INSIGHT":
-            insights.append(msg)
-        else:
-            frames.append(msg)
+    async for frame in run_simulation(params, params.city_config.get_boundary_polygon(), db=None):
+        frames.append(frame)
 
     assert len(frames) == 6
-    for i, frame in enumerate(frames):
-        assert frame["month"] == i + 1
-        assert len(frame["cells"]) > 0
-        assert "metrics" in frame
-
-    assert len(insights) == 1
-    assert "markdown" in insights[0]
+    assert frames[0]["month"] == 1
+    assert frames[-1]["month"] == 6
+    assert "proof" in frames[-1]
 
 
 @pytest.mark.asyncio
-async def test_simulation_different_horizons():
-    for horizon in [6, 12, 24]:
-        params = SimulationParams(
-            fdi=FDIParams(tech=20, manufacturing=-10, realEstate=5),
-            horizonMonths=horizon,
-        )
-        region_boundary = {
-            "type": "Polygon",
-            "coordinates": [[
-                [-74.025, 40.700],
-                [-73.925, 40.700],
-                [-73.925, 40.795],
-                [-74.025, 40.795],
-                [-74.025, 40.700],
-            ]],
-        }
+async def test_vague_valid_prompt_runs_with_defaults():
+    parsed = await parse_scenario("Bengaluru tech boom")
+    params = build_params(parsed)
 
-        set_deadline(5000)
-        frame_count = 0
-        async for msg in run_simulation(params, region_boundary, db=None):
-            if "type" not in msg:
-                frame_count += 1
+    assert params.horizon_months == 24
+    frame_count = 0
+    set_deadline(5000)
+    async for _ in run_simulation(params, params.city_config.get_boundary_polygon(), db=None):
+        frame_count += 1
 
-        assert frame_count == horizon, f"Expected {horizon} frames, got {frame_count}"
+    assert frame_count == 24

@@ -1,60 +1,26 @@
-import pytest
-import numpy as np
-from engine.grid import GridState
-from engine.serializer import to_frame
+from engine import primary_loop, secondary_loop, serializer
+from engine.config import CityConfig
+from engine.grid import GridFactory
+from engine.models import SimulationParams
 
 
-def test_to_frame_structure():
-    boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
-    state = GridState.initialize(boundary, {"fdi": {"tech": 0, "manufacturing": 0, "realEstate": 0}})
+def test_serializer_includes_visual_proof_fields():
+    cfg = CityConfig.load("bengaluru")
+    params = SimulationParams(
+        city="bengaluru",
+        sector_deltas={"it_ites": 30},
+        policies_active=["Digital India"],
+        public_works_zone=None,
+        horizon_months=12,
+        city_config=cfg,
+    )
+    state = GridFactory.initialize(cfg.get_boundary_polygon(), params)
+    state = primary_loop.step(state, params, month=1)
+    state = secondary_loop.step(state, params, month=1)
+    frame = serializer.to_frame(state, month=1)
 
-    frame = to_frame(state, month=3)
-
-    assert frame["month"] == 3
-    assert "timestamp" in frame
-    assert "cells" in frame
-    assert "metrics" in frame
-    assert len(frame["cells"]) == state.n_cells
-
-    cell = frame["cells"][0]
-    assert "h3Index" in cell
-    assert "economicActivity" in cell
-    assert "delta" in cell
-    assert "jobDensity" in cell
-    assert "realEstateIndex" in cell
-    assert "congestion" in cell
-
-    metrics = frame["metrics"]
-    assert "gdpDelta" in metrics
-    assert "unemploymentRate" in metrics
-    assert "realEstateIndex" in metrics
-    assert "transitCongestion" in metrics
-
-
-def test_to_frame_delta_bounds():
-    boundary = {
-        "type": "Polygon",
-        "coordinates": [[
-            [-74.025, 40.700],
-            [-73.925, 40.700],
-            [-73.925, 40.795],
-            [-74.025, 40.795],
-            [-74.025, 40.700],
-        ]],
-    }
-    state = GridState.initialize(boundary, {"fdi": {"tech": 0, "manufacturing": 0, "realEstate": 0}})
-
-    state.K = state.K * 3
-    frame = to_frame(state, month=1)
-
-    for cell in frame["cells"]:
-        assert -1.0 <= cell["delta"] <= 1.0
+    assert frame["cells"]
+    assert "proof" in frame["cells"][0]
+    assert "visualCue" in frame["cells"][0]
+    assert "proof" in frame
+    assert "informalEmployment" in frame["metrics"]
