@@ -1,10 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { ParameterPanel } from "@/components/controls/ParameterPanel";
+import { ScenarioPanel } from "@/components/controls/ScenarioPanel";
+import { FrameScrubber } from "@/components/controls/FrameScrubber";
+import { EvidencePanel } from "@/components/dashboard/EvidencePanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
-import { AIInsightPanel } from "@/components/dashboard/AIInsightPanel";
-import { LoadingOverlay } from "@/components/shared/LoadingOverlay";
+import { PipelineFlow } from "@/components/dashboard/PipelineFlow";
+import { SimulationProgress } from "@/components/shared/LoadingOverlay";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useSimulationStore } from "@/store/simulationStore";
 
 const MapViewport = dynamic(
   () => import("@/components/map/MapViewport").then((m) => ({ default: m.MapViewport })),
@@ -17,24 +21,87 @@ const DrawingToolbar = dynamic(
 );
 
 export default function Home() {
+  useKeyboardShortcuts();
+
+  const isLeftSidebarOpen = useSimulationStore((s) => s.isLeftSidebarOpen);
+  const isRightSidebarOpen = useSimulationStore((s) => s.isRightSidebarOpen);
+  const setLeftSidebarOpen = useSimulationStore((s) => s.setLeftSidebarOpen);
+  const setRightSidebarOpen = useSimulationStore((s) => s.setRightSidebarOpen);
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      <ParameterPanel />
+    <main className="relative h-screen w-screen overflow-hidden bg-dark-400 text-gray-100 font-sans">
+      {/* 1. Full Screen Map Viewport */}
+      <div className="absolute inset-0 z-0 w-full h-full">
+        <MapViewport />
+      </div>
 
-      <div className="flex-1 flex flex-col relative">
-        <div className="flex-1 relative">
-          <MapViewport />
-          <DrawingToolbar />
-          <LoadingOverlay />
-        </div>
-
-        <div className="h-64 bg-dark-300 border-t border-dark-100 overflow-y-auto p-4">
-          <div className="max-w-5xl mx-auto space-y-4">
-            <MetricPanel />
-            <AIInsightPanel />
-          </div>
+      {/* 2. Floating Header: Pipeline Stage Status */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4 md:px-0 pointer-events-none">
+        <div className="pointer-events-auto">
+          <PipelineFlow />
         </div>
       </div>
-    </div>
+
+      {/* 3. Collapsible Left Panel Overlay: Scenario Simulator */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 z-20 transition-all duration-300 transform ${
+          isLeftSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <ScenarioPanel />
+      </div>
+
+      {/* Toggle Left Sidebar Button */}
+      <button
+        onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
+        className={`absolute top-1/2 -translate-y-1/2 z-30 flex h-14 w-5 items-center justify-center rounded-r-xl border border-l-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
+          isLeftSidebarOpen ? "left-[360px]" : "left-0"
+        }`}
+        title={isLeftSidebarOpen ? "Hide scenario panel" : "Show scenario panel"}
+      >
+        <span className="text-[10px] font-bold font-mono">
+          {isLeftSidebarOpen ? "◀" : "▶"}
+        </span>
+      </button>
+
+      {/* 4. Collapsible Right Panel Overlay: Evidence & Proof */}
+      <div
+        className={`absolute right-0 top-0 bottom-0 z-20 transition-all duration-300 transform ${
+          isRightSidebarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <EvidencePanel />
+      </div>
+
+      {/* Toggle Right Sidebar Button */}
+      <button
+        onClick={() => setRightSidebarOpen(!isRightSidebarOpen)}
+        className={`absolute top-1/2 -translate-y-1/2 z-30 flex h-14 w-5 items-center justify-center rounded-l-xl border border-r-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
+          isRightSidebarOpen ? "right-[420px]" : "right-0"
+        }`}
+        title={isRightSidebarOpen ? "Hide evidence panel" : "Show evidence panel"}
+      >
+        <span className="text-[10px] font-bold font-mono">
+          {isRightSidebarOpen ? "▶" : "◀"}
+        </span>
+      </button>
+
+      {/* 5. Drawing Tool Overlay */}
+      <div className="absolute right-4 top-20 z-10">
+        <DrawingToolbar />
+      </div>
+
+      {/* 6. Dynamic Bottom Drawer overlay: Playback controls and detailed metrics */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-4xl px-4 md:px-0">
+        <div className="flex flex-col gap-2 rounded-xl border border-dark-100/50 bg-dark-200/85 backdrop-blur-md p-3.5 shadow-2xl">
+          {/* Metrics summary pills (clickable to expand charts) & Scrubber play block */}
+          <MetricPanel />
+          <FrameScrubber />
+        </div>
+      </div>
+
+      {/* 7. Loading Overlays */}
+      <SimulationProgress />
+    </main>
   );
 }
