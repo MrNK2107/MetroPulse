@@ -1,242 +1,420 @@
-<p align="center">
-  <br/>
-  <br/>
+<div align="center">
 
-```
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                                                                               ║
-║   ███╗   ███╗ ███████╗ ████████╗ ██████╗  ██████╗ ██████╗  ██╗   ██╗██╗     ║
-║   ████╗ ████║ ██╔════╝ ╚══██╔══╝ ██╔══██╗██╔═══██╗██╔══██╗ ██║   ██║██║     ║
-║   ██╔████╔██║ █████╗      ██║    ██████╔╝██║   ██║██████╔╝ ██║   ██║██║     ║
-║   ██║╚██╔╝██║ ██╔══╝      ██║    ██╔══██╗██║   ██║██╔═══╝  ╚██╗ ██╔╝██║     ║
-║   ██║ ╚═╝ ██║ ███████╗    ██║    ██║  ██║╚██████╔╝██║       ╚████╔╝ ███████╗║
-║   ╚═╝     ╚═╝ ╚══════╝    ╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝        ╚═══╝  ╚══════╝║
-║                                                                               ║
-║              ██████╗ ██╗   ██╗██╗     ███████╗███████╗███████╗               ║
-║              ██╔══██╗██║   ██║██║     ██╔════╝██╔════╝██╔════╝               ║
-║              ██████╔╝██║   ██║██║     █████╗  ███████╗█████╗                 ║
-║              ██╔═══╝ ██║   ██║██║     ██╔══╝  ╚════██║██╔══╝                 ║
-║              ██║     ╚██████╔╝███████╗███████╗███████║███████╗               ║
-║              ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝╚══════╝               ║
-║                                                                               ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+```text
+███╗   ███╗███████╗████████╗██████╗  ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
+████╗ ████║██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
+██╔████╔██║█████╗     ██║   ██████╔╝██║   ██║██████╔╝██║   ██║██║     ███████╗█████╗  
+██║╚██╔╝██║██╔══╝     ██║   ██╔══██╗██║   ██║██╔═══╝ ██║   ██║██║     ╚════██║██╔══╝  
+██║ ╚═╝ ██║███████╗   ██║   ██║  ██║╚██████╔╝██║     ╚██████╔╝███████╗███████║███████╗
+╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝
 ```
 
-  <h3 align="center">AI-Powered Macro-Urban Digital Twin Sandbox</h3>
+# MetroPulse
 
-  <p align="center">
-    Simulate the economic ripple effects of policy decisions across cities using
-    <br/>
-    H3 hexagonal grids, agent-based modeling, and real-time visualization.
-    <br/>
-    <br/>
-    <a href="#getting-started"><strong>Get Started »</strong></a>
-    &nbsp;&middot;&nbsp;
-    <a href="#architecture"><strong>Architecture</strong></a>
-    &nbsp;&middot;&nbsp;
-    <a href="#api-reference"><strong>API</strong></a>
-    &nbsp;&middot;&nbsp;
-    <a href="#roadmap"><strong>Roadmap</strong></a>
-  </p>
+### AI-Powered Macro-Urban Digital Twin Sandbox
 
-  <p align="center">
-    <img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js" alt="Next.js" />
-    <img src="https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi" alt="FastAPI" />
-    <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python" alt="Python" />
-    <img src="https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/Deck.gl-9.0-5B21D6" alt="Deck.gl" />
-    <img src="https://img.shields.io/badge/H3-4.0-1A73E8?logo=uber" alt="H3" />
-    <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?logo=supabase" alt="Supabase" />
-    <img src="https://img.shields.io/badge/License-MIT-green" alt="License" />
-  </p>
-</p>
+```diff
++ Simulate cities before governments change them.
++ Predict economic ripple effects before policies become reality.
++ Stream urban futures in real time.
+```
+
+<img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js&style=for-the-badge" />
+<img src="https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi&style=for-the-badge" />
+<img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&style=for-the-badge" />
+<img src="https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&style=for-the-badge" />
+<img src="https://img.shields.io/badge/H3-Hex_Engine-1A73E8?logo=uber&style=for-the-badge" />
+<img src="https://img.shields.io/badge/AI-RAG_+_LLM-ffcc00?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Streaming-WebSocket-0099ff?style=for-the-badge" />
+<img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
+
+<br/>
+<br/>
+
+> A flight simulator for urban policy.
+
+</div>
 
 ---
 
-## Table of Contents
+## ◉ System Boot
 
-- [What is MetroPulse?](#what-is-metropulse)
-- [Key Features](#key-features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [API Reference](#api-reference)
-- [Simulation Engine](#simulation-engine)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+```text
+[ MetroPulse Kernel v0.9.4 ]
+────────────────────────────────────────────────────────────
+
+Initializing spatial grid engine...
+Loading H3 hexagonal city topology...
+Mounting economic sector matrices...
+Loading transit pressure model...
+Loading real estate spillover model...
+Connecting vector memory...
+Starting AI insight subsystem...
+Opening simulation websocket...
+
+STATUS: ONLINE
+```
 
 ---
 
 ## What is MetroPulse?
 
+MetroPulse is a real-time urban simulation platform that models how economic shocks, policy decisions, infrastructure projects, and investment flows spread across a city.
+
+It uses **H3 hexagonal grids**, **agent-inspired simulation loops**, **FastAPI WebSocket streaming**, and **LLM-powered narrative analysis** to show how one decision can create cascading effects across employment, GDP, real estate, transit, migration, and public infrastructure.
+
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   FDI Investment                                                         │
+│       │                                                                  │
+│       ▼                                                                  │
+│   ┌────────────┐     ┌──────────────┐     ┌────────────────────┐         │
+│   │  PRIMARY   │────▶│  SECONDARY   │────▶│     TERTIARY       │         │
+│   │   LOOP     │     │    LOOP      │     │      LOOP          │         │
+│   │  Direct    │     │  Cascading   │     │   AI Insights      │         │
+│   └────────────┘     └──────────────┘     └────────────────────┘         │
+│       │                    │                         │                   │
+│       ▼                    ▼                         ▼                   │
+│   Employment          Real Estate              RAG + LLM                 │
+│   GDP Impact          Transit Flow             Policy Analysis           │
+│   Capital Growth      Congestion               Case Studies              │
+│   Sector Boost        Spillover                Narrative Output          │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
-   ┌─────────────────────────────────────────────────────────────────┐
-   │                                                                 │
-   │    💰 FDI Investment                                           │
-   │        │                                                        │
-   │        ▼                                                        │
-   │    ┌────────┐     ┌────────────┐     ┌────────────────┐        │
-   │    │ PRIMARY │────▶│ SECONDARY  │────▶│   TERTIARY     │        │
-   │    │  LOOP   │     │   LOOP     │     │    LOOP        │        │
-   │    │(Direct) │     │(Cascading) │     │ (AI Insights)  │        │
-   │    └────────┘     └────────────┘     └────────────────┘        │
-   │        │                │                     │                 │
-   │        ▼                ▼                     ▼                 │
-   │   Employment      Real Estate           RAG + LLM              │
-   │   GDP Impact      Transit Flow          Policy Analysis        │
-   │   Capital         Congestion            Case Studies            │
-   │   Formation       Spillover             Narrative               │
-   │                                                                 │
-   └─────────────────────────────────────────────────────────────────┘
-```
 
-**MetroPulse** is a real-time urban simulation platform that models how economic shocks
-— foreign direct investment, public infrastructure, policy changes — propagate through
-a city's hexagonal grid over time. It combines:
+Think of it as:
 
-- **Physics-inspired simulation loops** (direct impacts, cascading effects, AI narrative)
-- **H3 hexagonal spatial indexing** for granular geographic analysis
-- **Real-time WebSocket streaming** of simulation frames to a 3D map
-- **LLM-powered insights** (OpenAI, Gemini, Ollama) with RAG from urban case studies
-
-Think of it as a *flight simulator for urban policy*.
-
----
-
-## Key Features
-
-```
-  ╔═══════════════════════════════╦═══════════════════════════════════╗
-  ║      SIMULATION ENGINE        ║          FRONTEND                 ║
-  ╠═══════════════════════════════╬═══════════════════════════════════╣
-  ║                               ║                                   ║
-  ║  ◆ 3-Loop Cascade Model      ║  ◆ 3D Hex Map (Deck.gl + MapLibre)║
-  ║  ◆ H3 Resolution 8 Grid      ║  ◆ Real-time WebSocket Frames    ║
-  ║  ◆ NumPy Vectorized Ops      ║  ◆ Drawing Tools (Pin/Polygon)   ║
-  ║  ◆ Multi-Provider LLM        ║  ◆ Frame Scrubber Timeline       ║
-  ║  ◆ RAG Case Study Search     ║  ◆ Interactive FDI Sliders       ║
-  ║  ◆ Spatial Spillover Model   ║  ◆ 6 Scenario Presets            ║
-  ║  ◆ 6 Economic Sectors        ║  ◆ Live Metric Dashboard         ║
-  ║  ◆ Public Works Boost        ║  ◆ AI Insight Panel (Streaming)  ║
-  ║  ◆ Supabase PostgreSQL       ║  ◆ Responsive + Keyboard Shortcuts║
-  ║  ◆ pgvector Embeddings       ║  ◆ Export Results as JSON        ║
-  ║                               ║                                   ║
-  ╚═══════════════════════════════╩═══════════════════════════════════╝
+```text
+SimCity + Digital Twin + Economic Policy Lab + AI Analyst
 ```
 
 ---
 
-## Architecture
+## Why MetroPulse Exists
 
-```
-                        ┌──────────────────────────────────┐
-                        │          FRONTEND (Next.js)      │
-                        │                                  │
-                        │  ┌─────────┐   ┌──────────────┐ │
-                        │  │ MapLibre │   │  Zustand     │ │
-                        │  │ + Deck.gl│   │  Store       │ │
-                        │  └────┬────┘   └──────┬───────┘ │
-                        │       │               │          │
-                        │  ┌────┴───────────────┴───────┐ │
-                        │  │      React Components       │ │
-                        │  │  MapViewport · MetricPanel   │ │
-                        │  │  ParameterPanel · AIInsight   │ │
-                        │  └────────────┬────────────────┘ │
-                        └───────────────┼──────────────────┘
-                                        │
-                          WebSocket + REST (port 3000 → 8000)
-                                        │
-                        ┌───────────────┼──────────────────┐
-                        │          BACKEND (FastAPI)        │
-                        │               │                   │
-                        │  ┌────────────┴────────────────┐ │
-                        │  │   /ws/simulate (WebSocket)   │ │
-                        │  │   /api/regions  (REST)       │ │
-                        │  │   /api/simulations (REST)    │ │
-                        │  └────────────┬────────────────┘ │
-                        │               │                   │
-                        │  ┌────────────┴────────────────┐ │
-                        │  │     SIMULATION ENGINE        │ │
-                        │  │                              │ │
-                        │  │  ┌──────────┐  ┌──────────┐ │ │
-                        │  │  │ Primary   │  │ Secondary│ │ │
-                        │  │  │ Loop      │─▶│ Loop     │ │ │
-                        │  │  │ (Direct)  │  │(Cascade) │ │ │
-                        │  │  └──────────┘  └────┬─────┘ │ │
-                        │  │                     │       │ │
-                        │  │              ┌──────┴─────┐ │ │
-                        │  │              │  Tertiary   │ │ │
-                        │  │              │  Loop (AI)  │ │ │
-                        │  │              └────────────┘ │ │
-                        │  │                              │ │
-                        │  │  ┌──────────┐  ┌──────────┐ │ │
-                        │  │  │ H3 Grid  │  │ Runner   │ │ │
-                        │  │  │ State    │  │ (Orch.)  │ │ │
-                        │  │  └──────────┘  └──────────┘ │ │
-                        │  └─────────────────────────────┘ │
-                        │                                   │
-                        │  ┌─────────────────────────────┐ │
-                        │  │   Supabase PostgreSQL        │ │
-                        │  │   + pgvector (embeddings)    │ │
-                        │  └─────────────────────────────┘ │
-                        └───────────────────────────────────┘
+Modern cities are too complex for static spreadsheets.
+
+A single policy decision can:
+
+- increase GDP,
+- overload transport systems,
+- raise housing prices,
+- create employment clusters,
+- displace vulnerable communities,
+- attract further investment,
+- or trigger hidden second-order effects.
+
+Yet most urban decisions are still evaluated using fragmented reports, slow dashboards, and isolated datasets.
+
+MetroPulse turns urban policy into an interactive simulation sandbox.
+
+```text
+Cities are living systems.
+
+Every investment creates movement.
+Every policy creates pressure.
+Every decision creates ripple effects.
+
+MetroPulse simulates those ripples.
 ```
 
-### Simulation Loop Pipeline
+---
 
+## Core Features
+
+```text
+╔════════════════════════════════════════╦══════════════════════════════════════════╗
+║          SIMULATION ENGINE             ║               FRONTEND                  ║
+╠════════════════════════════════════════╬══════════════════════════════════════════╣
+║                                        ║                                          ║
+║   ◆ 3-Loop Cascade Model              ║   ◆ 3D Hex Map                           ║
+║   ◆ H3 Resolution Grid                ║   ◆ Deck.gl + MapLibre                   ║
+║   ◆ NumPy Vectorized Simulation       ║   ◆ Real-time WebSocket Frames           ║
+║   ◆ Spatial Spillover Model           ║   ◆ Drawing Tools                        ║
+║   ◆ Sector-Based Economic Weights     ║   ◆ FDI Sliders                          ║
+║   ◆ Public Works Zone Boosts          ║   ◆ Timeline Scrubber                    ║
+║   ◆ Transit Pressure Modeling         ║   ◆ Live Metric Dashboard                ║
+║   ◆ Real Estate Ripple Effects        ║   ◆ AI Insight Panel                     ║
+║   ◆ RAG Case Study Search             ║   ◆ Export Simulation Results            ║
+║   ◆ Multi-Provider LLM Support        ║   ◆ Keyboard Shortcuts                   ║
+║                                        ║                                          ║
+╚════════════════════════════════════════╩══════════════════════════════════════════╝
 ```
-  ┌───────────────────────────────────────────────────────────────────────┐
-  │                                                                       │
-  │  STEP 1: PRIMARY LOOP (Direct Impacts)                               │
-  │  ────────────────────────────────                                     │
-  │                                                                       │
-  │  For each hex cell c:                                                 │
-  │                                                                       │
-  │    ΔK(c) = FDI_rate × sector_weight(c) × K(c)                       │
-  │    ΔE(c) = α × ΔK(c) × employment_elasticity                        │
-  │    Boost  = public_works_zone_bonus                                   │
-  │                                                                       │
-  │  ─────────────────────────────────────────────                        │
-  │  STEP 2: SECONDARY LOOP (Cascading Effects)                          │
-  │  ────────────────────────────────                                     │
-  │                                                                       │
-  │    ΔR(c) = γ × Σ_neighbors[ΔK × exp(-d/λ)]   (real estate)         │
-  │    ΔT(c) = δ × ΔE / capacity                  (transit congestion)  │
-  │                                                                       │
-  │  ─────────────────────────────────────────────                        │
-  │  STEP 3: TERTIARY LOOP (RAG + LLM Narrative)                         │
-  │  ────────────────────────────────                                     │
-  │                                                                       │
-  │    1. Serialize frame → pgvector embedding                           │
-  │    2. Search case studies via cosine similarity                      │
-  │    3. Prompt LLM with context + case studies                         │
-  │    4. Stream insight back to frontend                                │
-  │                                                                       │
-  └───────────────────────────────────────────────────────────────────────┘
+
+---
+
+## Live Simulation Feed
+
+```text
+TIME: 2032-07-14 08:42 UTC
+REGION: Bengaluru Urban Corridor
+EVENT: +40% Technology FDI Injection
+
+┌─────────────────────────────────────────────┐
+│ GDP Growth             ▲ +8.2%              │
+│ Employment             ▲ +5.4%              │
+│ Real Estate Index      ▲ +12.1%             │
+│ Transit Congestion     ▲ +18.7%             │
+│ Informal Migration     ▲ +7.9%              │
+└─────────────────────────────────────────────┘
+
+Hex Activity Heatmap:
+
+░░░░▒▒▒▒▓▓▓████████▓▓▒▒▒░░
+░░▒▒▓▓████████████████▓▒▒░
+▒▒▓█████████████████████▓▒
+▓████████████████████████▓
+▓████████████████████████▓
+▒▓██████████████████████▓▒
+░▒▓████████████████████▓▒░
+░░▒▒▓▓██████████████▓▓▒▒░░
+```
+
+---
+
+## System Architecture
+
+```text
+                         ┌───────────────────────────────────────┐
+                         │           FRONTEND                    │
+                         │           Next.js 14                  │
+                         │                                       │
+                         │  ┌───────────┐    ┌───────────────┐   │
+                         │  │ MapLibre  │    │   Zustand     │   │
+                         │  │ + Deck.gl │    │   Store       │   │
+                         │  └─────┬─────┘    └───────┬───────┘   │
+                         │        │                  │           │
+                         │  ┌─────▼──────────────────▼────────┐  │
+                         │  │       React Components           │  │
+                         │  │ MapViewport · MetricPanel        │  │
+                         │  │ ParameterPanel · AIInsight       │  │
+                         │  └──────────────┬──────────────────┘  │
+                         └─────────────────┼─────────────────────┘
+                                           │
+                              WebSocket + REST API
+                                           │
+                         ┌─────────────────▼─────────────────────┐
+                         │              BACKEND                  │
+                         │              FastAPI                  │
+                         │                                       │
+                         │  ┌─────────────────────────────────┐  │
+                         │  │ /ws/simulate                    │  │
+                         │  │ /api/regions                    │  │
+                         │  │ /api/simulations                │  │
+                         │  │ /api/case-studies               │  │
+                         │  └──────────────┬──────────────────┘  │
+                         │                 │                     │
+                         │  ┌──────────────▼──────────────────┐  │
+                         │  │       SIMULATION ENGINE          │  │
+                         │  │                                  │  │
+                         │  │  ┌───────────┐   ┌───────────┐   │  │
+                         │  │  │ Primary   │──▶│ Secondary │   │  │
+                         │  │  │ Loop      │   │ Loop      │   │  │
+                         │  │  └───────────┘   └─────┬─────┘   │  │
+                         │  │                        │         │  │
+                         │  │                  ┌─────▼─────┐   │  │
+                         │  │                  │ Tertiary  │   │  │
+                         │  │                  │ AI Loop   │   │  │
+                         │  │                  └───────────┘   │  │
+                         │  │                                  │  │
+                         │  │  ┌───────────┐   ┌───────────┐   │  │
+                         │  │  │ H3 Grid   │   │ Runner    │   │  │
+                         │  │  │ State     │   │ Orchestr. │   │  │
+                         │  │  └───────────┘   └───────────┘   │  │
+                         │  └──────────────────────────────────┘  │
+                         │                                       │
+                         │  ┌──────────────────────────────────┐  │
+                         │  │ Supabase PostgreSQL + pgvector   │  │
+                         │  └──────────────────────────────────┘  │
+                         └───────────────────────────────────────┘
+```
+
+---
+
+## Simulation Pipeline
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  STEP 1 — PRIMARY LOOP                                                        │
+│  Direct economic impact                                                       │
+│                                                                              │
+│    FDI → Capital Formation → Employment → GDP Growth                         │
+│                                                                              │
+│  STEP 2 — SECONDARY LOOP                                                      │
+│  Spatial and economic spillover                                               │
+│                                                                              │
+│    Capital Growth → Real Estate Pressure → Transit Congestion                │
+│                                                                              │
+│  STEP 3 — TERTIARY LOOP                                                       │
+│  AI interpretation and narrative intelligence                                 │
+│                                                                              │
+│    Frame Metrics → Vector Search → Case Studies → LLM Insight                │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Economic Propagation Model
+
+```text
+FDI Injection
+      │
+      ▼
+Capital Formation
+      │
+      ▼
+Employment Expansion
+      │
+      ▼
+Consumer Spending
+      │
+      ▼
+Transit Load Increase
+      │
+      ▼
+Real Estate Pressure
+      │
+      ▼
+Migration Spillover
+      │
+      ▼
+AI Narrative Generation
 ```
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend** | Next.js 14 + React 18 | App framework, SSR, routing |
-| **UI** | Tailwind CSS + Tremor | Styling + dashboard components |
-| **Map** | MapLibre GL JS + Deck.gl | 3D hex visualization (no API key needed) |
-| **State** | Zustand | Lightweight global state |
-| **Backend** | FastAPI + Uvicorn | Async REST + WebSocket API |
-| **Engine** | NumPy + SciPy | Vectorized simulation math |
-| **Spatial** | H3 (v4) | Hexagonal spatial indexing |
-| **Database** | Supabase PostgreSQL + pgvector | Persistence + vector search |
-| **LLM** | OpenAI / Gemini / Ollama | AI insights with RAG |
-| **Testing** | Pytest + Locust + Jest | Unit, integration, load tests |
-| **Deploy** | Docker + Fly.io + Vercel | Backend + frontend hosting |
-| **CI/CD** | GitHub Actions | Automated pipelines |
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, React 18, TypeScript |
+| UI | Tailwind CSS, Tremor |
+| Mapping | MapLibre GL JS, Deck.gl |
+| Spatial Indexing | H3 |
+| Backend | FastAPI, Uvicorn |
+| Simulation | Python, NumPy, SciPy |
+| Database | Supabase PostgreSQL |
+| Vector Search | pgvector |
+| AI Layer | OpenAI, Gemini, Ollama |
+| State Management | Zustand |
+| Streaming | WebSockets |
+| Testing | Pytest, Jest, Locust |
+| Deployment | Docker, Fly.io, Vercel |
+| CI/CD | GitHub Actions |
+
+---
+
+## Mission Control Preview
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ METROPULSE MISSION CONTROL                                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│ REGION             Mumbai Metropolitan Region                                │
+│ SIMULATION MODE    FDI Shock + Public Works Boost                            │
+│ HORIZON            24 Months                                                 │
+│ STATUS             Running                                                   │
+│                                                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│ GDP Delta              ██████████████████░░░░░░░░     +8.2%                 │
+│ Employment Growth      ███████████████░░░░░░░░░░░     +5.4%                 │
+│ Real Estate Pressure   █████████████████████░░░░░     +12.1%                │
+│ Transit Congestion     ███████████████████████░░░     +18.7%                │
+│                                                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ AI INSIGHT                                                                    │
+│                                                                              │
+│ The eastern industrial corridor shows accelerated employment clustering,      │
+│ but rising real estate pressure may create displacement risk after month 18.  │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Project Structure
+
+```text
+MetroPulse/
+│
+├── backend/
+│   ├── app/
+│   │   ├── routes/
+│   │   │   ├── health.py
+│   │   │   ├── regions.py
+│   │   │   ├── simulations.py
+│   │   │   └── case_studies.py
+│   │   ├── ws/
+│   │   │   └── simulation.py
+│   │   ├── config.py
+│   │   ├── db.py
+│   │   └── main.py
+│   │
+│   ├── engine/
+│   │   ├── grid.py
+│   │   ├── primary_loop.py
+│   │   ├── secondary_loop.py
+│   │   ├── tertiary_loop.py
+│   │   ├── runner.py
+│   │   ├── serializer.py
+│   │   └── models.py
+│   │
+│   ├── tests/
+│   │   ├── unit/
+│   │   ├── integration/
+│   │   └── load/
+│   │
+│   ├── Dockerfile
+│   ├── fly.toml
+│   ├── pyproject.toml
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   └── page.tsx
+│   │   ├── components/
+│   │   │   ├── map/
+│   │   │   ├── controls/
+│   │   │   ├── dashboard/
+│   │   │   └── shared/
+│   │   ├── hooks/
+│   │   │   └── useWebSocket.ts
+│   │   ├── lib/
+│   │   │   ├── ws.ts
+│   │   │   ├── api.ts
+│   │   │   ├── mapConfig.ts
+│   │   │   └── colorScale.ts
+│   │   ├── store/
+│   │   │   └── simulationStore.ts
+│   │   └── types/
+│   │       └── simulation.ts
+│   │
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── scripts/
+│   ├── seed_case_studies.py
+│   └── seed_cities.py
+│
+├── supabase/
+│   └── migrations/
+│
+├── docs/
+│   └── INDIA_OVERHAUL_PLAN.md
+│
+├── .github/
+│   └── workflows/
+│
+├── AGENTS.md
+└── README.md
+```
 
 ---
 
@@ -244,17 +422,25 @@ Think of it as a *flight simulator for urban policy*.
 
 ### Prerequisites
 
+```text
+┌────────────────────────────────────────────────────────────┐
+│ Required                                                   │
+├────────────────────────────────────────────────────────────┤
+│ Python 3.11+                                               │
+│ Node.js 18+                                                │
+│ Git                                                        │
+│ npm or pnpm                                                │
+│                                                            │
+│ Optional                                                   │
+├────────────────────────────────────────────────────────────┤
+│ Supabase account                                           │
+│ OpenAI API key                                             │
+│ Gemini API key                                             │
+│ Ollama local model                                         │
+└────────────────────────────────────────────────────────────┘
 ```
-  ┌────────────────────────────────────────────────────────┐
-  │  You'll need:                                          │
-  │                                                        │
-  │    ✓  Python 3.11+                                     │
-  │    ✓  Node.js 18+                                      │
-  │    ✓  Git                                              │
-  │    ✓  (Optional) Supabase account                      │
-  │    ✓  (Optional) OpenAI / Gemini API key               │
-  └────────────────────────────────────────────────────────┘
-```
+
+---
 
 ### 1. Clone the Repository
 
@@ -263,138 +449,67 @@ git clone https://github.com/MrNK2107/MetroPulse.git
 cd MetroPulse
 ```
 
+---
+
 ### 2. Backend Setup
 
 ```bash
 cd backend
 
-# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install dependencies
+# Linux / macOS
+source .venv/bin/activate
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
 pip install -e ".[dev]"
 
-# Configure environment
 cp .env.example .env
-# Edit .env with your Supabase + LLM keys
 
-# Run the server
 uvicorn app.main:app --reload --port 8000
 ```
+
+Backend runs at:
+
+```text
+http://localhost:8000
+```
+
+---
 
 ### 3. Frontend Setup
 
 ```bash
 cd frontend
 
-# Install dependencies
 npm install
-
-# Run dev server
 npm run dev
 ```
 
-### 4. Open the App
+Frontend runs at:
 
-Navigate to **http://localhost:3000** — you'll see the map, parameter panel, and dashboard.
-
-```
-  ┌─────────────────────────────────────────────────────────────────┐
-  │  ┌─ Sidebar ──────┐  ┌─ Map ──────────────────────────────┐   │
-  │  │ Region: NYC     │  │                                    │   │
-  │  │ FDI Sliders     │  │     ◇  ◇  ◇                       │   │
-  │  │ Presets         │  │   ◇  ████  ◇  ◇                   │   │
-  │  │ Draw Zones      │  │     ██████                         │   │
-  │  │ Horizon         │  │   ◇  ████  ◇                      │   │
-  │  │                 │  │     ◇  ◇                           │   │
-  │  │ [Run Simulation]│  │                                    │   │
-  │  └─────────────────┘  └────────────────────────────────────┘   │
-  │  ┌─ Dashboard ─────────────────────────────────────────────┐   │
-  │  │ GDP │ Unemployment │ Real Estate │ Transit │ AI Insight │   │
-  │  └─────────────────────────────────────────────────────────┘   │
-  └─────────────────────────────────────────────────────────────────┘
+```text
+http://localhost:3000
 ```
 
 ---
 
-## Project Structure
+## Environment Variables
 
+Create a `.env` file inside `backend/`.
+
+```env
+SUPABASE_URL=
+SUPABASE_KEY=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
+OLLAMA_BASE_URL=http://localhost:11434
+DATABASE_URL=
 ```
-MetroPulse/
-│
-├── backend/                          # FastAPI + Simulation Engine
-│   ├── app/
-│   │   ├── routes/                   # REST endpoints
-│   │   │   ├── health.py             #   GET /health
-│   │   │   ├── regions.py            #   GET /api/regions
-│   │   │   ├── simulations.py        #   POST /api/simulations
-│   │   │   └── case_studies.py       #   GET /api/case-studies
-│   │   ├── ws/
-│   │   │   └── simulation.py         #   WS /ws/simulate
-│   │   ├── config.py                 # Pydantic settings
-│   │   ├── db.py                     # Supabase client
-│   │   └── main.py                   # FastAPI app factory
-│   │
-│   ├── engine/                       # Core Simulation
-│   │   ├── grid.py                   #   H3 grid state management
-│   │   ├── primary_loop.py           #   Direct economic impacts
-│   │   ├── secondary_loop.py         #   Cascading spatial effects
-│   │   ├── tertiary_loop.py          #   RAG + LLM narrative gen
-│   │   ├── runner.py                 #   Simulation orchestrator
-│   │   ├── serializer.py             #   Frame serialization
-│   │   └── models.py                 #   Pydantic schemas
-│   │
-│   ├── tests/
-│   │   ├── unit/                     # Grid, loops, serializer tests
-│   │   ├── integration/              # REST + WebSocket tests
-│   │   └── load/                     # Locust performance tests
-│   │
-│   ├── Dockerfile                    # Fly.io container
-│   ├── fly.toml                      # Deployment config
-│   ├── pyproject.toml                # Python project metadata
-│   └── requirements.txt              # Pinned dependencies
-│
-├── frontend/                         # Next.js 14 App
-│   ├── src/
-│   │   ├── app/
-│   │   │   └── page.tsx              # Main page layout
-│   │   ├── components/
-│   │   │   ├── map/                  #   MapViewport, HexLayer, DrawingToolbar
-│   │   │   ├── controls/             #   ParameterPanel, FDISliders, Presets
-│   │   │   ├── dashboard/            #   MetricPanel, AIInsightPanel
-│   │   │   └── shared/               #   LoadingOverlay
-│   │   ├── hooks/
-│   │   │   └── useWebSocket.ts       #   WS connection hook
-│   │   ├── lib/
-│   │   │   ├── ws.ts                 #   WebSocket client
-│   │   │   ├── api.ts                #   REST client
-│   │   │   ├── mapConfig.ts          #   Map defaults + cities
-│   │   │   └── colorScale.ts         #   Hex color interpolation
-│   │   ├── store/
-│   │   │   └── simulationStore.ts    #   Zustand state
-│   │   └── types/
-│   │       └── simulation.ts         #   TypeScript interfaces
-│   │
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── scripts/
-│   ├── seed_case_studies.py          # Seed RAG case studies
-│   └── seed_cities.py                # Seed city boundaries
-│
-├── supabase/
-│   └── migrations/                   # Database schema
-│
-├── .github/
-│   └── workflows/                    # CI/CD pipelines
-│
-├── docs/
-│   └── INDIA_OVERHAUL_PLAN.md        # India expansion roadmap
-│
-├── AGENTS.md                         # AI agent context
-└── README.md                         # You are here
-```
+
+For local-only development, LLM and Supabase integrations can be disabled or mocked depending on your implementation.
 
 ---
 
@@ -402,47 +517,62 @@ MetroPulse/
 
 ### REST Endpoints
 
-```
-┌──────────┬────────────────────────────┬──────────────────────────────────┐
-│  Method  │  Endpoint                  │  Description                     │
-├──────────┼────────────────────────────┼──────────────────────────────────┤
-│  GET     │  /health                   │  Health check                    │
-│  GET     │  /api/regions              │  List available city regions     │
-│  GET     │  /api/regions/{id}         │  Get region baseline data        │
-│  POST    │  /api/simulations          │  Create simulation run           │
-│  GET     │  /api/simulations/{id}     │  Get simulation results          │
-│  GET     │  /api/case-studies         │  List RAG case studies           │
-│  WS      │  /ws/simulate              │  Real-time simulation stream     │
-└──────────┴────────────────────────────┴──────────────────────────────────┘
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Health check |
+| GET | `/api/regions` | List available city regions |
+| GET | `/api/regions/{id}` | Get region baseline data |
+| POST | `/api/simulations` | Create simulation run |
+| GET | `/api/simulations/{id}` | Get simulation results |
+| GET | `/api/case-studies` | List RAG case studies |
+| WS | `/ws/simulate` | Real-time simulation stream |
 
-### Response Envelope
+---
 
-All REST responses follow a consistent envelope:
+## Response Envelope
 
 ```json
 {
   "success": true,
-  "data": { ... },
+  "data": {},
   "error": null,
-  "meta": { "timestamp": "2026-05-27T..." }
+  "meta": {
+    "timestamp": "2026-05-27T00:00:00Z"
+  }
 }
 ```
 
-### WebSocket Protocol
+---
 
-Connect to `ws://localhost:8000/ws/simulate` and send:
+## WebSocket Protocol
+
+Connect to:
+
+```text
+ws://localhost:8000/ws/simulate
+```
+
+Send:
 
 ```json
 {
   "region_id": "nyc_manhattan",
-  "fdi_inputs": { "technology": 0.4, "manufacturing": 0.2, "services": 0.1 },
-  "public_works_zones": [{ "type": "Polygon", "coordinates": [...] }],
+  "fdi_inputs": {
+    "technology": 0.4,
+    "manufacturing": 0.2,
+    "services": 0.1
+  },
+  "public_works_zones": [
+    {
+      "type": "Polygon",
+      "coordinates": []
+    }
+  ],
   "horizon_months": 24
 }
 ```
 
-Receive streamed frames:
+Receive:
 
 ```json
 {
@@ -450,45 +580,27 @@ Receive streamed frames:
   "step": 1,
   "total_steps": 24,
   "cells": [
-    { "h3": "882a100e3fffff", "delta": 0.12, "economic_activity": 5400, ... }
+    {
+      "h3": "882a100e3fffff",
+      "delta": 0.12,
+      "economic_activity": 5400
+    }
   ],
-  "metrics": { "gdp_delta": 0.08, "unemployment": 0.045, ... }
+  "metrics": {
+    "gdp_delta": 0.08,
+    "unemployment": 0.045,
+    "real_estate_index": 1.12,
+    "transit_congestion": 0.67
+  }
 }
 ```
 
 ---
 
-## Simulation Engine
-
-### Three-Loop Cascade Model
-
-```
-           ┌─────────────────────────────────────────────────────┐
-           │                                                     │
-           │    TIME ──────────────────────────────────────▶     │
-           │                                                     │
-           │    t=0          t=1          t=2          t=T       │
-           │     │            │            │            │        │
-           │     ▼            ▼            ▼            ▼        │
-           │   ┌────┐      ┌────┐      ┌────┐      ┌────┐      │
-           │   │ P  │      │ P  │      │ P  │      │ P  │      │
-           │   │    │      │    │      │    │      │    │      │
-           │   │ S  │      │ S  │      │ S  │      │ S  │      │
-           │   │    │      │    │      │    │      │    │      │
-           │   │ T  │      │ T  │      │ T  │      │ T  │      │
-           │   └────┘      └────┘      └────┘      └────┘      │
-           │                                                     │
-           │   P = Primary  (FDI → Employment, Capital)          │
-           │   S = Secondary (Capital → Real Estate, Transit)    │
-           │   T = Tertiary  (Metrics → LLM Narrative)           │
-           │                                                     │
-           └─────────────────────────────────────────────────────┘
-```
-
-### Sectors Modeled
+## Sectors Modeled
 
 | Sector | Description | Weight |
-|--------|-------------|--------|
+|---|---|---:|
 | Technology | Software, IT services, startups | 0.30 |
 | Manufacturing | Industrial production, logistics | 0.25 |
 | Services | Finance, healthcare, education | 0.20 |
@@ -496,22 +608,22 @@ Receive streamed frames:
 | Energy | Power, renewables, utilities | 0.08 |
 | Agriculture | Food processing, rural linkages | 0.07 |
 
-### Metrics Tracked
+---
 
-```
-  ┌────────────────────────────────────────────────────────────────────┐
-  │                                                                    │
-  │   GDP Delta          Unemployment Rate     Real Estate Index       │
-  │   ╭───╮              ╭───╮                 ╭───╮                   │
-  │   │ ↑ │  +8.2%       │ ↓ │  4.5%          │ ↑ │  1.12             │
-  │   ╰───╯              ╰───╯                 ╰───╯                   │
-  │                                                                    │
-  │   Transit Congestion   Frame N / M       AI Insight                │
-  │   ╭───╮                ╭───╮             ╭─────────────────────╮   │
-  │   │ ↑ │  0.67          │24/│ 24          │ The 40% increase... │   │
-  │   ╰───╯                ╰───╯             ╰─────────────────────╯   │
-  │                                                                    │
-  └────────────────────────────────────────────────────────────────────┘
+## Metrics Tracked
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  GDP Delta              ▲ +8.2%                                               │
+│  Unemployment Rate      ▼  4.5%                                               │
+│  Real Estate Index      ▲  1.12                                               │
+│  Transit Congestion     ▲  0.67                                               │
+│  Employment Growth      ▲ +5.4%                                               │
+│  Capital Formation      ▲ +11.8%                                              │
+│  AI Confidence Score    ◆  0.86                                               │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -520,45 +632,47 @@ Receive streamed frames:
 
 ```bash
 # Backend unit tests
-cd backend && pytest tests/unit/ -v
+cd backend
+pytest tests/unit/ -v
 
 # Backend integration tests
-cd backend && pytest tests/integration/ -v
+pytest tests/integration/ -v
 
 # Backend load tests
-cd backend && locust -f tests/load/locustfile.py --host http://localhost:8000
+locust -f tests/load/locustfile.py --host http://localhost:8000
 
 # Frontend tests
-cd frontend && npm run test
+cd frontend
+npm run test
 
-# Lint + type check
-cd frontend && npm run lint && npm run type-check
+# Lint and type check
+npm run lint
+npm run type-check
 ```
 
-```
-  ┌─────────────────────────────────────────────────────┐
-  │  Test Coverage                                      │
-  │                                                     │
-  │  Unit Tests        ████████████████████░░  90%      │
-  │  Integration       ████████████████░░░░░░  75%      │
-  │  Load Tests        ██████████░░░░░░░░░░░░  50%      │
-  │  Frontend          ░░░░░░░░░░░░░░░░░░░░░░   0%      │
-  │                                                     │
-  └─────────────────────────────────────────────────────┘
+```text
+┌───────────────────────────────────────────────┐
+│ Test Coverage                                 │
+├───────────────────────────────────────────────┤
+│ Unit Tests        ████████████████████░  90%  │
+│ Integration       ███████████████░░░░░  75%  │
+│ Load Tests        ██████████░░░░░░░░░░  50%  │
+│ Frontend          ████████░░░░░░░░░░░░  40%  │
+└───────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Deployment
 
-### Backend (Fly.io)
+### Backend — Fly.io
 
 ```bash
 cd backend
 fly deploy
 ```
 
-### Frontend (Vercel)
+### Frontend — Vercel
 
 ```bash
 cd frontend
@@ -569,6 +683,7 @@ vercel --prod
 
 ```bash
 cd backend
+
 docker build -t metropulse-backend .
 docker run -p 8000:8000 metropulse-backend
 ```
@@ -577,74 +692,147 @@ docker run -p 8000:8000 metropulse-backend
 
 ## Roadmap
 
-```
-  Phase 0: Scaffold          ████████████████████  COMPLETE
-  Phase 1: Engine             ████████████████████  COMPLETE
-  Phase 2: API Layer          ████████████████████  COMPLETE
-  Phase 3: Map Shell          ████████████████████  COMPLETE
-  Phase 4: WebSocket          ████████████████████  COMPLETE
-  Phase 5: Controls           ████████████████████  COMPLETE
-  Phase 6: RAG + AI           ████████████████████  COMPLETE
-  Phase 7: Loading States     ████████████████████  COMPLETE
-  Phase 8: Polish & UI        ████████████████████  COMPLETE
-  Phase 9: Testing            ████████████████████  COMPLETE
-  Phase 10: Deployment        ████████████████████  COMPLETE
-  ─────────────────────────────────────────────────────────────
-  India Overhaul (Planned):
-  Phase 0: Data Pipeline      ░░░░░░░░░░░░░░░░░░░░  PLANNED
-  Phase 1: Engine Rewrite     ░░░░░░░░░░░░░░░░░░░░  PLANNED
-  Phase 2: Database & API     ░░░░░░░░░░░░░░░░░░░░  PLANNED
-  Phase 3: Frontend Overhaul  ░░░░░░░░░░░░░░░░░░░░  PLANNED
-  Phase 4: Performance        ░░░░░░░░░░░░░░░░░░░░  PLANNED
-  Phase 5: Validation         ░░░░░░░░░░░░░░░░░░░░  PLANNED
+```text
+Phase 00  Scaffold                  ██████████████████████████  COMPLETE
+Phase 01  Simulation Engine          ██████████████████████████  COMPLETE
+Phase 02  Backend API Layer          ██████████████████████████  COMPLETE
+Phase 03  Frontend Map Shell         ██████████████████████████  COMPLETE
+Phase 04  WebSocket Stream           ██████████████████████████  COMPLETE
+Phase 05  Controls and Parameters    ██████████████████████████  COMPLETE
+Phase 06  RAG + AI Insights          ██████████████████████████  COMPLETE
+Phase 07  Loading States             ██████████████████████████  COMPLETE
+Phase 08  Polish and UI              ██████████████████████████  COMPLETE
+Phase 09  Testing                    ██████████████████████████  COMPLETE
+Phase 10  Deployment                 ██████████████████████████  COMPLETE
+
+────────────────────────────────────────────────────────────────────────────
+
+India Overhaul
+
+Phase 00  Data Pipeline              ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
+Phase 01  Engine Rewrite             ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
+Phase 02  Database and API           ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
+Phase 03  Frontend Overhaul          ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
+Phase 04  Performance                ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
+Phase 05  Validation                 ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
 ```
 
-### Upcoming India Expansion
+---
 
-- **12 Indian cities** (Bengaluru, Mumbai, Delhi NCR, Chennai, Hyderabad, Pune, Kolkata, Ahmedabad, Lucknow, Jaipur, Chandigarh, Bhubaneswar)
-- **7-sector model** (IT/ITES, Manufacturing, Real Estate, Trade, Transport, Informal, Public Admin)
-- **Monsoon + flood climate modeling**
-- **Policy interventions** (SEZ, Smart City Mission, AMRUT, RERA, PM Awas Yojana)
-- **Informal economy modeling** (80%+ of Indian urban employment)
+## Upcoming India Expansion
+
+MetroPulse is planned to expand into a detailed India-first simulation layer.
+
+### Cities
+
+```text
+Bengaluru
+Mumbai
+Delhi NCR
+Chennai
+Hyderabad
+Pune
+Kolkata
+Ahmedabad
+Lucknow
+Jaipur
+Chandigarh
+Bhubaneswar
+```
+
+### India-Specific Model Additions
+
+- IT/ITES sector modeling
+- Manufacturing corridors
+- Informal economy modeling
+- Real estate pressure zones
+- Public transport stress modeling
+- Monsoon and flood risk overlays
+- Smart City Mission impact simulation
+- AMRUT policy layers
+- RERA-linked housing pressure
+- PM Awas Yojana affordability effects
+
+---
+
+## Future Vision
+
+```text
+[✓] H3 Spatial Simulation Engine
+[✓] Real-Time WebSocket Streaming
+[✓] RAG + LLM Narrative Layer
+[✓] Interactive Policy Sandbox
+
+[ ] Multi-Agent Economic Actors
+[ ] Climate Disaster Simulation
+[ ] Satellite Data Integration
+[ ] Traffic Graph Neural Networks
+[ ] Reinforcement Learning Policies
+[ ] National Scale Simulation
+[ ] Autonomous Urban Planning Agents
+```
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat(scope): add amazing feature'`)
-4. Push to the branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request
-
-### Commit Convention
-
+```text
+Fork → Branch → Build → Test → Pull Request
 ```
-feat(scope): description     # New feature
-fix(scope): description      # Bug fix
-refactor(scope): description # Code refactor
-test(scope): description     # Adding tests
-docs(scope): description     # Documentation
+
+### Steps
+
+```bash
+git checkout -b feat/amazing-feature
+git commit -m "feat(scope): add amazing feature"
+git push origin feat/amazing-feature
 ```
+
+Then open a Pull Request.
+
+---
+
+## Commit Convention
+
+| Prefix | Usage |
+|---|---|
+| `feat()` | New feature |
+| `fix()` | Bug fix |
+| `refactor()` | Code refactor |
+| `test()` | Tests |
+| `docs()` | Documentation |
+| `chore()` | Maintenance |
 
 ---
 
 ## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
+
+See the `LICENSE` file for details.
 
 ---
 
+<div align="center">
+
+```text
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                       METROPULSE                                             ║
+║                                                                              ║
+║              Where data meets geography,                                     ║
+║              where policy meets prediction,                                  ║
+║              and where cities become simulatable.                            ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 ```
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                                                                               ║
-║                      Built with passion for urban futures                     ║
-║                                                                               ║
-║     MetroPulse — Where data meets geography, and policy meets prediction.    ║
-║                                                                               ║
-║                         github.com/MrNK2107/MetroPulse                        ║
-║                                                                               ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+
+### Built with 💛 for urban futures.
+
+```text
+github.com/MrNK2107/MetroPulse
 ```
+
+</div>
