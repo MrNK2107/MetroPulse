@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     ws_max_connections: int = Field(default=10, alias="WS_MAX_CONNECTIONS")
-    sim_timeout_ms: int = Field(default=3000, alias="SIM_TIMEOUT_MS")
+    sim_timeout_ms: int = Field(default=60000, alias="SIM_TIMEOUT_MS")
     llm_timeout_ms: int = Field(default=10000, alias="LLM_TIMEOUT_MS")
 
     @property
