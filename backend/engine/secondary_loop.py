@@ -2,64 +2,78 @@ from __future__ import annotations
 
 import numpy as np
 
-from engine.grid import GridState
-from engine.models import SimulationParams
-
-GAMMA: float = 0.15
-LAMBDA_R: float = 3.5
-DELTA: float = 0.08
+from engine.models import GridState, SimulationParams
 
 
-def step(state: GridState, params: SimulationParams, delta_K_prev: np.ndarray | None = None) -> GridState:
-    if delta_K_prev is None:
-        delta_K_prev = np.zeros(state.n_cells, dtype=np.float64)
+def step(state: GridState, params: SimulationParams, month: int) -> GridState:
+    delta_k = state.last_delta_k if state.last_delta_k is not None else np.zeros(state.n_cells)
+    delta_e = state.last_delta_e if state.last_delta_e is not None else np.zeros(state.n_cells)
 
-    delta_R = np.zeros(state.n_cells, dtype=np.float64)
-    pairs = state.get_neighbor_distances()
+    gamma = float(state.constants.get("gamma_realestate", 0.12))
+    lambda_r = float(state.constants.get("lambda_realestate_cascade", 3.2))
+    delta_congestion = float(state.constants.get("delta_congestion", 0.10))
+    delta_r = np.zeros(state.n_cells, dtype=np.float64)
 
-    if len(pairs) > 0:
-        pairs_arr = np.array(pairs, dtype=np.float64)
-        i_idx = pairs_arr[:, 0].astype(int)
-        j_idx = pairs_arr[:, 1].astype(int)
-        dists = pairs_arr[:, 2]
+    if state.neighbor_i_idx is not None:
+        np.add.at(delta_r, state.neighbor_i_idx, gamma * delta_k[state.neighbor_j_idx] * state.neighbor_weights)
+    elif state.neighbor_pairs:
+        pairs = np.array(state.neighbor_pairs, dtype=np.float64)
+        i_idx = pairs[:, 0].astype(int)
+        j_idx = pairs[:, 1].astype(int)
+        weights = np.exp(-pairs[:, 2] / lambda_r)
+        np.add.at(delta_r, i_idx, gamma * delta_k[j_idx] * weights)
 
-        weights = np.exp(-dists / LAMBDA_R)
+    if "RERA Compliance" in params.policies_active:
+        delta_r *= 0.88
+        state.active_effects.append("RERA volatility dampening")
 
-        for idx in np.unique(i_idx):
-            mask = i_idx == idx
-            neighbor_j = j_idx[mask]
-            neighbor_w = weights[mask]
-            delta_K_neighbors = delta_K_prev[neighbor_j]
-            delta_R[idx] = GAMMA * np.sum(delta_K_neighbors * neighbor_w)
+    if "PM Awas Yojana" in params.policies_active:
+        state.H[state.slum_flag] += float(state.constants.get("slum_upgrade_rate", 0.012)) * 2.0
+        state.active_effects.append("PMAY housing upgrade")
 
-    state.R = state.R + delta_R
-    state.R = np.clip(state.R, 0.0, 2.0)
+    if "AMRUT" in params.policies_active:
+        state.H += 0.004
+        state.T -= 0.002
+        state.active_effects.append("AMRUT services improvement")
 
-    capacity = np.full(state.n_cells, 1.0, dtype=np.float64)
-    delta_T = DELTA * (delta_K_prev) / capacity
-    state.T = state.T + delta_T
-    state.T = np.clip(state.T, 0.0, 1.0)
+    if "Smart City Mission" in params.policies_active:
+        state.T -= 0.003
+        state.active_effects.append("Smart City operations")
 
+    if month in params.city_config.monsoon_season:
+        flood_impact = float(state.constants.get("flood_impact", 0.15)) / max(len(params.city_config.monsoon_season), 1)
+        state.K *= (1.0 - flood_impact * state.F[:, None] * 0.18)
+        state.T += float(state.constants.get("flood_congestion_bonus", 0.2)) * state.F * 0.025
+        state.active_effects.append("monsoon flood pressure")
+
+    state.R = np.clip(state.R + delta_r, 0.0, 2.0)
+    capacity = np.maximum(state.E_formal + state.E_informal, 1.0)
+    state.T = np.clip(state.T + delta_congestion * delta_e / capacity, 0.0, 1.0)
+    state.H = np.clip(state.H - np.maximum(delta_r, 0.0) * 0.04, 0.2, 1.8)
+    state.M = np.clip(state.M + (1.0 - state.H) * 0.002 - np.maximum(delta_e, 0.0) / capacity * 0.01, 0.0, 1.0)
     return state
 
 
 def compute_aggregate_metrics(state: GridState) -> dict[str, float]:
-    K0_sum = np.sum(state.baselines["K"])
-    Kt_sum = np.sum(state.K)
-    gdp_delta = (Kt_sum - K0_sum) / K0_sum if K0_sum > 0 else 0.0
+    k0 = np.sum(state.baselines["K"])
+    kt = np.sum(state.K)
+    gdp_delta = (kt - k0) / k0 if k0 > 0 else 0.0
 
-    E0_sum = np.sum(state.baselines["E"])
-    Et_sum = np.sum(state.E)
+    e0 = np.sum(state.baselines["E_formal"]) + np.sum(state.baselines["E_informal"])
+    et = np.sum(state.E_formal) + np.sum(state.E_informal)
     baseline_unemployment = float(state.baselines["unemployment_rate"])
-    unemployment = 1.0 - (Et_sum / E0_sum) * (1.0 - baseline_unemployment) if E0_sum > 0 else baseline_unemployment
-    unemployment = max(0.0, min(1.0, unemployment))
+    unemployment = baseline_unemployment - ((et - e0) / max(e0, 1.0)) * 0.65
 
-    real_estate_idx = float(np.mean(state.R))
-    transit_congestion = float(np.mean(state.T))
+    informal_share = np.sum(state.E_informal) / max(et, 1.0)
+    flood_disruption = float(np.mean(state.F * np.maximum(0.0, -gdp_delta)))
 
     return {
-        "gdpDelta": round(gdp_delta, 4),
-        "unemploymentRate": round(unemployment, 4),
-        "realEstateIndex": round(real_estate_idx, 4),
-        "transitCongestion": round(transit_congestion, 4),
+        "gdpDelta": round(float(gdp_delta), 4),
+        "unemploymentRate": round(float(np.clip(unemployment, 0.0, 1.0)), 4),
+        "realEstateIndex": round(float(np.mean(state.R)), 4),
+        "transitCongestion": round(float(np.mean(state.T)), 4),
+        "informalEmployment": round(float(informal_share), 4),
+        "housingAffordability": round(float(np.mean(state.H)), 4),
+        "floodDisruption": round(flood_disruption, 4),
+        "migrationBalance": round(float(np.mean(state.M) - np.mean(state.baselines["H"]) * 0.0), 4),
     }

@@ -1,74 +1,70 @@
 from __future__ import annotations
 
-import h3
 import numpy as np
 
-from engine.grid import GridState
-from engine.models import SimulationParams
-
-ALPHA: float = 0.6
-BETA: float = 0.3
-LAMBDA: float = 2.0
-
-SECTOR_WEIGHTS: dict[str, float] = {
-    "tech": 0.4,
-    "manufacturing": 0.35,
-    "realEstate": 0.25,
-}
+from engine.grid import public_zone_mask
+from engine.models import GridState, SECTOR_INDEX, SECTOR_NAMES, SimulationParams
 
 
-def step(state: GridState, params: SimulationParams) -> GridState:
-    delta_K = np.zeros(state.n_cells, dtype=np.float64)
+def step(state: GridState, params: SimulationParams, month: int) -> GridState:
+    rates = np.array(
+        [float(params.sector_deltas.get(sector, 0.0)) / 100.0 for sector in SECTOR_NAMES],
+        dtype=np.float64,
+    )
+    monthly_rates = rates / max(params.horizon_months, 1)
+    alpha = float(state.constants.get("alpha_default", 0.55))
+    beta_informal = float(state.constants.get("beta_informal", 0.35))
 
-    sector_map = {
-        "tech": params.fdi.tech,
-        "manufacturing": params.fdi.manufacturing,
-        "realEstate": params.fdi.realEstate,
-    }
+    delta_k = state.K * monthly_rates[None, :] * state.sector_weights[None, :]
+    effects: list[str] = []
 
-    for sector, rate in sector_map.items():
-        if rate == 0.0:
-            continue
-        fdi_rate = rate / 100.0
-        weight = SECTOR_WEIGHTS[sector]
-        delta_K += fdi_rate * weight * state.K
+    if np.any(rates != 0):
+        effects.append("sector shock")
 
-    if params.publicWorksZone is not None:
-        zone_indices = state.get_zone_cells(params.publicWorksZone)
-        zone_idx_set = set(
-            i for i, idx in enumerate(state.h3_indices) if idx in zone_indices
-        )
+    if "Digital India" in params.policies_active:
+        delta_k[:, SECTOR_INDEX["it_ites"]] += state.K[:, SECTOR_INDEX["it_ites"]] * 0.015
+        effects.append("Digital India IT boost")
 
-        if zone_idx_set:
-            zone_centers = [
-                (i, h3.cell_to_latlng(state.h3_indices[i]))
-                for i in zone_idx_set
-            ]
-            if zone_centers:
-                centroid_lat = np.mean([c[1][0] for c in zone_centers])
-                centroid_lon = np.mean([c[1][1] for c in zone_centers])
+    if "Make in India" in params.policies_active:
+        delta_k[:, SECTOR_INDEX["manufacturing"]] += state.K[:, SECTOR_INDEX["manufacturing"]] * 0.012
+        effects.append("Make in India manufacturing boost")
 
-                for i in range(state.n_cells):
-                    lat, lon = h3.cell_to_latlng(state.h3_indices[i])
-                    dlat = np.radians(lat - centroid_lat)
-                    dlon = np.radians(lon - centroid_lon)
-                    a = (
-                        np.sin(dlat / 2) ** 2
-                        + np.cos(np.radians(centroid_lat))
-                        * np.cos(np.radians(lat))
-                        * np.sin(dlon / 2) ** 2
-                    )
-                    d = 6371.0 * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-                    boost = BETA * np.exp(-d / LAMBDA)
-                    delta_K[i] += boost
+    if "SEZ Notification" in params.policies_active and state.zone_flags:
+        combined = np.zeros(state.n_cells, dtype=bool)
+        for mask in state.zone_flags.values():
+            combined |= mask
+        if np.any(combined):
+            delta_k[combined, :] += state.K[combined, :] * 0.01
+            effects.append("SEZ zone multiplier")
 
-    state.K = state.K + delta_K
+    public_mask = public_zone_mask(state, params.public_works_zone)
+    if np.any(public_mask):
+        # Cache the distance computation keyed by the public mask hash
+        mask_key = hash(public_mask.tobytes())
+        if mask_key not in state.public_dist_cache:
+            state.public_dist_cache[mask_key] = np.min(
+                np.linalg.norm(
+                    state.cell_centers[:, None, :] - state.cell_centers[public_mask][None, :, :],
+                    axis=2,
+                ),
+                axis=1,
+            )
+        dist = state.public_dist_cache[mask_key]
+        boost = 0.018 * np.exp(-dist / 0.04)
+        delta_k[:, SECTOR_INDEX["real_estate"]] += state.K[:, SECTOR_INDEX["real_estate"]] * boost
+        delta_k[:, SECTOR_INDEX["public_admin"]] += state.K[:, SECTOR_INDEX["public_admin"]] * boost
+        effects.append("public works distance boost")
 
-    employment_elasticity = np.full(state.n_cells, 1.0, dtype=np.float64)
-    delta_E = ALPHA * delta_K * employment_elasticity
-    state.E = state.E + delta_E
+    state.K = np.maximum(state.K + delta_k, 0.0)
+    total_delta_k = np.sum(delta_k, axis=1)
+    sector_employment_pressure = np.dot(delta_k, np.array([0.7, 0.65, 0.5, 0.8, 0.6, 0.45, 0.4]))
+    delta_formal = alpha * sector_employment_pressure
+    lag = 0.6 if month > 1 else 0.25
+    delta_informal = beta_informal * lag * delta_formal + state.M * 0.002 * np.maximum(state.E_formal, 1.0)
 
-    state.E = np.maximum(state.E, 0.0)
-    state.K = np.maximum(state.K, 0.0)
-
+    state.E_formal = np.maximum(state.E_formal + delta_formal, 0.0)
+    state.E_informal = np.maximum(state.E_informal + delta_informal, 0.0)
+    state.last_delta_k = total_delta_k
+    state.last_delta_e = delta_formal + delta_informal
+    state.active_effects = effects or ["baseline drift"]
     return state
