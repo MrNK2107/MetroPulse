@@ -202,3 +202,11 @@ class SimulationFrame(BaseModel):
     metrics: AggregateMetrics
     activeLoop: str
     proof: dict[str, Any] = Field(default_factory=dict)
+
+
+# ── NL Conversation WebSocket messages ─────────────────────────────────────
+
+
+class InputResponseMessage(BaseModel):
+    type: Literal["INPUT_RESPONSE"] = "INPUT_RESPONSE"
+    text: str
