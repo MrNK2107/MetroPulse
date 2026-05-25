@@ -8,29 +8,12 @@ from engine.nl_engine.domain_maps import (
     CITY_ALIASES,
     SECTOR_SYNONYMS,
     CAUSE_EFFECT_CHAINS,
+    POLICY_KEYWORDS,
+    NEGATIVE_WORDS,
+    POSITIVE_WORDS,
     detect_event,
     detect_sentiment,
 )
-
-# Policy keywords
-POLICY_KEYWORDS: dict[str, list[str]] = {
-    "SEZ Notification": ["sez", "special economic zone"],
-    "Smart City Mission": ["smart city"],
-    "AMRUT": ["amrut", "water", "sanitation"],
-    "RERA Compliance": ["rera"],
-    "PM Awas Yojana": ["pmay", "awas", "affordable housing", "housing scheme"],
-    "Make in India": ["make in india"],
-    "Digital India": ["digital india"],
-}
-
-NEGATIVE_WORDS = [
-    "drop", "drops", "decline", "falls", "fall", "cut", "loss", "crisis",
-    "shock", "reduce", "reduced", "devastate", "crash", "plummet", "slump",
-]
-POSITIVE_WORDS = [
-    "increase", "increases", "rise", "rises", "boom", "growth", "boost",
-    "push", "investment", "improve", "surge", "soar", "gain",
-]
 
 
 class RegexParser:

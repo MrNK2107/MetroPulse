@@ -11,20 +11,12 @@ from engine.nl_engine.domain_maps import (
     CAUSE_EFFECT_CHAINS,
     SENTIMENT_WORDS,
     MAGNITUDE_MAP,
+    POLICY_KEYWORDS,
+    NEGATIVE_WORDS,
+    POSITIVE_WORDS,
     detect_event,
     detect_sentiment,
 )
-
-# Policy keywords
-POLICY_KEYWORDS: dict[str, list[str]] = {
-    "SEZ Notification": ["sez", "special economic zone"],
-    "Smart City Mission": ["smart city"],
-    "AMRUT": ["amrut"],
-    "RERA Compliance": ["rera"],
-    "PM Awas Yojana": ["pmay", "awas", "affordable housing"],
-    "Make in India": ["make in india"],
-    "Digital India": ["digital india"],
-}
 
 # Magnitude adjectives mapped to delta values
 MAGNITUDE_ADJECTIVES: dict[str, float] = {
@@ -34,17 +26,6 @@ MAGNITUDE_ADJECTIVES: dict[str, float] = {
     "slight": 8, "minor": 8, "gradual": 8, "mild": 8,
     "moderate": 15, "steady": 12,
 }
-
-# Negative/positive direction words
-NEGATIVE_WORDS = [
-    "drop", "drops", "decline", "falls", "fall", "cut", "loss", "crisis",
-    "shock", "reduce", "reduced", "devastate", "crash", "plummet", "slump",
-    "destroyed", "destroy", "ruin", "damage",
-]
-POSITIVE_WORDS = [
-    "increase", "increases", "rise", "rises", "boom", "growth", "boost",
-    "push", "investment", "improve", "surge", "soar", "gain", "grows",
-]
 
 
 def _fuzzy_match_city(text: str, threshold: float = 0.75) -> str | None:
@@ -85,7 +66,7 @@ class SpacyParser:
         city = self._extract_city(doc, text)
 
         # Sector detection via noun phrases + synonyms
-        sectors_found = self._extract_sectors(doc, text)
+        sectors_found = self._extract_sectors(doc)
 
         # Delta extraction via NUM entities + context
         explicit_delta = self._extract_delta(doc)
@@ -174,9 +155,8 @@ class SpacyParser:
 
         return None
 
-    def _extract_sectors(self, doc: Any, text: str) -> list[str]:
+    def _extract_sectors(self, doc: Any) -> list[str]:
         sectors: set[str] = set()
-        lowered = text.lower()
 
         # Check noun phrases against synonyms
         for chunk in doc.noun_chunks:

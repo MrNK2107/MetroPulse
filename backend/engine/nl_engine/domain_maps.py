@@ -253,6 +253,31 @@ FOLLOW_UP_TEMPLATES: dict[str, str] = {
     "missing_horizon": "How far out — 6 months, a year, or 2 years?",
 }
 
+# ── Policy keywords ────────────────────────────────────────────────────────
+
+POLICY_KEYWORDS: dict[str, list[str]] = {
+    "SEZ Notification": ["sez", "special economic zone"],
+    "Smart City Mission": ["smart city"],
+    "AMRUT": ["amrut", "water", "sanitation"],
+    "RERA Compliance": ["rera"],
+    "PM Awas Yojana": ["pmay", "awas", "affordable housing", "housing scheme"],
+    "Make in India": ["make in india"],
+    "Digital India": ["digital india"],
+}
+
+# ── Direction words (positive / negative) ──────────────────────────────────
+
+NEGATIVE_WORDS: list[str] = [
+    "drop", "drops", "decline", "falls", "fall", "cut", "loss", "crisis",
+    "shock", "reduce", "reduced", "devastate", "crash", "plummet", "slump",
+    "destroyed", "destroy", "ruin", "damage",
+]
+
+POSITIVE_WORDS: list[str] = [
+    "increase", "increases", "rise", "rises", "boom", "growth", "boost",
+    "push", "investment", "improve", "surge", "soar", "gain", "grows",
+]
+
 
 # ── Helper functions ───────────────────────────────────────────────────────
 
