@@ -20,7 +20,7 @@ class IntentRouter:
         self._spacy = None
 
     @property
-    def spacy(self):
+    def spacy(self) -> "SpacyParser":
         if self._spacy is None:
             from engine.nl_engine.spacy_parser import SpacyParser
             self._spacy = SpacyParser()
@@ -37,6 +37,8 @@ class IntentRouter:
             return regex_result, regex_confidence
 
         # Path 2: spaCy (fast local NLP)
+        spacy_confidence = 0.0
+        spacy_result = regex_result  # fallback if spaCy unavailable
         try:
             spacy_result = self.spacy.parse(text)
             spacy_confidence = self._confidence_score(spacy_result, self.spacy)
