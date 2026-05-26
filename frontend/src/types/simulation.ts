@@ -15,8 +15,10 @@ export type PipelineStage =
   | "simulating"
   | "retrieving"
   | "synthesizing"
+  | "group_scoring"
   | "done"
-  | "error";
+  | "error"
+  | "needs_input";
 
 export interface ParsedScenario {
   city: string;
@@ -159,6 +161,33 @@ export interface WSDoneMessage {
   simulationId: string;
 }
 
+export interface GroupImpact {
+  name: string;
+  purchasing_power: number;
+  income_stability: number;
+  expense_pressure: number;
+  housing_impact: number;
+  employment_impact: number;
+  severity: "low" | "moderate" | "high";
+}
+
+export interface WSNeedsInputMessage {
+  type: "NEEDS_INPUT";
+  question: string;
+  inferred_params: {
+    city: string;
+    sectors: { name: string; delta: number }[];
+  };
+  options: string[];
+  mode: "quick" | "deep";
+}
+
+export interface WSGroupScoresMessage {
+  type: "GROUP_SCORES";
+  groups: GroupImpact[];
+  citizen_satisfaction: number;
+}
+
 export type WSMessage =
   | WSStageMessage
   | WSParsedMessage
@@ -167,7 +196,9 @@ export type WSMessage =
   | WSCaseStudiesMessage
   | WSEvidenceMessage
   | WSErrorMessage
-  | WSDoneMessage;
+  | WSDoneMessage
+  | WSNeedsInputMessage
+  | WSGroupScoresMessage;
 
 export type MetricKey =
   | "gdpDelta"
