@@ -10,14 +10,19 @@ from pydantic import ValidationError
 
 from app.config import settings
 from app.db import get_db
-from engine.models import StartScenarioMessage
+from engine.models import StartScenarioMessage, InputResponseMessage
 from engine.prediction_generator import generate_prediction
 from engine.runner import run_simulation, SimulationTimeoutError
-from engine.scenario_parser import ScenarioParseError, build_params, parse_scenario
+from engine.scenario_parser import ScenarioParseError, build_params
 from engine.tertiary_loop import synthesize_evidence
+from engine.nl_engine.router import IntentRouter
+from engine.nl_engine.conversation import ConversationManager, ConversationMode
+from engine.nl_engine.group_scorer import score_groups, compute_satisfaction
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+_intent_router = IntentRouter()
 
 
 @router.websocket("/ws/simulate")
@@ -26,10 +31,50 @@ async def simulation_websocket(websocket: WebSocket):
     simulation_id = str(uuid4())
     db = await get_db()
 
+    conv = ConversationManager()
+
     try:
         data = await _receive_start(websocket)
-        await _send_stage(websocket, "parsing", "Reading the scenario and resolving city, sectors, policy, and horizon.")
-        parsed = await parse_scenario(data.scenario)
+        scenario_text = data.scenario
+
+        # ── Parsing stage with conversation ──────────────────────────
+        await _send_stage(websocket, "parsing", "Reading your scenario...")
+        parsed, confidence = await _intent_router.route(scenario_text)
+        conv.mode = conv.detect_mode(scenario_text)
+
+        # If low confidence or incomplete params, ask follow-up
+        followup = conv.get_followup(parsed)
+        if followup and conv.mode == ConversationMode.QUICK:
+            options = conv.get_followup_options(parsed)
+            await websocket.send_json({
+                "type": "NEEDS_INPUT",
+                "question": followup,
+                "inferred_params": {
+                    "city": parsed.city,
+                    "sectors": [
+                        {"name": s, "delta": d}
+                        for s, d in parsed.sector_deltas.items()
+                        if d != 0.0
+                    ],
+                },
+                "options": options,
+                "mode": conv.mode.value,
+            })
+
+            # Wait for user response
+            response_data = await _receive_input_response(websocket)
+            combined_text = f"{scenario_text} {response_data.text}"
+            parsed, confidence = await _intent_router.route(combined_text)
+
+        # Ensure we have a city
+        if not parsed.city:
+            await websocket.send_json({
+                "type": "ERROR",
+                "stage": "parsing",
+                "code": "CLARIFICATION_NEEDED",
+                "message": "I could not identify the city. Try naming one Indian city.",
+            })
+            return
 
         params = build_params(parsed)
         boundary = await db.get_region_boundary(params.city)
@@ -41,21 +86,22 @@ async def simulation_websocket(websocket: WebSocket):
                 "message": f"No boundary data found for {params.city}.",
             })
             return
-
         await websocket.send_json({"type": "PARSED", "params": parsed.model_dump(), "boundary": boundary})
 
-        await _send_stage(websocket, "predicting", "Generating a before-simulation expectation to compare against the math.")
+        # ── Prediction stage ─────────────────────────────────────────
+        await _send_stage(websocket, "predicting", "Generating a before-simulation expectation.")
         prediction = await generate_prediction(params)
         await websocket.send_json({"type": "PREDICTION", "prediction": prediction.model_dump()})
 
+        # ── Simulation stage ─────────────────────────────────────────
         await _send_stage(websocket, "simulating", "Animating monthly H3 cell changes across the city.")
         deadline = asyncio.get_running_loop().time() + settings.sim_timeout_ms / 1000.0
-        final_frame = None
+        frames = []
         async for frame in run_simulation(params, boundary, db=db, deadline=deadline):
-            final_frame = frame
+            frames.append(frame)
             await websocket.send_json({"type": "FRAME", "payload": frame})
 
-        if final_frame is None:
+        if not frames:
             await websocket.send_json({
                 "type": "ERROR",
                 "stage": "simulating",
@@ -64,21 +110,33 @@ async def simulation_websocket(websocket: WebSocket):
             })
             return
 
-        await _send_stage(websocket, "retrieving", "Finding Indian urban precedents that match the scenario.")
+        final_frame = frames[-1]
+
+        # ── Case studies stage ───────────────────────────────────────
+        await _send_stage(websocket, "retrieving", "Finding Indian urban precedents.")
         case_studies = await db.search_case_studies(
-            parsed.keywords,
-            city=parsed.city,
-            top_k=5,
+            parsed.keywords, city=parsed.city, top_k=5,
         )
         await websocket.send_json({
             "type": "CASE_STUDIES",
             "studies": [case.model_dump() for case in case_studies],
         })
 
-        await _send_stage(websocket, "synthesizing", "Comparing prediction vs simulation and preparing proof.")
+        # ── Group scoring stage ──────────────────────────────────────
+        await _send_stage(websocket, "synthesizing", "Computing social group impacts.")
+        groups = score_groups(parsed.sector_deltas, final_frame["metrics"])
+        satisfaction = compute_satisfaction(groups)
+        await websocket.send_json({
+            "type": "GROUP_SCORES",
+            "groups": [g.to_dict() for g in groups],
+            "citizen_satisfaction": satisfaction,
+        })
+
+        # ── Evidence stage ───────────────────────────────────────────
         evidence = synthesize_evidence(params, prediction, final_frame, case_studies)
         await websocket.send_json({"type": "EVIDENCE", "evidence": evidence})
 
+        # ── Done ─────────────────────────────────────────────────────
         saved_id = await db.save_simulation(
             region_id=None,
             params=params.to_dict(),
@@ -134,6 +192,15 @@ async def _receive_start(websocket: WebSocket) -> StartScenarioMessage:
         return StartScenarioMessage(**payload)
     except (json.JSONDecodeError, ValidationError) as e:
         raise ScenarioParseError(f"First message must be valid JSON shaped as {{ type: 'START', scenario: '...' }}. {e}") from e
+
+
+async def _receive_input_response(websocket: WebSocket) -> InputResponseMessage:
+    message = await asyncio.wait_for(websocket.receive_text(), timeout=60.0)
+    try:
+        payload = json.loads(message)
+        return InputResponseMessage(**payload)
+    except (json.JSONDecodeError, ValidationError) as e:
+        raise ScenarioParseError(f"Invalid input response: {e}") from e
 
 
 async def _send_stage(websocket: WebSocket, stage: str, message: str) -> None:
