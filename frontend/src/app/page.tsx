@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { ScenarioPanel } from "@/components/controls/ScenarioPanel";
+import { ConversationPanel } from "@/components/controls/ConversationPanel";
 import { FrameScrubber } from "@/components/controls/FrameScrubber";
 import { EvidencePanel } from "@/components/dashboard/EvidencePanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
@@ -42,19 +42,41 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
+        className="md:hidden absolute top-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all"
+        title="Toggle scenario panel"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile Backdrop */}
+      {(isLeftSidebarOpen || isRightSidebarOpen) && (
+        <div
+          className="md:hidden fixed inset-0 z-15 bg-black/50 backdrop-blur-sm"
+          onClick={() => {
+            setLeftSidebarOpen(false);
+            setRightSidebarOpen(false);
+          }}
+        />
+      )}
+
       {/* 3. Collapsible Left Panel Overlay: Scenario Simulator */}
       <div
         className={`absolute left-0 top-0 bottom-0 z-20 transition-all duration-300 transform ${
           isLeftSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } w-full md:w-auto`}
       >
-        <ScenarioPanel />
+        <ConversationPanel />
       </div>
 
-      {/* Toggle Left Sidebar Button */}
+      {/* Toggle Left Sidebar Button (desktop) */}
       <button
         onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
-        className={`absolute top-1/2 -translate-y-1/2 z-30 flex h-14 w-5 items-center justify-center rounded-r-xl border border-l-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
+        className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-r-xl border border-l-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
           isLeftSidebarOpen ? "left-[360px]" : "left-0"
         }`}
         title={isLeftSidebarOpen ? "Hide scenario panel" : "Show scenario panel"}
@@ -68,15 +90,15 @@ export default function Home() {
       <div
         className={`absolute right-0 top-0 bottom-0 z-20 transition-all duration-300 transform ${
           isRightSidebarOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        } w-full md:w-auto`}
       >
         <EvidencePanel />
       </div>
 
-      {/* Toggle Right Sidebar Button */}
+      {/* Toggle Right Sidebar Button (desktop) */}
       <button
         onClick={() => setRightSidebarOpen(!isRightSidebarOpen)}
-        className={`absolute top-1/2 -translate-y-1/2 z-30 flex h-14 w-5 items-center justify-center rounded-l-xl border border-r-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
+        className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-l-xl border border-r-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
           isRightSidebarOpen ? "right-[420px]" : "right-0"
         }`}
         title={isRightSidebarOpen ? "Hide evidence panel" : "Show evidence panel"}
