@@ -5,14 +5,23 @@ import type {
   AggregateMetrics,
   CaseStudy,
   EvidenceReport,
+  GroupImpact,
   ParsedScenario,
   PipelineStage,
   Prediction,
   SimulationFrame,
+  WSGroupScoresMessage,
+  WSNeedsInputMessage,
 } from "@/types/simulation";
 import type { MapMetricKey } from "@/lib/colorScale";
 
 export type DrawMode = "none" | "point" | "polygon";
+
+export interface ConversationMessage {
+  role: "user" | "system";
+  text: string;
+  timestamp: number;
+}
 
 export interface StageEntry {
   stage: PipelineStage;
@@ -48,6 +57,13 @@ interface SimulationStore {
   error: string | null;
   errorStage: PipelineStage | null;
   simulationId: string | null;
+
+  // Conversation state
+  conversationMessages: ConversationMessage[];
+  conversationMode: "quick" | "deep";
+  pendingQuestion: WSNeedsInputMessage | null;
+  groupScores: GroupImpact[];
+  citizenSatisfaction: number | null;
 
   drawMode: DrawMode;
   pendingVertices: [number, number][];
@@ -85,6 +101,8 @@ interface SimulationStore {
   setPublicWorksZone: (zone: GeoJSON.GeoJSON | null) => void;
   setRegionBoundary: (boundary: GeoJSON.GeoJSON | null) => void;
   setActiveFrameIndex: (index: number) => void;
+  setHorizonMonths: (months: 6 | 12 | 24 | 60) => void;
+  adjustSectorDelta: (sector: string, value: number) => void;
 
   setActiveVisualizationMode: (mode: "heatmap" | "flat" | "3d") => void;
   setActiveMetric: (metric: MapMetricKey) => void;
@@ -93,6 +111,11 @@ interface SimulationStore {
   setBottomDrawerOpen: (open: boolean) => void;
   setMapViewState: (viewState: any) => void;
   flyToCity: (cityId: string) => void;
+
+  addConversationMessage: (role: "user" | "system", text: string) => void;
+  setPendingQuestion: (question: WSNeedsInputMessage | null) => void;
+  setConversationMode: (mode: "quick" | "deep") => void;
+  setGroupScores: (msg: WSGroupScoresMessage) => void;
 
   resetRun: () => void;
   resetAll: () => void;
@@ -122,6 +145,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   error: null,
   errorStage: null,
   simulationId: null,
+
+  conversationMessages: [],
+  conversationMode: "quick",
+  pendingQuestion: null,
+  groupScores: [],
+  citizenSatisfaction: null,
 
   drawMode: "none",
   pendingVertices: [],
@@ -229,6 +258,23 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
   setActiveFrameIndex: (index) => set({ activeFrameIndex: index }),
 
+  setHorizonMonths: (months) =>
+    set((state) => ({
+      parsedScenario: state.parsedScenario
+        ? { ...state.parsedScenario, horizon_months: months }
+        : null,
+    })),
+
+  adjustSectorDelta: (sector, value) =>
+    set((state) => ({
+      parsedScenario: state.parsedScenario
+        ? {
+            ...state.parsedScenario,
+            sector_deltas: { ...state.parsedScenario.sector_deltas, [sector]: value },
+          }
+        : null,
+    })),
+
   setActiveVisualizationMode: (mode) => {
     set((state) => ({
       activeVisualizationMode: mode,
@@ -259,6 +305,24 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     }
   },
 
+  addConversationMessage: (role, text) =>
+    set((state) => ({
+      conversationMessages: [
+        ...state.conversationMessages,
+        { role, text, timestamp: Date.now() },
+      ],
+    })),
+
+  setPendingQuestion: (question) => set({ pendingQuestion: question }),
+
+  setConversationMode: (mode) => set({ conversationMode: mode }),
+
+  setGroupScores: (msg) =>
+    set({
+      groupScores: msg.groups,
+      citizenSatisfaction: msg.citizen_satisfaction,
+    }),
+
   resetRun: () =>
     set({
       parsedScenario: null,
@@ -273,6 +337,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       errorStage: null,
       simulationId: null,
       activeFrameIndex: -1,
+      conversationMessages: [],
+      pendingQuestion: null,
+      groupScores: [],
+      citizenSatisfaction: null,
     }),
 
   resetAll: () =>
