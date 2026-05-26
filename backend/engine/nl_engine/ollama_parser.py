@@ -85,7 +85,6 @@ class OllamaParser:
                 sector_deltas[name] = max(-50.0, min(50.0, delta))
 
         policies = data.get("policies", [])
-
         horizon = int(data.get("horizon_months", 24))
         horizon = min([6, 12, 24, 60], key=lambda x: abs(x - horizon))
 
