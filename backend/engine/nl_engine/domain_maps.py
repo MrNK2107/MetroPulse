@@ -279,6 +279,11 @@ POSITIVE_WORDS: list[str] = [
 ]
 
 
+# ── Default delta magnitude ────────────────────────────────────────────────
+
+DEFAULT_DELTA: float = 15.0
+
+
 # ── Helper functions ───────────────────────────────────────────────────────
 
 def resolve_sector(word: str) -> str | None:

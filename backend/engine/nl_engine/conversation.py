@@ -5,7 +5,7 @@ import re
 from enum import Enum
 
 from engine.models import ParsedScenario
-from engine.nl_engine.domain_maps import FOLLOW_UP_TEMPLATES, CITY_ALIASES
+from engine.nl_engine.domain_maps import FOLLOW_UP_TEMPLATES, CITY_ALIASES, DEFAULT_DELTA
 
 
 class ConversationMode(str, Enum):
@@ -40,13 +40,6 @@ class ConversationManager:
         if has_numbers or has_mode_keywords:
             return ConversationMode.DEEP
 
-        has_vague_language = any(
-            w in text.lower()
-            for w in ["what if", "imagine", "suppose", "happens", "affect", "impact"]
-        )
-        if has_vague_language:
-            return ConversationMode.QUICK
-
         return ConversationMode.QUICK
 
     def get_followup(self, parsed: ParsedScenario) -> str | None:
@@ -60,7 +53,7 @@ class ConversationManager:
 
         if parsed.confidence == "medium":
             has_explicit_delta = any(
-                abs(d) > 0 and abs(d) != 15.0
+                abs(d) > 0 and abs(d) != DEFAULT_DELTA
                 for d in parsed.sector_deltas.values()
             )
             if not has_explicit_delta:
@@ -80,7 +73,7 @@ class ConversationManager:
 
         return ["Mild", "Moderate", "Severe"]
 
-    def advance(self, user_response: str | None = None) -> ConversationState:
+    def advance(self) -> ConversationState:
         """Advance conversation state."""
         self.turn_count += 1
 

@@ -14,6 +14,7 @@ from engine.nl_engine.domain_maps import (
     POLICY_KEYWORDS,
     NEGATIVE_WORDS,
     POSITIVE_WORDS,
+    DEFAULT_DELTA,
     detect_event,
     detect_sentiment,
 )
@@ -218,7 +219,7 @@ class SpacyParser:
             return magnitude
         if direction == "negative":
             return -magnitude
-        return 15.0  # default moderate
+        return DEFAULT_DELTA
 
     def _compute_confidence_score(
         self, city: str | None, sectors: list[str], delta: float | None

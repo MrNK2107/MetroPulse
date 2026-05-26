@@ -11,6 +11,7 @@ from engine.nl_engine.domain_maps import (
     POLICY_KEYWORDS,
     NEGATIVE_WORDS,
     POSITIVE_WORDS,
+    DEFAULT_DELTA,
     detect_event,
     detect_sentiment,
 )
@@ -132,7 +133,7 @@ class RegexParser:
         if explicit_delta is not None:
             magnitude = abs(explicit_delta)
         else:
-            magnitude = 15.0  # default when no number found
+            magnitude = DEFAULT_DELTA
 
         if magnitude > 50:
             magnitude = 50.0
