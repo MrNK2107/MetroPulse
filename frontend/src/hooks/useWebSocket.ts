@@ -25,6 +25,12 @@ export function useWebSocket() {
         onEvidence: (msg) => useSimulationStore.getState().setEvidence(msg.evidence),
         onError: (msg) => useSimulationStore.getState().setError(msg.message, msg.stage as any),
         onDone: (msg) => useSimulationStore.getState().setSimulationId(msg.simulationId),
+        onNeedsInput: (msg) => {
+          const store = useSimulationStore.getState();
+          store.setPendingQuestion(msg);
+          store.addConversationMessage("system", msg.question);
+        },
+        onGroupScores: (msg) => useSimulationStore.getState().setGroupScores(msg),
       });
 
       clientRef.current = client;
@@ -38,5 +44,12 @@ export function useWebSocket() {
     useSimulationStore.getState().setError("Simulation stopped by user.");
   }, []);
 
-  return { startSimulation, stopSimulation };
+  const sendResponse = useCallback((text: string) => {
+    const store = useSimulationStore.getState();
+    store.addConversationMessage("user", text);
+    store.setPendingQuestion(null);
+    clientRef.current?.sendInputResponse(text);
+  }, []);
+
+  return { startSimulation, stopSimulation, sendResponse };
 }

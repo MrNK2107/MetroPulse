@@ -4,6 +4,8 @@ import type {
   WSErrorMessage,
   WSEvidenceMessage,
   WSFrameMessage,
+  WSGroupScoresMessage,
+  WSNeedsInputMessage,
   WSParsedMessage,
   WSPredictionMessage,
   WSStageMessage,
@@ -19,6 +21,8 @@ export interface WSCallbacks {
   onEvidence?: (evidence: WSEvidenceMessage) => void;
   onError?: (error: WSErrorMessage) => void;
   onDone?: (done: WSDoneMessage) => void;
+  onNeedsInput?: (msg: WSNeedsInputMessage) => void;
+  onGroupScores?: (msg: WSGroupScoresMessage) => void;
 }
 
 export class WebSocketClient {
@@ -80,6 +84,12 @@ export class WebSocketClient {
     this.ws = null;
   }
 
+  sendInputResponse(text: string): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "INPUT_RESPONSE", text }));
+    }
+  }
+
   private handleMessage(data: WSMessage): void {
     switch (data.type) {
       case "STAGE":
@@ -107,6 +117,12 @@ export class WebSocketClient {
       case "DONE":
         this.shouldReconnect = false;
         this.callbacks.onDone?.(data);
+        break;
+      case "NEEDS_INPUT":
+        this.callbacks.onNeedsInput?.(data);
+        break;
+      case "GROUP_SCORES":
+        this.callbacks.onGroupScores?.(data);
         break;
     }
   }
