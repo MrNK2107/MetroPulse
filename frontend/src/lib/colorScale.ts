@@ -126,6 +126,7 @@ export function formatDelta(delta: number): string {
  * Preserves sign for delta: -0.15→0, 0→50, +0.15→100.
  */
 export function heatmapWeight(value: number, metric: MapMetricKey): number {
+  if (Number.isNaN(value)) return 0;
   const { clamp } = METRIC_SCALES[metric];
   const normalized = (value - clamp[0]) / (clamp[1] - clamp[0]);
   return Math.max(0, Math.min(100, normalized * 100));

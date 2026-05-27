@@ -2,8 +2,8 @@
 
 import { useRef, useMemo, useCallback, useState } from "react";
 import Map, { NavigationControl } from "react-map-gl/maplibre";
-import DeckGL from "@deck.gl/react";
-import { MapView } from "@deck.gl/core";
+import DeckGL, { type DeckGLRef } from "@deck.gl/react";
+import { MapView, type PickingInfo, type Layer } from "@deck.gl/core";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import { H3HexagonLayer } from "@deck.gl/geo-layers";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
@@ -39,7 +39,7 @@ function getMetricVal(cell: HexCellState, metric: MapMetricKey): number {
 }
 
 export function MapViewport() {
-  const deckRef = useRef<any>(null);
+  const deckRef = useRef<DeckGLRef>(null);
   const frames = useSimulationStore((s) => s.frames);
   const pipelineStage = useSimulationStore((s) => s.pipelineStage);
   const horizonMonths = useSimulationStore((s) => s.parsedScenario?.horizon_months ?? s.frames.length);
@@ -95,7 +95,7 @@ export function MapViewport() {
   }, [regionBoundary]);
 
   const layers = useMemo(() => {
-    const result: any[] = [];
+    const result: Layer[] = [];
 
     if (currentFrame) {
       if (activeVisualizationMode === "heatmap") {
@@ -250,7 +250,7 @@ export function MapViewport() {
   }, [currentFrame, publicWorksZone, drawMode, pendingVertices, activeVisualizationMode, activeMetric, maskData, positionCache]);
 
   const handleClick = useCallback(
-    (info: any) => {
+    (info: PickingInfo) => {
       if (!info.coordinate) return;
 
       if (drawMode === "point") {
@@ -266,9 +266,9 @@ export function MapViewport() {
   );
 
   const handleHover = useCallback(
-    (info: any) => {
+    (info: PickingInfo) => {
       if (info.object && drawMode === "none") {
-        setHoveredCell({ cell: info.object as HexCellState, x: info.x, y: info.y });
+        setHoveredCell({ cell: info.object as HexCellState, x: info.x ?? 0, y: info.y ?? 0 });
       } else {
         setHoveredCell(null);
       }
@@ -285,7 +285,7 @@ export function MapViewport() {
   );
 
   const handleViewStateChange = useCallback(
-    (e: any) => {
+    (e: { viewState: Record<string, unknown> }) => {
       setMapViewState(e.viewState);
     },
     [setMapViewState]
