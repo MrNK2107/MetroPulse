@@ -14,7 +14,11 @@ from app.ws.simulation import router as ws_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await get_db()
+    db = await get_db()
+    try:
+        await db.seed_case_studies()
+    except Exception:
+        pass  # non-fatal: keyword fallback still works
     yield
 
 

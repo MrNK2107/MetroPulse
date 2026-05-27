@@ -10,6 +10,57 @@ from engine.models import CaseStudy, CityProfile
 
 logger = logging.getLogger(__name__)
 
+
+async def generate_embedding(text: str) -> list[float] | None:
+    """Generate an embedding vector for the given text using the configured provider."""
+    from app.config import settings
+
+    provider = settings.resolved_embedding_provider.lower()
+    model = settings.resolved_embedding_model
+
+    try:
+        if provider == "openai" and settings.openai_api_key:
+            from openai import AsyncOpenAI
+
+            client = AsyncOpenAI(api_key=settings.openai_api_key)
+            response = await asyncio.wait_for(
+                client.embeddings.create(input=text, model=model),
+                timeout=10.0,
+            )
+            return response.data[0].embedding
+
+        if provider == "gemini" and settings.gemini_api_key:
+            from google import genai
+
+            client = genai.Client(api_key=settings.gemini_api_key)
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.embed_content,
+                    model=model,
+                    contents=text,
+                ),
+                timeout=10.0,
+            )
+            return response.embeddings[0].values
+
+        if provider == "ollama":
+            import httpx
+
+            base_url = settings.ollama_base_url or "http://localhost:11434"
+            async with httpx.AsyncClient() as http:
+                resp = await http.post(
+                    f"{base_url}/api/embeddings",
+                    json={"model": model, "prompt": text},
+                    timeout=10.0,
+                )
+                resp.raise_for_status()
+                return resp.json()["embedding"]
+
+    except Exception as e:
+        logger.warning("Embedding generation failed (%s): %s", provider, e)
+
+    return None
+
 LOCAL_CASE_STUDIES: list[CaseStudy] = [
     CaseStudy(
         id="bengaluru-it-infra",
@@ -206,7 +257,20 @@ class DatabaseClient:
         if settings.supabase_url and settings.supabase_key:
             try:
                 from supabase import create_client
-                self._client = create_client(settings.supabase_url, settings.supabase_key)
+                from supabase.lib.client_options import SyncClientOptions
+                import httpx
+
+                # Pre-configure httpx client to avoid deprecated timeout/verify params
+                http_client = httpx.Client(timeout=30.0, verify=True)
+                options = SyncClientOptions(
+                    postgrest_client_timeout=30.0,
+                    httpx_client=http_client,
+                )
+                self._client = create_client(
+                    settings.supabase_url,
+                    settings.supabase_key,
+                    options=options,
+                )
                 logger.info("Connected to Supabase at %s", settings.supabase_url)
             except Exception as e:
                 logger.warning("Failed to connect to Supabase, using in-memory fallback: %s", e)
@@ -265,29 +329,34 @@ class DatabaseClient:
         }
 
     async def list_simulations(self, page: int = 1, per_page: int = 20) -> list[dict[str, Any]]:
-        if self._client:
-            start = (page - 1) * per_page
-            result = await asyncio.to_thread(
-                lambda: self._client.table("simulations")
-                .select("id,region_id,params,horizon_months,result_summary,created_at")
-                .order("created_at", desc=True)
-                .range(start, start + per_page - 1)
-                .execute()
-            )
-            return result.data
         start = (page - 1) * per_page
+        if self._client:
+            try:
+                result = await asyncio.to_thread(
+                    lambda: self._client.table("simulations")
+                    .select("id,region_id,params,horizon_months,result_summary,created_at")
+                    .order("created_at", desc=True)
+                    .range(start, start + per_page - 1)
+                    .execute()
+                )
+                return result.data
+            except Exception:
+                logger.debug("Supabase list_simulations failed, using in-memory fallback")
         return self._saved[start : start + per_page]
 
     async def get_simulation(self, simulation_id: UUID) -> dict[str, Any] | None:
         if self._client:
-            result = await asyncio.to_thread(
-                lambda: self._client.table("simulations")
-                .select("*")
-                .eq("id", str(simulation_id))
-                .limit(1)
-                .execute()
-            )
-            return result.data[0] if result.data else None
+            try:
+                result = await asyncio.to_thread(
+                    lambda: self._client.table("simulations")
+                    .select("*")
+                    .eq("id", str(simulation_id))
+                    .limit(1)
+                    .execute()
+                )
+                return result.data[0] if result.data else None
+            except Exception:
+                logger.debug("Supabase get_simulation failed, using in-memory fallback")
         return next((item for item in self._saved if item["id"] == str(simulation_id)), None)
 
     async def save_simulation(
@@ -319,7 +388,17 @@ class DatabaseClient:
         """Upsert all local case studies to Supabase with embeddings."""
         if not self._client:
             return
-        from app.config import settings
+        # Skip if already seeded
+        try:
+            existing = await asyncio.to_thread(
+                lambda: self._client.table("case_studies").select("id", count="exact").limit(1).execute()
+            )
+            if existing.count and existing.count > 0:
+                logger.info("case_studies already seeded (%d rows), skipping", existing.count)
+                return
+        except Exception:
+            pass
+        logger.info("Seeding case_studies with embeddings...")
         for case in LOCAL_CASE_STUDIES:
             record = {
                 "id": case.id,
@@ -333,12 +412,52 @@ class DatabaseClient:
                 "sectors": case.sectors,
                 "policies": case.policies,
             }
+            # Generate embedding for semantic search
+            embed_text = f"{case.title} {case.description} {' '.join(case.tags)} {' '.join(case.sectors)} {' '.join(case.policies)}"
+            embedding = await self._generate_embedding(embed_text)
+            if embedding:
+                record["embedding"] = embedding
             try:
                 await asyncio.to_thread(
                     lambda r=record: self._client.table("case_studies").upsert(r).execute()
                 )
             except Exception as e:
                 logger.warning("Failed to seed case study %s: %s", case.id, e)
+
+    async def _generate_embedding(self, text: str) -> list[float] | None:
+        """Generate embedding vector for text using configured provider."""
+        try:
+            from app.config import settings
+            import httpx
+
+            provider = (settings.embedding_provider or settings.llm_provider or "").lower()
+
+            if provider == "openai" and settings.openai_api_key:
+                async with httpx.AsyncClient(timeout=15) as client:
+                    resp = await client.post(
+                        "https://api.openai.com/v1/embeddings",
+                        headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                        json={"input": text, "model": settings.embedding_model or "text-embedding-3-small"},
+                    )
+                    resp.raise_for_status()
+                    return resp.json()["data"][0]["embedding"]
+
+            if provider == "gemini" and settings.gemini_api_key:
+                model = settings.embedding_model or "text-embedding-004"
+                async with httpx.AsyncClient(timeout=15) as client:
+                    resp = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:embedContent?key={settings.gemini_api_key}",
+                        json={"model": f"models/{model}", "content": {"parts": [{"text": text}]}},
+                    )
+                    resp.raise_for_status()
+                    return resp.json()["embedding"]["values"]
+
+            # Ollama or fallback — skip embedding
+            logger.info("No embedding provider configured, skipping vector search")
+            return None
+        except Exception as e:
+            logger.warning("Embedding generation failed: %s", e)
+            return None
 
     async def search_case_studies(
         self,
@@ -357,6 +476,48 @@ class DatabaseClient:
         if policy:
             words.add(policy.lower())
 
+        # Try pgvector semantic search if Supabase is available
+        if self._client and words:
+            query_text = " ".join(words)
+            embedding = await self._generate_embedding(query_text)
+            if embedding:
+                try:
+                    result = await asyncio.to_thread(
+                        lambda emb=embedding: self._client.rpc(
+                            "match_case_studies",
+                            {"query_embedding": emb, "match_count": top_k},
+                        ).execute()
+                    )
+                    if result.data:
+                        studies = []
+                        for row in result.data:
+                            studies.append(CaseStudy(
+                                id=row.get("id", ""),
+                                title=row.get("title", ""),
+                                city=row.get("city", ""),
+                                year=row.get("year", 0),
+                                description=row.get("description", ""),
+                                outcome=row.get("outcome", ""),
+                                source=row.get("source", ""),
+                                tags=row.get("tags", []),
+                                sectors=row.get("sectors", []),
+                                policies=row.get("policies", []),
+                                relevance_score=row.get("similarity", 0.0),
+                            ))
+                        # Apply city/sector/policy filters
+                        if city:
+                            city_lower = city.lower().replace("_", " ")
+                            studies = [s for s in studies if city_lower in s.city.lower()]
+                        if sector:
+                            studies = [s for s in studies if sector.lower() in " ".join(s.sectors).lower()]
+                        if policy:
+                            studies = [s for s in studies if policy.lower() in " ".join(s.policies).lower()]
+                        if studies:
+                            return studies[:top_k]
+                except Exception as e:
+                    logger.warning("pgvector search failed, falling back to keyword: %s", e)
+
+        # Keyword fallback
         scored: list[CaseStudy] = []
         for case in LOCAL_CASE_STUDIES:
             haystack = " ".join(
