@@ -28,11 +28,18 @@ out/
 *~
 .DS_Store
 
+# Environment secrets (explicit — belt and suspenders)
+backend/.env
+frontend/.env.local
+
 # Mapbox tokens (prevent accidental commit)
 *.mapbox_token
 
 # Supabase
 .supabase/
+
+# Duplicate data (project-level data/ is canonical)
+backend/data/
 
 # Logs
 *.log
