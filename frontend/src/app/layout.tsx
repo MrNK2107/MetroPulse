@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "MetroPulse — Urban Digital Twin Sandbox",
   description: "AI-Powered Macro-Urban Digital Twin Sandbox",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
