@@ -123,9 +123,35 @@ export function MetricPanel() {
   const isRunning = stage === "simulating";
   const frames = useSimulationStore((s) => s.frames);
   const activeFrameIndex = useSimulationStore((s) => s.activeFrameIndex);
+  const simulationId = useSimulationStore((s) => s.simulationId);
+  const parsedScenario = useSimulationStore((s) => s.parsedScenario);
+  const prediction = useSimulationStore((s) => s.prediction);
+  const caseStudies = useSimulationStore((s) => s.caseStudies);
+  const evidence = useSimulationStore((s) => s.evidence);
+  const metrics = useSimulationStore((s) => s.metrics);
 
   const isBottomDrawerOpen = useSimulationStore((s) => s.isBottomDrawerOpen);
   const setBottomDrawerOpen = useSimulationStore((s) => s.setBottomDrawerOpen);
+
+  const handleExport = () => {
+    const data = {
+      scenario: parsedScenario,
+      prediction,
+      frames,
+      metrics,
+      caseStudies,
+      evidence,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `metropulse-${simulationId || "export"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const currentFrame =
     frames.length > 0 && activeFrameIndex >= 0
@@ -151,13 +177,21 @@ export function MetricPanel() {
         </div>
 
         {isDataAvailable && (
-          <button
-            onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-            className="text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 border border-blue-500/20 bg-blue-950/20 px-2.5 py-1 rounded-lg transition-all"
-          >
-            <span>{isBottomDrawerOpen ? "Hide Detailed Charts" : "Show Detailed Charts"}</span>
-            <span>{isBottomDrawerOpen ? "▼" : "▲"}</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 px-2.5 py-1 rounded-lg transition-all"
+            >
+              Export JSON
+            </button>
+            <button
+              onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
+              className="text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 border border-blue-500/20 bg-blue-950/20 px-2.5 py-1 rounded-lg transition-all"
+            >
+              <span>{isBottomDrawerOpen ? "Hide Detailed Charts" : "Show Detailed Charts"}</span>
+              <span>{isBottomDrawerOpen ? "▼" : "▲"}</span>
+            </button>
+          </div>
         )}
       </div>
 

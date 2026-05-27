@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSimulationStore } from "@/store/simulationStore";
@@ -42,15 +42,50 @@ export function EvidencePanel() {
   const isDataAvailable = Boolean(evidence || currentFrame);
   const activeLoop = currentFrame?.activeLoop ?? (evidence?.proof?.activeEffects?.join(" -> ") || "complete");
 
+  // Streaming text reveal for Report tab
+  const [visibleWords, setVisibleWords] = useState(0);
+  const totalWordsRef = useRef(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!evidence?.markdown) {
+      setVisibleWords(0);
+      return;
+    }
+    const words = evidence.markdown.split(/\s+/);
+    totalWordsRef.current = words.length;
+    setVisibleWords(0);
+
+    // Fast reveal: ~15ms per word
+    intervalRef.current = setInterval(() => {
+      setVisibleWords((prev) => {
+        if (prev >= totalWordsRef.current) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return prev;
+        }
+        return prev + 3; // reveal 3 words at a time for speed
+      });
+    }, 15);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [evidence?.markdown]);
+
   // Pre-process markdown to clean literal "Delta/delta" words and set up inline LaTeX formatting
-  const processedMarkdown = useMemo(() =>
-    evidence?.markdown
-      ? evidence.markdown
-          .replace(/\bDelta K_sector = monthly_rate \* sector_weight \* K\b/g, "\\Delta K_{sector} = \\text{monthly\\_rate} \\times \\text{sector\\_weight} \\times K")
-          .replace(/\bDelta\b/g, "Δ")
-          .replace(/\bdelta\b/g, "Δ")
-      : ""
-  , [evidence?.markdown]);
+  const processedMarkdown = useMemo(() => {
+    if (!evidence?.markdown) return "";
+    const raw = evidence.markdown
+      .replace(/\bDelta K_sector = monthly_rate \* sector_weight \* K\b/g, "\\Delta K_{sector} = \\text{monthly\\_rate} \\times \\text{sector\\_weight} \\times K")
+      .replace(/\bDelta\b/g, "Δ")
+      .replace(/\bdelta\b/g, "Δ");
+    // Apply streaming reveal: truncate to visible words
+    if (visibleWords > 0 && visibleWords < totalWordsRef.current) {
+      const words = raw.split(/\s+/);
+      return words.slice(0, visibleWords).join(" ");
+    }
+    return raw;
+  }, [evidence?.markdown, visibleWords]);
 
   return (
     <aside className="w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
@@ -139,6 +174,10 @@ export function EvidencePanel() {
                   <div className="space-y-4">
                     {evidence ? (
                       <article className="font-sans text-gray-300 leading-[1.5]">
+                        {/* Blinking cursor while streaming */}
+                        {visibleWords > 0 && visibleWords < totalWordsRef.current && (
+                          <span className="inline-block w-1.5 h-3 bg-blue-400 animate-pulse ml-0.5 align-middle" />
+                        )}
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
