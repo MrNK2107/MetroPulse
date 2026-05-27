@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import functools
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 
@@ -39,7 +42,15 @@ class CityConfig:
             raise FileNotFoundError(f"City config not found: {yaml_path}")
         with open(yaml_path, "r") as f:
             data = yaml.safe_load(f)
-        return cls(**data)
+        cfg = cls(**data)
+        # Warn about missing zone files
+        for zone in cfg.special_zones:
+            zone_file = zone.get("file")
+            if zone_file:
+                abs_path = os.path.join(DATA_DIR, "..", zone_file)
+                if not os.path.exists(abs_path):
+                    logger.warning("Zone file not found for %s: %s (using distance fallback)", cfg.name, zone_file)
+        return cfg
 
     @classmethod
     @functools.lru_cache(maxsize=32)
