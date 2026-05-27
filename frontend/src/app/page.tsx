@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { ConversationPanel } from "@/components/controls/ConversationPanel";
 import { FrameScrubber } from "@/components/controls/FrameScrubber";
 import { EvidencePanel } from "@/components/dashboard/EvidencePanel";
+import { GroupImpactPanel } from "@/components/dashboard/GroupImpactPanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
 import { PipelineFlow } from "@/components/dashboard/PipelineFlow";
 import { SimulationProgress } from "@/components/shared/LoadingOverlay";
@@ -93,6 +94,9 @@ export default function Home() {
         } w-full md:w-auto`}
       >
         <EvidencePanel />
+        <div className="px-4 pb-4">
+          <GroupImpactPanel />
+        </div>
       </div>
 
       {/* Toggle Right Sidebar Button (desktop) */}

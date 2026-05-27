@@ -10,7 +10,6 @@ const STEPS: { stage: PipelineStage; label: string }[] = [
   { stage: "simulating", label: "Simulation" },
   { stage: "retrieving", label: "Evidence" },
   { stage: "synthesizing", label: "Social Impact" },
-  { stage: "group_scoring", label: "Groups" },
 ];
 
 export const PipelineFlow = React.memo(function PipelineFlow() {

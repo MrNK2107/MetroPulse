@@ -46,6 +46,7 @@ class SpacyParser:
 
     def __init__(self) -> None:
         self._nlp = None
+        self.last_confidence: float = 0.0
 
     @property
     def nlp(self) -> Any:
@@ -116,6 +117,8 @@ class SpacyParser:
 
         # Confidence scoring
         confidence_score = self._compute_confidence_score(city, mentioned_sectors, explicit_delta)
+        confidence_map = {"high": 0.9, "medium": 0.6, "low": 0.3}
+        self.last_confidence = confidence_map.get(confidence_score, 0.3)
 
         keywords = []
         if city:
