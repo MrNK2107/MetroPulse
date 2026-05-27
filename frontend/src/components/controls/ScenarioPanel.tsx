@@ -4,6 +4,9 @@ import { useMemo } from "react";
 import { useSimulationStore } from "@/store/simulationStore";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { SECTOR_LABELS } from "@/types/simulation";
+import { PresetSelector } from "./PresetSelector";
+import { TemporalSlider } from "./TemporalSlider";
+import { FDISliders } from "./FDISliders";
 
 const EXAMPLES = [
   "What happens to Hyderabad if pharma FDI drops 40% but Smart City Mission continues for 24 months?",
@@ -55,6 +58,9 @@ export function ScenarioPanel() {
       </div>
 
       <div className="p-5 space-y-6 flex-1">
+        {/* Quick Presets */}
+        <PresetSelector />
+
         {/* Scenario Input */}
         <div>
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
@@ -73,6 +79,12 @@ export function ScenarioPanel() {
             </div>
           </div>
         </div>
+
+        {/* Simulation Horizon */}
+        <TemporalSlider />
+
+        {/* FDI Sector Sliders */}
+        <FDISliders />
 
         {/* Examples */}
         <div className="space-y-2">
@@ -154,6 +166,9 @@ export function ScenarioPanel() {
                 </div>
               </div>
             )}
+
+            {/* FDI Sliders — adjust deltas before running */}
+            <FDISliders />
 
             {parsed.policies_active.length > 0 && (
               <div className="space-y-1.5 pt-1">
