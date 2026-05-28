@@ -1,6 +1,8 @@
+import asyncio
+
 import pytest
 
-from engine.runner import run_simulation, set_deadline
+from engine.runner import run_simulation, SimulationTimeoutError
 from engine.scenario_parser import build_params, parse_scenario
 
 
@@ -10,9 +12,9 @@ async def test_simulation_emits_correct_frame_count():
     params = build_params(parsed)
     params.horizon_months = 6
 
-    set_deadline(5000)
+    deadline = asyncio.get_running_loop().time() + 30
     frames = []
-    async for frame in run_simulation(params, params.city_config.get_boundary_polygon(), db=None):
+    async for frame in run_simulation(params, params.city_config.get_boundary_polygon(), db=None, deadline=deadline):
         frames.append(frame)
 
     assert len(frames) == 6
@@ -28,8 +30,8 @@ async def test_vague_valid_prompt_runs_with_defaults():
 
     assert params.horizon_months == 24
     frame_count = 0
-    set_deadline(5000)
-    async for _ in run_simulation(params, params.city_config.get_boundary_polygon(), db=None):
+    deadline = asyncio.get_running_loop().time() + 30
+    async for _ in run_simulation(params, params.city_config.get_boundary_polygon(), db=None, deadline=deadline):
         frame_count += 1
 
     assert frame_count == 24
