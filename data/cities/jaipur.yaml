@@ -1,15 +1,19 @@
 name: Jaipur
 state: Rajasthan
 country: India
-center: [26.9124, 75.7873]
+center:
+- 26.9124
+- 75.7873
 zoom: 11
-boundary_source: "jaipur.geojson"
+boundary_source: jaipur.geojson
 population: 4000000
 city_type: tourism_handicrafts
 port_city: false
-monsoon_season: [7, 8, 9]
+monsoon_season:
+- 7
+- 8
+- 9
 metro_system: false
-
 baselines:
   employment_formal: 900000
   employment_informal: 1800000
@@ -17,7 +21,6 @@ baselines:
   slum_population_pct: 0.18
   unemployment_rate: 0.055
   literacy_rate: 0.76
-
 sector_weights:
   it_ites: 0.08
   manufacturing: 0.18
@@ -25,13 +28,12 @@ sector_weights:
   trade_hospitality: 0.22
   transport_logistics: 0.08
   informal: 0.18
-  public_admin: 0.10
-
+  public_admin: 0.1
 constants:
-  alpha_default: 0.50
+  alpha_default: 0.5
   beta_informal: 0.48
-  gamma_realestate: 0.10
-  delta_congestion: 0.10
+  gamma_realestate: 0.1
+  delta_congestion: 0.1
   lambda_cbd_employment: 3.5
   lambda_road_boost: 1.3
   lambda_realestate_cascade: 2.8
@@ -40,10 +42,29 @@ constants:
   slum_upgrade_rate: 0.01
   migration_eta: 0.05
   housing_xi: 0.08
-
+  employment_pressure_weights:
+  - 0.7
+  - 0.65
+  - 0.5
+  - 0.8
+  - 0.6
+  - 0.45
+  - 0.4
+  public_works_boost: 0.018
+  public_works_decay: 0.04
+  policy_digital_india_it_boost: 0.015
+  policy_make_in_india_mfg_boost: 0.012
+  policy_sez_multiplier: 0.01
+  policy_rera_dampening: 0.88
+  policy_pmay_multiplier: 2.0
+  policy_amrut_housing: 0.004
+  policy_amrut_congestion: -0.002
+  policy_smart_city_congestion: -0.003
+  flood_k_impact: 0.18
+  flood_t_impact: 0.025
 special_zones: []
 policies:
   smart_city: true
-  mission_name: "Jaipur Smart City"
+  mission_name: Jaipur Smart City
   amrut: true
   metro_phase: 0

@@ -1,32 +1,34 @@
 name: Chennai
 state: Tamil Nadu
 country: India
-center: [13.0827, 80.2707]
+center:
+- 13.0827
+- 80.2707
 zoom: 11
-boundary_source: "chennai.geojson"
+boundary_source: chennai.geojson
 population: 11000000
 city_type: auto_it_port
 port_city: true
-monsoon_season: [10, 11, 12]
+monsoon_season:
+- 10
+- 11
+- 12
 metro_system: true
-
 baselines:
   employment_formal: 2800000
   employment_informal: 4000000
   gdp_estimate_crores: 380000
-  slum_population_pct: 0.20
+  slum_population_pct: 0.2
   unemployment_rate: 0.042
   literacy_rate: 0.87
-
 sector_weights:
   it_ites: 0.22
   manufacturing: 0.25
   real_estate: 0.15
   trade_hospitality: 0.14
-  transport_logistics: 0.10
+  transport_logistics: 0.1
   informal: 0.08
   public_admin: 0.06
-
 constants:
   alpha_default: 0.53
   beta_informal: 0.42
@@ -40,21 +42,42 @@ constants:
   slum_upgrade_rate: 0.011
   migration_eta: 0.05
   housing_xi: 0.09
-
+  employment_pressure_weights:
+  - 0.7
+  - 0.65
+  - 0.5
+  - 0.8
+  - 0.6
+  - 0.45
+  - 0.4
+  public_works_boost: 0.018
+  public_works_decay: 0.04
+  policy_digital_india_it_boost: 0.015
+  policy_make_in_india_mfg_boost: 0.012
+  policy_sez_multiplier: 0.01
+  policy_rera_dampening: 0.88
+  policy_pmay_multiplier: 2.0
+  policy_amrut_housing: 0.004
+  policy_amrut_congestion: -0.002
+  policy_smart_city_congestion: -0.003
+  flood_k_impact: 0.18
+  flood_t_impact: 0.025
 special_zones:
-  - type: sez
-    name: "Siruseri IT SEZ"
-    file: "data/sez/siruseri.geojson"
-    sectors: ["it_ites"]
-    boost: 0.20
-  - type: sez
-    name: "Chennai Port Industrial Corridor"
-    file: "data/sez/chennai_port.geojson"
-    sectors: ["manufacturing", "transport_logistics"]
-    boost: 0.18
-
+- type: sez
+  name: Siruseri IT SEZ
+  file: data/sez/siruseri.geojson
+  sectors:
+  - it_ites
+  boost: 0.2
+- type: sez
+  name: Chennai Port Industrial Corridor
+  file: data/sez/chennai_port.geojson
+  sectors:
+  - manufacturing
+  - transport_logistics
+  boost: 0.18
 policies:
   smart_city: true
-  mission_name: "Chennai Smart City"
+  mission_name: Chennai Smart City
   amrut: true
   metro_phase: 2

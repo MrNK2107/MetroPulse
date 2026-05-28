@@ -1,15 +1,19 @@
 name: Delhi NCR
 state: Delhi
 country: India
-center: [28.6139, 77.2090]
+center:
+- 28.6139
+- 77.209
 zoom: 10
-boundary_source: "delhi_ncr.geojson"
+boundary_source: delhi_ncr.geojson
 population: 28000000
 city_type: capital_region
 port_city: false
-monsoon_season: [7, 8, 9]
+monsoon_season:
+- 7
+- 8
+- 9
 metro_system: true
-
 baselines:
   employment_formal: 6000000
   employment_informal: 9000000
@@ -17,16 +21,14 @@ baselines:
   slum_population_pct: 0.18
   unemployment_rate: 0.045
   literacy_rate: 0.86
-
 sector_weights:
   it_ites: 0.18
   manufacturing: 0.22
-  real_estate: 0.20
+  real_estate: 0.2
   trade_hospitality: 0.16
-  transport_logistics: 0.10
+  transport_logistics: 0.1
   informal: 0.08
   public_admin: 0.06
-
 constants:
   alpha_default: 0.52
   beta_informal: 0.42
@@ -40,21 +42,42 @@ constants:
   slum_upgrade_rate: 0.01
   migration_eta: 0.07
   housing_xi: 0.09
-
+  employment_pressure_weights:
+  - 0.7
+  - 0.65
+  - 0.5
+  - 0.8
+  - 0.6
+  - 0.45
+  - 0.4
+  public_works_boost: 0.018
+  public_works_decay: 0.04
+  policy_digital_india_it_boost: 0.015
+  policy_make_in_india_mfg_boost: 0.012
+  policy_sez_multiplier: 0.01
+  policy_rera_dampening: 0.88
+  policy_pmay_multiplier: 2.0
+  policy_amrut_housing: 0.004
+  policy_amrut_congestion: -0.002
+  policy_smart_city_congestion: -0.003
+  flood_k_impact: 0.18
+  flood_t_impact: 0.025
 special_zones:
-  - type: sez
-    name: "Noida SEZ"
-    file: "data/sez/noida.geojson"
-    sectors: ["it_ites", "manufacturing"]
-    boost: 0.22
-  - type: sez
-    name: "Gurugram Cyber City"
-    file: "data/sez/gurugram.geojson"
-    sectors: ["it_ites"]
-    boost: 0.25
-
+- type: sez
+  name: Noida SEZ
+  file: data/sez/noida.geojson
+  sectors:
+  - it_ites
+  - manufacturing
+  boost: 0.22
+- type: sez
+  name: Gurugram Cyber City
+  file: data/sez/gurugram.geojson
+  sectors:
+  - it_ites
+  boost: 0.25
 policies:
   smart_city: true
-  mission_name: "Delhi Smart City"
+  mission_name: Delhi Smart City
   amrut: true
   metro_phase: 4

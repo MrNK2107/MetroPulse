@@ -1,15 +1,20 @@
 name: Pune
 state: Maharashtra
 country: India
-center: [18.5204, 73.8567]
+center:
+- 18.5204
+- 73.8567
 zoom: 11
-boundary_source: "pune.geojson"
+boundary_source: pune.geojson
 population: 6500000
 city_type: auto_it_education
 port_city: false
-monsoon_season: [6, 7, 8, 9]
+monsoon_season:
+- 6
+- 7
+- 8
+- 9
 metro_system: true
-
 baselines:
   employment_formal: 1800000
   employment_informal: 2500000
@@ -17,7 +22,6 @@ baselines:
   slum_population_pct: 0.25
   unemployment_rate: 0.038
   literacy_rate: 0.89
-
 sector_weights:
   it_ites: 0.25
   manufacturing: 0.28
@@ -26,12 +30,11 @@ sector_weights:
   transport_logistics: 0.06
   informal: 0.08
   public_admin: 0.06
-
 constants:
   alpha_default: 0.55
-  beta_informal: 0.40
+  beta_informal: 0.4
   gamma_realestate: 0.12
-  delta_congestion: 0.10
+  delta_congestion: 0.1
   lambda_cbd_employment: 4.0
   lambda_road_boost: 1.5
   lambda_realestate_cascade: 3.0
@@ -40,21 +43,41 @@ constants:
   slum_upgrade_rate: 0.012
   migration_eta: 0.05
   housing_xi: 0.08
-
+  employment_pressure_weights:
+  - 0.7
+  - 0.65
+  - 0.5
+  - 0.8
+  - 0.6
+  - 0.45
+  - 0.4
+  public_works_boost: 0.018
+  public_works_decay: 0.04
+  policy_digital_india_it_boost: 0.015
+  policy_make_in_india_mfg_boost: 0.012
+  policy_sez_multiplier: 0.01
+  policy_rera_dampening: 0.88
+  policy_pmay_multiplier: 2.0
+  policy_amrut_housing: 0.004
+  policy_amrut_congestion: -0.002
+  policy_smart_city_congestion: -0.003
+  flood_k_impact: 0.18
+  flood_t_impact: 0.025
 special_zones:
-  - type: sez
-    name: "Hinjewadi IT Park"
-    file: "data/sez/hinjewadi.geojson"
-    sectors: ["it_ites"]
-    boost: 0.22
-  - type: sez
-    name: "Chakan Auto Cluster"
-    file: "data/sez/chakan.geojson"
-    sectors: ["manufacturing"]
-    boost: 0.20
-
+- type: sez
+  name: Hinjewadi IT Park
+  file: data/sez/hinjewadi.geojson
+  sectors:
+  - it_ites
+  boost: 0.22
+- type: sez
+  name: Chakan Auto Cluster
+  file: data/sez/chakan.geojson
+  sectors:
+  - manufacturing
+  boost: 0.2
 policies:
   smart_city: true
-  mission_name: "Pune Smart City"
+  mission_name: Pune Smart City
   amrut: true
   metro_phase: 2

@@ -1,60 +1,85 @@
 name: Kolkata
 state: West Bengal
 country: India
-center: [22.5726, 88.3639]
+center:
+- 22.5726
+- 88.3639
 zoom: 11
-boundary_source: "kolkata.geojson"
+boundary_source: kolkata.geojson
 population: 14500000
 city_type: port_services
 port_city: true
-monsoon_season: [6, 7, 8, 9]
+monsoon_season:
+- 6
+- 7
+- 8
+- 9
 metro_system: true
-
 baselines:
   employment_formal: 3000000
   employment_informal: 5500000
   gdp_estimate_crores: 320000
-  slum_population_pct: 0.30
+  slum_population_pct: 0.3
   unemployment_rate: 0.055
   literacy_rate: 0.82
-
 sector_weights:
-  it_ites: 0.10
-  manufacturing: 0.20
+  it_ites: 0.1
+  manufacturing: 0.2
   real_estate: 0.16
   trade_hospitality: 0.18
   transport_logistics: 0.12
   informal: 0.18
   public_admin: 0.06
-
 constants:
   alpha_default: 0.48
-  beta_informal: 0.50
-  gamma_realestate: 0.10
+  beta_informal: 0.5
+  gamma_realestate: 0.1
   delta_congestion: 0.14
   lambda_cbd_employment: 4.0
   lambda_road_boost: 1.2
   lambda_realestate_cascade: 2.8
-  flood_impact: 0.30
+  flood_impact: 0.3
   flood_congestion_bonus: 0.35
   slum_upgrade_rate: 0.008
   migration_eta: 0.06
-  housing_xi: 0.10
-
+  housing_xi: 0.1
+  employment_pressure_weights:
+  - 0.7
+  - 0.65
+  - 0.5
+  - 0.8
+  - 0.6
+  - 0.45
+  - 0.4
+  public_works_boost: 0.018
+  public_works_decay: 0.04
+  policy_digital_india_it_boost: 0.015
+  policy_make_in_india_mfg_boost: 0.012
+  policy_sez_multiplier: 0.01
+  policy_rera_dampening: 0.88
+  policy_pmay_multiplier: 2.0
+  policy_amrut_housing: 0.004
+  policy_amrut_congestion: -0.002
+  policy_smart_city_congestion: -0.003
+  flood_k_impact: 0.18
+  flood_t_impact: 0.025
 special_zones:
-  - type: sez
-    name: "New Town Kolkata"
-    file: "data/sez/new_town.geojson"
-    sectors: ["it_ites", "real_estate"]
-    boost: 0.18
-  - type: sez
-    name: "Kolkata Port Industrial Zone"
-    file: "data/sez/kolkata_port.geojson"
-    sectors: ["manufacturing", "transport_logistics"]
-    boost: 0.15
-
+- type: sez
+  name: New Town Kolkata
+  file: data/sez/new_town.geojson
+  sectors:
+  - it_ites
+  - real_estate
+  boost: 0.18
+- type: sez
+  name: Kolkata Port Industrial Zone
+  file: data/sez/kolkata_port.geojson
+  sectors:
+  - manufacturing
+  - transport_logistics
+  boost: 0.15
 policies:
   smart_city: true
-  mission_name: "Kolkata Smart City"
+  mission_name: Kolkata Smart City
   amrut: true
   metro_phase: 2

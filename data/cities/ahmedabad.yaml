@@ -1,15 +1,20 @@
 name: Ahmedabad
 state: Gujarat
 country: India
-center: [23.0225, 72.5714]
+center:
+- 23.0225
+- 72.5714
 zoom: 11
-boundary_source: "ahmedabad.geojson"
+boundary_source: ahmedabad.geojson
 population: 7500000
 city_type: textile_pharma_auto
 port_city: false
-monsoon_season: [6, 7, 8, 9]
+monsoon_season:
+- 6
+- 7
+- 8
+- 9
 metro_system: true
-
 baselines:
   employment_formal: 2000000
   employment_informal: 3000000
@@ -17,21 +22,19 @@ baselines:
   slum_population_pct: 0.18
   unemployment_rate: 0.036
   literacy_rate: 0.85
-
 sector_weights:
-  it_ites: 0.10
+  it_ites: 0.1
   manufacturing: 0.35
   real_estate: 0.18
   trade_hospitality: 0.14
   transport_logistics: 0.08
-  informal: 0.10
+  informal: 0.1
   public_admin: 0.05
-
 constants:
   alpha_default: 0.56
   beta_informal: 0.38
   gamma_realestate: 0.12
-  delta_congestion: 0.10
+  delta_congestion: 0.1
   lambda_cbd_employment: 4.5
   lambda_road_boost: 1.6
   lambda_realestate_cascade: 3.2
@@ -40,21 +43,42 @@ constants:
   slum_upgrade_rate: 0.013
   migration_eta: 0.04
   housing_xi: 0.08
-
+  employment_pressure_weights:
+  - 0.7
+  - 0.65
+  - 0.5
+  - 0.8
+  - 0.6
+  - 0.45
+  - 0.4
+  public_works_boost: 0.018
+  public_works_decay: 0.04
+  policy_digital_india_it_boost: 0.015
+  policy_make_in_india_mfg_boost: 0.012
+  policy_sez_multiplier: 0.01
+  policy_rera_dampening: 0.88
+  policy_pmay_multiplier: 2.0
+  policy_amrut_housing: 0.004
+  policy_amrut_congestion: -0.002
+  policy_smart_city_congestion: -0.003
+  flood_k_impact: 0.18
+  flood_t_impact: 0.025
 special_zones:
-  - type: sez
-    name: "GIFT City"
-    file: "data/sez/gift_city.geojson"
-    sectors: ["it_ites", "real_estate"]
-    boost: 0.30
-  - type: sez
-    name: "Ahmedabad SEZ"
-    file: "data/sez/ahmedabad_sez.geojson"
-    sectors: ["manufacturing"]
-    boost: 0.18
-
+- type: sez
+  name: GIFT City
+  file: data/sez/gift_city.geojson
+  sectors:
+  - it_ites
+  - real_estate
+  boost: 0.3
+- type: sez
+  name: Ahmedabad SEZ
+  file: data/sez/ahmedabad_sez.geojson
+  sectors:
+  - manufacturing
+  boost: 0.18
 policies:
   smart_city: true
-  mission_name: "Ahmedabad Smart City"
+  mission_name: Ahmedabad Smart City
   amrut: true
   metro_phase: 2
