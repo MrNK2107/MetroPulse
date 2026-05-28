@@ -2,9 +2,7 @@
 
 **Project:** AI-Powered Macro-Urban Digital Twin Sandbox  
 **Version:** 1.0.0  
-**Status:** Pre-production  
-**Author:** 3rd Year CSE Student  
-**Target:** Production Internship Portfolio
+**Status:** Pre-production
 
 ---
 
