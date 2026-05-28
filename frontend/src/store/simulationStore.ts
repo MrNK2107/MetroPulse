@@ -123,8 +123,16 @@ interface SimulationStore {
   resetAll: () => void;
 }
 
-const EXAMPLE =
-  "What happens to Hyderabad if pharma FDI drops 40% but Smart City Mission continues for 24 months?";
+const EXAMPLE_SCENARIOS = [
+  "What happens to Hyderabad if pharma FDI drops 40% but Smart City Mission continues for 24 months?",
+  "Bengaluru tech sector grows 25% with Digital India expansion over 2 years",
+  "Mumbai port trade declines 15% due to global shipping disruptions for 12 months",
+  "Chennai manufacturing gets a 30% Make in India boost alongside AMRUT upgrades",
+  "Pune auto industry faces 20% decline while RERA compliance continues for 24 months",
+  "Ahmedabad textile exports surge 35% with new SEZ notification for 60 months",
+];
+
+const EXAMPLE = EXAMPLE_SCENARIOS[Math.floor(Math.random() * EXAMPLE_SCENARIOS.length)];
 
 const DEFAULT_MAP_VIEW_STATE = {
   longitude: 78.4867,
