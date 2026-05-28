@@ -241,12 +241,26 @@ async def simulation_websocket(websocket: WebSocket):
 
 
 async def _receive_start(websocket: WebSocket) -> StartScenarioMessage:
-    message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
-    try:
-        payload = json.loads(message)
-        return StartScenarioMessage(**payload)
-    except (json.JSONDecodeError, ValidationError) as e:
-        raise ScenarioParseError(f"First message must be valid JSON shaped as {{ type: 'START', scenario: '...' }}. {e}") from e
+    deadline = asyncio.get_event_loop().time() + 30.0
+    while True:
+        remaining = deadline - asyncio.get_event_loop().time()
+        if remaining <= 0:
+            raise asyncio.TimeoutError()
+        message = await asyncio.wait_for(websocket.receive_text(), timeout=remaining)
+        try:
+            payload = json.loads(message)
+        except json.JSONDecodeError as e:
+            raise ScenarioParseError(f"First message must be valid JSON. {e}") from e
+        # Skip heartbeat pings
+        if payload.get("type") == "PING":
+            await websocket.send_json({"type": "PONG"})
+            continue
+        try:
+            return StartScenarioMessage(**payload)
+        except ValidationError as e:
+            raise ScenarioParseError(
+                f"First message must be {{ type: 'START', scenario: '...' }}. Got: {payload.get('type', 'unknown')}"
+            ) from e
 
 
 async def _receive_input_response(websocket: WebSocket) -> InputResponseMessage:

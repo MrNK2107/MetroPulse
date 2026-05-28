@@ -270,7 +270,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       parsedScenario: state.parsedScenario
         ? {
             ...state.parsedScenario,
-            sector_deltas: { ...state.parsedScenario.sector_deltas, [sector]: value },
+            sector_deltas: {
+              ...state.parsedScenario.sector_deltas,
+              [sector]: Math.max(-100, Math.min(100, value)),
+            },
           }
         : null,
     })),
