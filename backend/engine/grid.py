@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import h3
@@ -117,10 +118,37 @@ class GridFactory:
         n = len(h3_indices)
         centers = np.array([h3.cell_to_latlng(idx) for idx in h3_indices], dtype=np.float64)
         center_lat, center_lng = city_config.center
-        dist = _haversine_vec(centers[:, 0], centers[:, 1], center_lat, center_lng)
+
         for zone in city_config.special_zones:
             name = zone.get("name", "zone")
-            flags[name] = dist <= float(zone.get("radius_km", 5.0))
+            zone_file = zone.get("file")
+
+            # Try GeoJSON polygon containment first
+            if zone_file:
+                import os
+                abs_path = os.path.join(os.path.dirname(__file__), "..", "..", zone_file)
+                if os.path.exists(abs_path):
+                    try:
+                        with open(abs_path, "r") as f:
+                            geojson = json.load(f)
+                        features = geojson.get("features", [])
+                        if features:
+                            geom = features[0]["geometry"]
+                            if geom.get("type") in ("Polygon", "MultiPolygon"):
+                                shape = h3.geo_to_h3shape(geom)
+                                zone_cells = set(h3.h3shape_to_cells(shape, 8))
+                                mask = np.isin(np.array(h3_indices), list(zone_cells))
+                                if np.any(mask):
+                                    flags[name] = mask
+                                    continue
+                    except Exception:
+                        pass  # Fall through to distance fallback
+
+            # Fallback: distance radius from city center
+            dist = _haversine_vec(centers[:, 0], centers[:, 1], center_lat, center_lng)
+            radius = float(zone.get("radius_km", 5.0))
+            flags[name] = dist <= radius
+
         return flags
 
 

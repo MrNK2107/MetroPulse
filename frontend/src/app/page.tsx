@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ConversationPanel } from "@/components/controls/ConversationPanel";
 import { FrameScrubber } from "@/components/controls/FrameScrubber";
@@ -23,6 +24,11 @@ const DrawingToolbar = dynamic(
 
 export default function Home() {
   useKeyboardShortcuts();
+
+  // Load city coordinates from API on mount (merges with static fallback)
+  useEffect(() => {
+    useSimulationStore.getState().loadCityCoords();
+  }, []);
 
   const isLeftSidebarOpen = useSimulationStore((s) => s.isLeftSidebarOpen);
   const isRightSidebarOpen = useSimulationStore((s) => s.isRightSidebarOpen);
