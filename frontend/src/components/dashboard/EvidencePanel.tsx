@@ -28,10 +28,37 @@ function LaTeX({ math, block = false }: { math: string; block?: boolean }) {
   }
 }
 
+function AssumptionsList({ assumptions }: { assumptions: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-950/10">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+          Assumptions ({assumptions.length})
+        </span>
+        <span className="text-amber-400 text-xs">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <ul className="px-4 pb-3 space-y-1.5">
+          {assumptions.map((a, i) => (
+            <li key={i} className="text-[11px] text-amber-200/80 leading-[1.5] pl-2 border-l border-amber-500/30">
+              {a}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function EvidencePanel() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("report");
   const evidence = useSimulationStore((s) => s.evidence);
   const caseStudies = useSimulationStore((s) => s.caseStudies);
+  const prediction = useSimulationStore((s) => s.prediction);
   const pipelineStage = useSimulationStore((s) => s.pipelineStage);
   const currentFrame = useSimulationStore((s) => {
     if (s.frames.length === 0) return null;
@@ -230,6 +257,11 @@ export function EvidencePanel() {
                         >
                           {processedMarkdown}
                         </ReactMarkdown>
+
+                        {/* Assumptions section */}
+                        {evidence.assumptions && evidence.assumptions.length > 0 && (
+                          <AssumptionsList assumptions={evidence.assumptions} />
+                        )}
                       </article>
                     ) : (
                       <div className="rounded-xl border border-dark-100/60 bg-dark-300/40 p-4">
@@ -322,8 +354,26 @@ export function EvidencePanel() {
                       </p>
                       <div className="space-y-2 text-[11px]">
                         <div className="flex justify-between border-b border-dark-100/20 py-1.5">
-                          <span className="text-gray-500">Data Reliability</span>
-                          <span className="text-gray-300 font-semibold">{evidence?.proof?.dataQuality ? "Config Estimates" : "Fallback Estimates"}</span>
+                          <span className="text-gray-500">Baselines</span>
+                          <span className="text-gray-300 font-semibold">City YAML estimates</span>
+                        </div>
+                        <div className="flex justify-between border-b border-dark-100/20 py-1.5">
+                          <span className="text-gray-500">Flood Risk</span>
+                          <span className="text-gray-300 font-semibold">
+                            {currentFrame?.proof?.dataSources?.flood === "geotiff" ? "GeoTIFF data" : "Distance proxy"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b border-dark-100/20 py-1.5">
+                          <span className="text-gray-500">Zone Detection</span>
+                          <span className="text-gray-300 font-semibold">
+                            {currentFrame?.proof?.dataSources?.zones === "geojson" ? "GeoJSON polygons" : "Radius fallback"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b border-dark-100/20 py-1.5">
+                          <span className="text-gray-500">Prediction</span>
+                          <span className="text-gray-300 font-semibold">
+                            {prediction?.source === "deterministic_fallback" ? "Rule-based (no LLM)" : "LLM-generated"}
+                          </span>
                         </div>
                         <div className="flex justify-between border-b border-dark-100/20 py-1.5">
                           <span className="text-gray-500">Active H3 Grid Cells</span>

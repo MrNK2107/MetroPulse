@@ -68,7 +68,13 @@ def to_frame(state: GridState, month: int) -> dict:
         "activeLoop": " -> ".join(state.active_effects[:4]) if state.active_effects else "baseline",
         "proof": {
             "formula": "\\Delta K_{sector} = \\text{monthly\\_rate} \\times \\text{sector\\_weight} \\times K; cascading R/T/H/M updates are deterministic vector operations.",
-            "dataQuality": "estimated proxy baselines from city YAML, H3 geometry, sector weights, and deterministic spatial decay.",
+            "dataQuality": "City YAML baselines, H3 geometry, configured sector weights, and deterministic spatial decay. Flood/slum/zone detection uses proxy estimates unless GeoTIFF/GeoJSON data is provided.",
+            "dataSources": {
+                "baselines": "city_yaml",
+                "flood": "proxy_estimate",
+                "zones": "geojson_or_radius_fallback",
+                "sector_weights": "city_yaml",
+            },
             "cellCount": state.n_cells,
             "activeEffects": state.active_effects,
         },

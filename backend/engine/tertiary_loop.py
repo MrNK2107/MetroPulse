@@ -30,7 +30,7 @@ def synthesize_evidence(
 
     markdown = f"""## Simulation Results
 
-MetroPulse simulated **{params.city_config.name}** for **{params.horizon_months} months** using estimated city baselines and deterministic H3 cell updates. The main modeled changes were: {", ".join(changed) if changed else "policy/baseline effects"}.
+MetroPulse simulated **{params.city_config.name}** for **{params.horizon_months} months** using city baselines and deterministic H3 cell updates. The main modeled changes were: {", ".join(changed) if changed else "policy/baseline effects"}.
 
 ### Prediction vs Reality
 
@@ -53,12 +53,12 @@ MetroPulse simulated **{params.city_config.name}** for **{params.horizon_months}
 ### Math & Data Proof
 
 - Formula: `Delta K_sector = monthly_rate * sector_weight * K`; real estate and transit are updated by deterministic vector operations.
-- Data quality: MVP uses city YAML, H3 geometry, configured sector weights, and proxy baselines where real datasets are not present.
+- Data quality: City YAML baselines, H3 geometry, configured sector weights, and proxy estimates where real datasets are not present.
 - Cell count: **{final_frame["proof"]["cellCount"]}** H3 cells.
 
 ### Policy Recommendation
 
-Pair the scenario shock with targeted transit and housing support in the most affected cells. In this MVP, that means comparing the same prompt with **AMRUT**, **PM Awas Yojana**, or **Smart City Mission** explicitly added.
+Pair the scenario shock with targeted transit and housing support in the most affected cells. Try comparing the same prompt with **AMRUT**, **PM Awas Yojana**, or **Smart City Mission** explicitly added.
 """
 
     return {

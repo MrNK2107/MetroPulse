@@ -47,6 +47,7 @@ export interface Prediction {
   counter_intuitive: string[];
   overall_confidence: "high" | "medium" | "low";
   reasoning: string;
+  source?: "llm" | "deterministic_fallback";
 }
 
 export interface CaseStudy {
@@ -99,6 +100,12 @@ export interface SimulationFrame {
   proof: {
     formula: string;
     dataQuality: string;
+    dataSources?: {
+      baselines: string;
+      flood: string;
+      zones: string;
+      sector_weights: string;
+    };
     cellCount: number;
     activeEffects: string[];
   };
