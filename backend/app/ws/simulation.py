@@ -68,11 +68,17 @@ async def simulation_websocket(websocket: WebSocket):
 
         # Ensure we have a city
         if not parsed.city:
+            from engine.config import list_available_cities
+            supported = ", ".join(c["name"] for c in list_available_cities()[:8])
             await websocket.send_json({
                 "type": "ERROR",
                 "stage": "parsing",
                 "code": "CLARIFICATION_NEEDED",
-                "message": "I could not identify the city. Try naming one Indian city.",
+                "message": (
+                    "I couldn't find a city in your scenario. "
+                    f"Supported cities: {supported}. "
+                    "Example: 'What happens to Hyderabad if pharma FDI drops 40%?'"
+                ),
             })
             return
 
@@ -89,17 +95,40 @@ async def simulation_websocket(websocket: WebSocket):
         await websocket.send_json({"type": "PARSED", "params": parsed.model_dump(), "boundary": boundary})
 
         # ── Prediction stage ─────────────────────────────────────────
+        prediction_source = "llm"
         await _send_stage(websocket, "predicting", "Generating a before-simulation expectation.")
-        prediction = await generate_prediction(params)
-        await websocket.send_json({"type": "PREDICTION", "prediction": prediction.model_dump()})
+        try:
+            prediction = await generate_prediction(params)
+        except Exception as e:
+            logger.warning("Prediction generation failed, using deterministic fallback: %s", e)
+            from engine.prediction_generator import _deterministic_prediction
+            prediction = _deterministic_prediction(params)
+            prediction_source = "deterministic_fallback"
+
+        prediction_data = prediction.model_dump()
+        prediction_data["source"] = prediction_source
+        await websocket.send_json({"type": "PREDICTION", "prediction": prediction_data})
 
         # ── Simulation stage ─────────────────────────────────────────
         await _send_stage(websocket, "simulating", "Animating monthly H3 cell changes across the city.")
         deadline = asyncio.get_running_loop().time() + settings.sim_timeout_ms / 1000.0
         frames = []
-        async for frame in run_simulation(params, boundary, db=db, deadline=deadline):
-            frames.append(frame)
-            await websocket.send_json({"type": "FRAME", "payload": frame})
+        try:
+            async for frame in run_simulation(params, boundary, db=db, deadline=deadline):
+                frames.append(frame)
+                await websocket.send_json({"type": "FRAME", "payload": frame})
+        except SimulationTimeoutError:
+            raise
+        except Exception as e:
+            logger.error("Simulation loop failed at frame %d: %s", len(frames), e)
+            if not frames:
+                await websocket.send_json({
+                    "type": "ERROR",
+                    "stage": "simulating",
+                    "code": "SIMULATION_FAILED",
+                    "message": f"Simulation failed: {e}",
+                })
+                return
 
         if not frames:
             await websocket.send_json({
@@ -113,28 +142,54 @@ async def simulation_websocket(websocket: WebSocket):
         final_frame = frames[-1]
 
         # ── Case studies stage ───────────────────────────────────────
+        case_studies = []
         await _send_stage(websocket, "retrieving", "Finding Indian urban precedents.")
-        case_studies = await db.search_case_studies(
-            parsed.keywords, city=parsed.city, top_k=5,
-        )
-        await websocket.send_json({
-            "type": "CASE_STUDIES",
-            "studies": [case.model_dump() for case in case_studies],
-        })
+        try:
+            case_studies = await db.search_case_studies(
+                parsed.keywords, city=parsed.city, top_k=5,
+            )
+            await websocket.send_json({
+                "type": "CASE_STUDIES",
+                "studies": [case.model_dump() for case in case_studies],
+            })
+        except Exception as e:
+            logger.warning("Case study retrieval failed: %s", e)
+            await websocket.send_json({"type": "CASE_STUDIES", "studies": []})
 
         # ── Group scoring stage ──────────────────────────────────────
         await _send_stage(websocket, "synthesizing", "Computing social group impacts.")
-        groups = score_groups(parsed.sector_deltas, final_frame["metrics"])
-        satisfaction = compute_satisfaction(groups)
-        await websocket.send_json({
-            "type": "GROUP_SCORES",
-            "groups": [g.to_dict() for g in groups],
-            "citizen_satisfaction": satisfaction,
-        })
+        try:
+            groups = score_groups(parsed.sector_deltas, final_frame["metrics"])
+            satisfaction = compute_satisfaction(groups)
+            await websocket.send_json({
+                "type": "GROUP_SCORES",
+                "groups": [g.to_dict() for g in groups],
+                "citizen_satisfaction": satisfaction,
+            })
+        except Exception as e:
+            logger.warning("Group scoring failed: %s", e)
+            await websocket.send_json({
+                "type": "GROUP_SCORES",
+                "groups": [],
+                "citizen_satisfaction": 50,
+            })
 
         # ── Evidence stage ───────────────────────────────────────────
-        evidence = synthesize_evidence(params, prediction, final_frame, case_studies)
-        await websocket.send_json({"type": "EVIDENCE", "evidence": evidence})
+        try:
+            evidence = synthesize_evidence(params, prediction, final_frame, case_studies)
+            await websocket.send_json({"type": "EVIDENCE", "evidence": evidence})
+        except Exception as e:
+            logger.warning("Evidence synthesis failed: %s", e)
+            await websocket.send_json({
+                "type": "EVIDENCE",
+                "evidence": {
+                    "markdown": "Evidence synthesis encountered an error. The simulation results above are still valid.",
+                    "verdict": "Error",
+                    "metrics": final_frame.get("metrics", {}),
+                    "proof": final_frame.get("proof", {}),
+                    "assumptions": params.assumptions,
+                },
+            })
 
         # ── Done ─────────────────────────────────────────────────────
         saved_id = await db.save_simulation(

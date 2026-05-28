@@ -62,7 +62,11 @@ def resolve_city_id(value: str) -> str:
     for city in list_available_cities():
         if needle in {_clean(city["id"]), _clean(city["name"])}:
             return city["id"]
-    raise ScenarioParseError("I could not identify the city. Try naming one Indian city, for example Hyderabad or Bengaluru.")
+    supported = ", ".join(c["name"] for c in list_available_cities()[:6])
+    raise ScenarioParseError(
+        f"I couldn't find '{value}' as a supported city. "
+        f"Try one of: {supported}, and more."
+    )
 
 
 def build_params(parsed: ParsedScenario):
@@ -84,7 +88,12 @@ def _fallback_parse(text: str) -> ParsedScenario:
     lowered = text.lower()
     city = _extract_city(lowered)
     if city is None:
-        raise ScenarioParseError("I could not identify the city. Try: 'What happens to Hyderabad if pharma FDI drops 40%?'")
+        supported = ", ".join(c["name"] for c in list_available_cities()[:6])
+        raise ScenarioParseError(
+            "I couldn't find a city in your scenario. "
+            f"Try naming one: {supported}, and more. "
+            "Example: 'What happens to Hyderabad if pharma FDI drops 40%?'"
+        )
 
     sector_deltas = {sector: 0.0 for sector in SECTOR_NAMES}
     mentioned_sectors: list[str] = []
@@ -116,7 +125,16 @@ def _fallback_parse(text: str) -> ParsedScenario:
             mentioned_sectors = ["it_ites", "trade_hospitality"]
             assumptions.append("Vague negative prompt interpreted as a broad urban demand shock.")
         else:
-            raise ScenarioParseError("The prompt names a city but not a change to simulate. Add a sector, policy, or shock.")
+            # Apply balanced default based on city's dominant sectors
+            cfg = CityConfig.load(city)
+            top_sectors = sorted(cfg.sector_weights, key=cfg.sector_weights.get, reverse=True)[:3]
+            for sector in top_sectors:
+                sector_deltas[sector] = 10.0 * cfg.sector_weights.get(sector, 0.1)
+            mentioned_sectors = top_sectors
+            assumptions.append(
+                f"No sector specified. Applied small positive stimulus to {city}'s "
+                f"top sectors: {', '.join(top_sectors)}."
+            )
 
     keywords = [city, *mentioned_sectors, *policies]
     return ParsedScenario(

@@ -9,6 +9,19 @@ export function useWebSocket() {
 
   const startSimulation = useCallback(
     (scenario: string, wsUrl: string) => {
+      if (!scenario || scenario.trim().length < 10) {
+        useSimulationStore.getState().setError(
+          "Please describe a scenario with at least 10 characters. Example: 'What happens to Hyderabad if pharma FDI drops 40%?'"
+        );
+        return;
+      }
+
+      // Disconnect any existing client before starting a new one
+      if (clientRef.current) {
+        clientRef.current.disconnect();
+        clientRef.current = null;
+      }
+
       const store = useSimulationStore.getState();
       store.resetRun();
       const client = new WebSocketClient(wsUrl, {
@@ -48,7 +61,10 @@ export function useWebSocket() {
     const store = useSimulationStore.getState();
     store.addConversationMessage("user", text);
     store.setPendingQuestion(null);
-    clientRef.current?.sendInputResponse(text);
+    const sent = clientRef.current?.sendInputResponse(text) ?? false;
+    if (!sent) {
+      store.setError("Could not send your response — connection lost. Please try again.");
+    }
   }, []);
 
   return { startSimulation, stopSimulation, sendResponse };

@@ -1,6 +1,7 @@
 """Path 1: Enhanced regex parser with domain knowledge integration."""
 from __future__ import annotations
 
+import logging
 import re
 
 from engine.models import ParsedScenario, SECTOR_NAMES
@@ -15,6 +16,8 @@ from engine.nl_engine.domain_maps import (
     detect_event,
     detect_sentiment,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class RegexParser:
@@ -86,6 +89,18 @@ class RegexParser:
                 sector_deltas["it_ites"] = -15.0
                 sector_deltas["trade_hospitality"] = -10.0
                 mentioned_sectors = ["it_ites", "trade_hospitality"]
+            elif city:
+                # City found but no sector — apply balanced default
+                from engine.config import CityConfig
+                try:
+                    cfg = CityConfig.load(city)
+                    top_sectors = sorted(cfg.sector_weights, key=cfg.sector_weights.get, reverse=True)[:3]
+                    for sector in top_sectors:
+                        sector_deltas[sector] = 10.0 * cfg.sector_weights.get(sector, 0.1)
+                    mentioned_sectors = top_sectors
+                    logger.info("No sectors detected for %s, applying balanced default to %s", city, top_sectors)
+                except FileNotFoundError:
+                    pass
 
         # Policy detection
         policies = [
