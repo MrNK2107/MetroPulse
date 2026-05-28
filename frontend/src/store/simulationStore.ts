@@ -84,6 +84,7 @@ interface SimulationStore {
     pitch: number;
     bearing: number;
   };
+  cityCoords: Record<string, { center: [number, number]; zoom: number; name: string }>;
 
   setScenarioText: (value: string) => void;
   setStage: (stage: PipelineStage, message: string) => void;
@@ -111,6 +112,7 @@ interface SimulationStore {
   setBottomDrawerOpen: (open: boolean) => void;
   setMapViewState: (viewState: any) => void;
   flyToCity: (cityId: string) => void;
+  loadCityCoords: () => Promise<void>;
 
   addConversationMessage: (role: "user" | "system", text: string) => void;
   setPendingQuestion: (question: WSNeedsInputMessage | null) => void;
@@ -166,6 +168,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   isBottomDrawerOpen: false,
   mapViewState: DEFAULT_MAP_VIEW_STATE,
 
+  // Dynamic city coordinates — starts with static fallback, updated from API
+  cityCoords: { ...CITY_COORDS },
+
   setScenarioText: (value) => set({ scenarioText: value }),
 
   setStage: (stage, message) =>
@@ -183,7 +188,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     set({ parsedScenario: params, publicWorksZone: params.public_works_zone });
     // Automatically center map viewport on resolved city
     const resolvedCity = params.city.toLowerCase().replace(" ", "_");
-    const cityConfig = CITY_COORDS[resolvedCity];
+    const cityConfig = get().cityCoords[resolvedCity];
     if (cityConfig) {
       set({
         mapViewState: {
@@ -294,7 +299,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   setBottomDrawerOpen: (open) => set({ isBottomDrawerOpen: open }),
   setMapViewState: (viewState) => set({ mapViewState: viewState }),
   flyToCity: (cityId) => {
-    const cityConfig = CITY_COORDS[cityId];
+    const cityConfig = get().cityCoords[cityId];
     if (cityConfig) {
       set((state) => ({
         mapViewState: {
@@ -325,6 +330,25 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       groupScores: msg.groups,
       citizenSatisfaction: msg.citizen_satisfaction,
     }),
+
+  loadCityCoords: async () => {
+    try {
+      const res = await fetch("/api/regions");
+      if (!res.ok) return;
+      const json = await res.json();
+      const regions = json.data as Array<{ id: string; center: [number, number]; zoom: number; name: string }>;
+      if (!Array.isArray(regions)) return;
+      const dynamic: Record<string, { center: [number, number]; zoom: number; name: string }> = {};
+      for (const r of regions) {
+        if (r.id && r.center && r.zoom) {
+          dynamic[r.id] = { center: r.center, zoom: r.zoom, name: r.name };
+        }
+      }
+      set({ cityCoords: { ...CITY_COORDS, ...dynamic } });
+    } catch {
+      // API unavailable — keep static fallback
+    }
+  },
 
   resetRun: () =>
     set({
