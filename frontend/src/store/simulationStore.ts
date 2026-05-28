@@ -102,7 +102,7 @@ interface SimulationStore {
   setPublicWorksZone: (zone: GeoJSON.GeoJSON | null) => void;
   setRegionBoundary: (boundary: GeoJSON.GeoJSON | null) => void;
   setActiveFrameIndex: (index: number) => void;
-  setHorizonMonths: (months: 6 | 12 | 24 | 60) => void;
+  setHorizonMonths: (months: number) => void;
   adjustSectorDelta: (sector: string, value: number) => void;
 
   setActiveVisualizationMode: (mode: "heatmap" | "flat" | "3d") => void;

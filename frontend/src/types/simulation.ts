@@ -25,7 +25,7 @@ export interface ParsedScenario {
   sector_deltas: Record<string, number>;
   policies_active: string[];
   public_works_zone: GeoJSON.GeoJSON | null;
-  horizon_months: 6 | 12 | 24 | 60;
+  horizon_months: number;
   causal_chain: string;
   keywords: string[];
   confidence: "high" | "medium" | "low";
