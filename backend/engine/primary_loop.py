@@ -15,6 +15,18 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     alpha = float(state.constants.get("alpha_default", 0.55))
     beta_informal = float(state.constants.get("beta_informal", 0.35))
 
+    # Read policy boost factors from city constants (with sensible defaults)
+    di_it_boost = float(state.constants.get("policy_digital_india_it_boost", 0.015))
+    mii_mfg_boost = float(state.constants.get("policy_make_in_india_mfg_boost", 0.012))
+    sez_multiplier = float(state.constants.get("policy_sez_multiplier", 0.01))
+    pw_boost = float(state.constants.get("public_works_boost", 0.018))
+    pw_decay = float(state.constants.get("public_works_decay", 0.04))
+
+    # Employment pressure weights per sector (read from city config)
+    _default_epw = [0.7, 0.65, 0.5, 0.8, 0.6, 0.45, 0.4]
+    epw_raw = state.constants.get("employment_pressure_weights", _default_epw)
+    employment_pressure_weights = np.array(epw_raw, dtype=np.float64)
+
     delta_k = state.K * monthly_rates[None, :] * state.sector_weights[None, :]
     effects: list[str] = []
 
@@ -22,11 +34,11 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         effects.append("sector shock")
 
     if "Digital India" in params.policies_active:
-        delta_k[:, SECTOR_INDEX["it_ites"]] += state.K[:, SECTOR_INDEX["it_ites"]] * 0.015
+        delta_k[:, SECTOR_INDEX["it_ites"]] += state.K[:, SECTOR_INDEX["it_ites"]] * di_it_boost
         effects.append("Digital India IT boost")
 
     if "Make in India" in params.policies_active:
-        delta_k[:, SECTOR_INDEX["manufacturing"]] += state.K[:, SECTOR_INDEX["manufacturing"]] * 0.012
+        delta_k[:, SECTOR_INDEX["manufacturing"]] += state.K[:, SECTOR_INDEX["manufacturing"]] * mii_mfg_boost
         effects.append("Make in India manufacturing boost")
 
     if "SEZ Notification" in params.policies_active and state.zone_flags:
@@ -34,7 +46,7 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         for mask in state.zone_flags.values():
             combined |= mask
         if np.any(combined):
-            delta_k[combined, :] += state.K[combined, :] * 0.01
+            delta_k[combined, :] += state.K[combined, :] * sez_multiplier
             effects.append("SEZ zone multiplier")
 
     public_mask = public_zone_mask(state, params.public_works_zone)
@@ -50,14 +62,14 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
                 axis=1,
             )
         dist = state.public_dist_cache[mask_key]
-        boost = 0.018 * np.exp(-dist / 0.04)
+        boost = pw_boost * np.exp(-dist / max(pw_decay, 0.001))
         delta_k[:, SECTOR_INDEX["real_estate"]] += state.K[:, SECTOR_INDEX["real_estate"]] * boost
         delta_k[:, SECTOR_INDEX["public_admin"]] += state.K[:, SECTOR_INDEX["public_admin"]] * boost
         effects.append("public works distance boost")
 
     state.K = np.maximum(state.K + delta_k, 0.0)
     total_delta_k = np.sum(delta_k, axis=1)
-    sector_employment_pressure = np.dot(delta_k, np.array([0.7, 0.65, 0.5, 0.8, 0.6, 0.45, 0.4]))
+    sector_employment_pressure = np.dot(delta_k, employment_pressure_weights)
     delta_formal = alpha * sector_employment_pressure
     lag = 0.6 if month > 1 else 0.25
     delta_informal = beta_informal * lag * delta_formal + state.M * 0.002 * np.maximum(state.E_formal, 1.0)
