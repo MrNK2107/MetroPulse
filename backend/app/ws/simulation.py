@@ -9,8 +9,11 @@ from fastapi import APIRouter, WebSocket
 from pydantic import ValidationError
 
 from app.config import settings
-from app.db import get_db
-from engine.models import StartScenarioMessage, InputResponseMessage
+from app.db import build_case_study_context, get_db
+from app.rag import build_evidence_pack, coefficient_factors, extract_coefficient_adjustments
+from app.realtime import build_demo_manifest, snapshot_quality
+from app.realtime_models import SnapshotData, utc_now
+from engine.models import AggregateMetrics, StartScenarioMessage, InputResponseMessage
 from engine.prediction_generator import generate_prediction
 from engine.runner import run_simulation, SimulationTimeoutError
 from engine.scenario_parser import ScenarioParseError, build_params
@@ -39,8 +42,37 @@ async def simulation_websocket(websocket: WebSocket):
 
         # ── Parsing stage with conversation ──────────────────────────
         await _send_stage(websocket, "parsing", "Reading your scenario...")
-        parsed, confidence = await _intent_router.route(scenario_text)
-        conv.mode = conv.detect_mode(scenario_text)
+        
+        is_json = False
+        if scenario_text.strip().startswith("{"):
+            try:
+                parsed_data = json.loads(scenario_text)
+                from engine.models import ParsedScenario, SECTOR_NAMES
+                # Reconstruct parsed scenario directly
+                sector_deltas = {
+                    s: float(parsed_data.get("sector_deltas", {}).get(s, 0.0))
+                    for s in SECTOR_NAMES
+                }
+                parsed = ParsedScenario(
+                    city=parsed_data.get("city", "mumbai"),
+                    sector_deltas=sector_deltas,
+                    policies_active=list(parsed_data.get("policies_active", [])),
+                    public_works_zone=parsed_data.get("public_works_zone"),
+                    horizon_months=int(parsed_data.get("horizon_months", 24)),
+                    causal_chain=parsed_data.get("causal_chain", "Direct parameter specification"),
+                    keywords=list(parsed_data.get("keywords", ["mumbai"])),
+                    confidence="high",
+                    assumptions=list(parsed_data.get("assumptions", ["Direct numeric specification by user."])),
+                )
+                confidence = 1.0
+                conv.mode = ConversationMode.DEEP
+                is_json = True
+            except Exception as e:
+                logger.warning("Failed to parse scenario as JSON, falling back to NLP routing: %s", e)
+        
+        if not is_json:
+            parsed, confidence = await _intent_router.route(scenario_text)
+            conv.mode = conv.detect_mode(scenario_text)
 
         # If low confidence or incomplete params, ask follow-up
         followup = conv.get_followup(parsed)
@@ -83,6 +115,38 @@ async def simulation_websocket(websocket: WebSocket):
             return
 
         params = build_params(parsed)
+        snapshot = await db.get_latest_snapshot(params.city)
+        quality = snapshot_quality(snapshot)
+        if snapshot is None:
+            if settings.realtime_mode_required:
+                await websocket.send_json({
+                    "type": "ERROR",
+                    "stage": "parsing",
+                    "code": "REALTIME_SNAPSHOT_UNAVAILABLE",
+                    "message": (
+                        "Real-Time Mode has no usable Bengaluru snapshot yet. "
+                        "Run ingestion or disable REALTIME_MODE_REQUIRED to use explicit Demo Mode."
+                    ),
+                })
+                return
+            snapshot = SnapshotData(
+                id=f"demo-{params.city}",
+                city=params.city,
+                snapshot_at=utc_now(),
+                status="demo",
+                quality_score=0.25,
+                source_manifest=build_demo_manifest(),
+            )
+            quality = snapshot_quality(snapshot)
+        params.realtime_snapshot = snapshot
+        evidence_pack = build_evidence_pack(parsed, scenario_text)
+        coefficient_adjustments = extract_coefficient_adjustments(parsed.sector_deltas, evidence_pack)
+        params.evidence_pack = evidence_pack.model_dump()
+        params.coefficient_adjustments = {
+            sector: adjustment.model_dump()
+            for sector, adjustment in coefficient_adjustments.items()
+        }
+        params.coefficient_factors = coefficient_factors(coefficient_adjustments)
         boundary = await db.get_region_boundary(params.city)
         if boundary is None:
             await websocket.send_json({
@@ -92,7 +156,22 @@ async def simulation_websocket(websocket: WebSocket):
                 "message": f"No boundary data found for {params.city}.",
             })
             return
-        await websocket.send_json({"type": "PARSED", "params": parsed.model_dump(), "boundary": boundary})
+        if quality.status == "degraded":
+            await _send_stage(websocket, "parsing", quality.message)
+        elif quality.status == "demo":
+            await _send_stage(websocket, "parsing", quality.message)
+        await websocket.send_json({
+            "type": "PARSED",
+            "params": parsed.model_dump(),
+            "boundary": boundary,
+            "snapshot": {
+                "id": snapshot.id,
+                "city": snapshot.city,
+                "status": quality.status,
+                "qualityScore": quality.quality_score,
+                "sourceManifest": snapshot.manifest_for_json(),
+            },
+        })
 
         # ── Prediction stage ─────────────────────────────────────────
         prediction_source = "llm"
@@ -113,8 +192,9 @@ async def simulation_websocket(websocket: WebSocket):
         await _send_stage(websocket, "simulating", "Animating monthly H3 cell changes across the city.")
         deadline = asyncio.get_running_loop().time() + settings.sim_timeout_ms / 1000.0
         frames = []
+        grid_state_ref: list = []
         try:
-            async for frame in run_simulation(params, boundary, db=db, deadline=deadline):
+            async for frame in run_simulation(params, boundary, db=None, deadline=deadline, state_ref=grid_state_ref):
                 frames.append(frame)
                 await websocket.send_json({"type": "FRAME", "payload": frame})
         except SimulationTimeoutError:
@@ -143,10 +223,11 @@ async def simulation_websocket(websocket: WebSocket):
 
         # ── Case studies stage ───────────────────────────────────────
         case_studies = []
+        case_context = build_case_study_context(parsed, original_query=scenario_text)
         await _send_stage(websocket, "retrieving", "Finding Indian urban precedents.")
         try:
             case_studies = await db.search_case_studies(
-                parsed.keywords, city=parsed.city, top_k=5,
+                parsed.keywords, city=parsed.city, top_k=5, context=case_context,
             )
             await websocket.send_json({
                 "type": "CASE_STUDIES",
@@ -158,8 +239,14 @@ async def simulation_websocket(websocket: WebSocket):
 
         # ── Group scoring stage ──────────────────────────────────────
         await _send_stage(websocket, "synthesizing", "Computing social group impacts.")
+        groups = []
         try:
-            groups = score_groups(parsed.sector_deltas, final_frame["metrics"])
+            metrics_data = final_frame["metrics"]
+            if isinstance(metrics_data, dict):
+                metrics_obj = AggregateMetrics(**metrics_data)
+            else:
+                metrics_obj = metrics_data
+            groups = score_groups(parsed.sector_deltas, metrics_obj)
             satisfaction = compute_satisfaction(groups)
             await websocket.send_json({
                 "type": "GROUP_SCORES",
@@ -176,7 +263,14 @@ async def simulation_websocket(websocket: WebSocket):
 
         # ── Evidence stage ───────────────────────────────────────────
         try:
-            evidence = synthesize_evidence(params, prediction, final_frame, case_studies)
+            evidence = synthesize_evidence(
+                params, prediction, final_frame, case_studies,
+                original_query=scenario_text,
+                group_impacts=groups,
+                case_retrieval=db.last_case_retrieval.model_dump(),
+                evidence_pack=params.evidence_pack,
+                grid_state=grid_state_ref[0] if grid_state_ref else None,
+            )
             await websocket.send_json({"type": "EVIDENCE", "evidence": evidence})
         except Exception as e:
             logger.warning("Evidence synthesis failed: %s", e)
