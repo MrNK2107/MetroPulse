@@ -22,6 +22,19 @@ class GridFactory:
         centers = np.array([h3.cell_to_latlng(idx) for idx in h3_indices], dtype=np.float64)
         n = len(h3_indices)
         center_lat, center_lng = params.city_config.center
+        # Multi-center density: sum weighted exponential decay from each urban anchor
+        from engine.config import ANCHOR_DECAY
+        anchors = params.city_config.urban_anchors
+        density = np.zeros(n, dtype=np.float64)
+        for anchor in anchors:
+            d = _haversine_vec(centers[:, 0], centers[:, 1], anchor.lat, anchor.lng)
+            d_max = max(float(np.max(d)), 1.0)
+            d_n = d / d_max
+            decay = ANCHOR_DECAY.get(anchor.type, 2.0)
+            density += anchor.weight * np.exp(-d_n * decay)
+        density = density / max(float(density.sum()), 1.0)
+
+        # Distance from primary center (used for outer_density, d_norm references)
         d_cbd = _haversine_vec(centers[:, 0], centers[:, 1], center_lat, center_lng)
         d_norm = d_cbd / max(float(np.max(d_cbd)), 1.0)
 
@@ -36,9 +49,6 @@ class GridFactory:
         total_informal = float(baselines.get("employment_informal", params.city_config.population * 0.35))
         gdp_proxy = float(baselines.get("gdp_estimate_crores", params.city_config.population / 100.0))
         slum_pct = float(baselines.get("slum_population_pct", 0.15))
-
-        density = np.exp(-d_norm * 2.8)
-        density = density / max(float(density.sum()), 1.0)
         outer_density = (0.25 + d_norm) / max(float(np.sum(0.25 + d_norm)), 1.0)
 
         E_formal = total_formal * density
@@ -52,6 +62,53 @@ class GridFactory:
         F = _flood_proxy(params.city_config, centers, d_norm)
         M = np.clip(0.15 + d_norm * 0.65 + weights[SECTOR_INDEX["informal"]] * 0.4, 0.0, 1.0)
         slum_flag = d_norm > np.quantile(d_norm, max(0.55, 1.0 - slum_pct))
+
+        # Initialize confidence arrays (all synthetic initially)
+        from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
+
+        confidence_K = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
+        confidence_R = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
+        confidence_T = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
+        confidence_H = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
+        confidence_F = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
+        confidence_M = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
+        data_origins = {k: v.value for k, v in DEFAULT_ORIGINS.items()}
+
+        # Apply real-time overlay from snapshot (city-level signals → per-cell modifiers)
+        snapshot = getattr(params, "realtime_snapshot", None)
+        overlay_summary: dict[str, Any] = {}
+        if snapshot:
+            from app.simulation.overlay import generate_overlay
+
+            overlay = generate_overlay(snapshot, h3_indices, params.city_config)
+            if overlay:
+                confidences = []
+                sources: set[str] = set()
+                modified = 0
+                for i, h3_index in enumerate(h3_indices):
+                    mod = overlay.get(h3_index)
+                    if not mod:
+                        continue
+                    modified += 1
+                    K[i, :] *= float(mod["economic_activity_multiplier"])
+                    M[i] *= float(mod["migration_pressure_multiplier"])
+                    R[i] *= float(mod["real_estate_multiplier"])
+                    confidence = float(mod.get("confidence", 0.0))
+                    confidence_K[i] = max(confidence_K[i], confidence)
+                    confidence_M[i] = max(confidence_M[i], confidence)
+                    confidence_R[i] = max(confidence_R[i], confidence * 0.9)
+                    confidences.append(confidence)
+                    sources.update(mod.get("sources", []))
+                data_origins["K"] = "real_time_context"
+                data_origins["M"] = "real_time_context"
+                data_origins["R"] = "real_time_context"
+                overlay_summary = {
+                    "applied": modified > 0,
+                    "modified_cells": modified,
+                    "origin": "real_time_context",
+                    "sources": sorted(sources),
+                    "confidence": float(np.mean(confidences)) if confidences else 0.0,
+                }
 
         neighbor_pairs = cls._neighbor_pairs(h3_indices)
         zone_flags = cls._zone_flags(h3_indices, params.city_config)
@@ -85,6 +142,7 @@ class GridFactory:
                 "R": R.copy(),
                 "T": T.copy(),
                 "H": H.copy(),
+                "M": M.copy(),
                 "unemployment_rate": float(baselines.get("unemployment_rate", 0.05)),
             },
             slum_flag=slum_flag,
@@ -96,6 +154,21 @@ class GridFactory:
             neighbor_j_idx=neighbor_j_idx,
             neighbor_weights=neighbor_weights,
             zone_flags=zone_flags,
+            snapshot_id=getattr(snapshot, "id", None),
+            data_mode="real_time" if getattr(snapshot, "is_realtime", False) else "demo",
+            source_manifest=snapshot.manifest_for_json() if snapshot else {},
+            snapshot_quality_score=float(getattr(snapshot, "quality_score", 0.0) or 0.0),
+            confidence_K=confidence_K,
+            confidence_R=confidence_R,
+            confidence_T=confidence_T,
+            confidence_H=confidence_H,
+            confidence_F=confidence_F,
+            confidence_M=confidence_M,
+            data_origins=data_origins,
+            overlay_summary=overlay_summary,
+            metric_metadata={
+                "rag_confidence": float((params.evidence_pack or {}).get("overall_evidence_confidence", 0.0) or 0.0)
+            },
         )
 
     @staticmethod
@@ -178,12 +251,24 @@ def public_zone_mask(state: GridState, zone_geojson: dict[str, Any] | None) -> n
 
 
 def _flood_proxy(city_config: Any, centers: np.ndarray, d_norm: np.ndarray) -> np.ndarray:
-    center_lat, center_lng = city_config.center
-    lat_offset = np.abs(centers[:, 0] - center_lat)
-    lng_offset = np.abs(centers[:, 1] - center_lng)
-    base = 0.15 + 0.35 * d_norm + 0.25 * np.sin((lat_offset + lng_offset) * 40.0) ** 2
+    """Estimate per-cell flood risk using urban geography heuristics.
+
+    Uses distance-from-center as a proxy for proximity to waterways
+    (rivers/coast typically at city edges). Port cities get elevated base risk.
+    Still synthetic but grounded in urban morphology, not arbitrary sine waves.
+    """
+    # Base risk increases toward periphery (rivers/coast at edges)
+    base = 0.10 + 0.25 * d_norm
+    # Port cities get elevated coastal risk
     if city_config.port_city:
-        base += 0.2
+        base += 0.15
+    # Cells near city boundary = higher water proximity risk
+    edge_proximity = 1.0 - d_norm
+    base += 0.08 * edge_proximity
+    # Allow city-specific override
+    city_flood_baseline = float(city_config.constants.get("flood_baseline", 0.0))
+    if city_flood_baseline > 0:
+        base = city_flood_baseline * np.ones_like(base)
     return np.clip(base, 0.0, 1.0)
 
 

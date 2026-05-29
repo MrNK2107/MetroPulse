@@ -19,6 +19,7 @@ async def run_simulation(
     region_boundary: dict[str, Any],
     db: Any = None,
     deadline: float | None = None,
+    state_ref: list | None = None,
 ) -> AsyncGenerator[dict[str, Any], None]:
     state = GridFactory.initialize(region_boundary, params)
     last_frame: dict[str, Any] | None = None
@@ -32,6 +33,10 @@ async def run_simulation(
         last_frame = serializer.to_frame(state, month)
         yield last_frame
         await asyncio.sleep(0)
+
+    # Expose final state for explainability
+    if state_ref is not None:
+        state_ref.append(state)
 
     if db is not None and last_frame is not None:
         await db.save_simulation(

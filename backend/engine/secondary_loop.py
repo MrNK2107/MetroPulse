@@ -69,6 +69,22 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         0.0,
         1.0,
     )
+    state.migration_balance = float(np.mean(state.M) - np.mean(state.baselines.get("M", state.M)))
+
+    # Confidence propagation — secondary effects are less certain than primary
+    from engine.provenance import SECONDARY_CASCADE_DECAY, MONSOON_DECAY
+    if state.confidence_R is not None:
+        state.confidence_R = np.clip(state.confidence_R * SECONDARY_CASCADE_DECAY, 0.1, 1.0)
+    if state.confidence_T is not None:
+        state.confidence_T = np.clip(state.confidence_T * SECONDARY_CASCADE_DECAY, 0.1, 1.0)
+    if state.confidence_H is not None:
+        state.confidence_H = np.clip(state.confidence_H * SECONDARY_CASCADE_DECAY, 0.1, 1.0)
+    if state.confidence_M is not None:
+        state.confidence_M = np.clip(state.confidence_M * SECONDARY_CASCADE_DECAY, 0.1, 1.0)
+    # Monsoon further reduces confidence
+    if month in params.city_config.monsoon_season and state.confidence_F is not None:
+        state.confidence_F = np.clip(state.confidence_F * MONSOON_DECAY, 0.1, 1.0)
+
     return state
 
 
@@ -93,5 +109,5 @@ def compute_aggregate_metrics(state: GridState) -> dict[str, float]:
         "informalEmployment": round(float(informal_share), 4),
         "housingAffordability": round(float(np.mean(state.H)), 4),
         "floodDisruption": round(flood_disruption, 4),
-        "migrationBalance": round(float(np.mean(state.M) - np.mean(state.baselines["H"]) * 0.0), 4),
+        "migrationBalance": round(float(state.migration_balance), 4),
     }

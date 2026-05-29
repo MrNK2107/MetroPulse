@@ -139,6 +139,24 @@ async def _call_openai(prompt: str, timeout_ms: int) -> str:
     return response.choices[0].message.content
 
 
+async def _call_mimo(prompt: str, timeout_ms: int) -> str:
+    from openai import AsyncOpenAI
+    from app.config import settings
+
+    client = AsyncOpenAI(api_key=settings.mimo_api_key, base_url=settings.mimo_base_url)
+    response = await asyncio.wait_for(
+        client.chat.completions.create(
+            model=settings.resolved_llm_model or "mimo-v2.5-pro",
+            messages=[
+                {"role": "system", "content": "You are a JSON-only API. Respond with valid JSON only, no markdown fences."},
+                {"role": "user", "content": prompt},
+            ],
+        ),
+        timeout=timeout_ms / 1000.0,
+    )
+    return response.choices[0].message.content
+
+
 def _deterministic_prediction(params: SimulationParams) -> Prediction:
     """Existing rule-based fallback."""
     impacts: dict[str, SectorPrediction] = {}
@@ -200,6 +218,7 @@ async def generate_prediction(params: SimulationParams) -> Prediction:
     has_key = (
         (provider == "gemini" and settings.gemini_api_key)
         or (provider == "openai" and settings.openai_api_key)
+        or (provider == "mimo" and settings.mimo_api_key)
         or (provider == "ollama")
     )
 
@@ -214,6 +233,8 @@ async def generate_prediction(params: SimulationParams) -> Prediction:
             text = await _call_gemini(prompt, settings.llm_timeout_ms)
         elif provider == "openai":
             text = await _call_openai(prompt, settings.llm_timeout_ms)
+        elif provider == "mimo":
+            text = await _call_mimo(prompt, settings.llm_timeout_ms)
         else:
             logger.warning("Unsupported LLM provider %s, using deterministic prediction", provider)
             return _deterministic_prediction(params)

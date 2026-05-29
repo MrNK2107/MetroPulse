@@ -11,6 +11,12 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         [float(params.sector_deltas.get(sector, 0.0)) / 100.0 for sector in SECTOR_NAMES],
         dtype=np.float64,
     )
+    if params.coefficient_factors:
+        factors = np.array(
+            [float(params.coefficient_factors.get(sector, 1.0)) for sector in SECTOR_NAMES],
+            dtype=np.float64,
+        )
+        rates = rates * factors
     monthly_rates = rates / max(params.horizon_months, 1)
     alpha = float(state.constants.get("alpha_default", 0.55))
     beta_informal = float(state.constants.get("beta_informal", 0.35))
@@ -79,4 +85,17 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     state.last_delta_k = total_delta_k
     state.last_delta_e = delta_formal + delta_informal
     state.active_effects = effects or ["baseline drift"]
+
+    # Confidence propagation — each step accumulates uncertainty
+    from engine.provenance import PRIMARY_LOOP_DECAY
+    if state.confidence_K is not None:
+        state.confidence_K = np.clip(state.confidence_K * PRIMARY_LOOP_DECAY, 0.1, 1.0)
+        if params.coefficient_adjustments:
+            coeff_conf = np.mean([
+                float(item.get("confidence", 0.35)) if isinstance(item, dict) else 0.35
+                for item in params.coefficient_adjustments.values()
+            ])
+            state.confidence_K = np.maximum(state.confidence_K, min(coeff_conf, 0.75))
+            state.data_origins["K"] = "rag_evidence"
+
     return state

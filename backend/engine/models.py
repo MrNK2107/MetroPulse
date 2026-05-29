@@ -110,6 +110,28 @@ class CaseStudy(BaseModel):
     sectors: list[str] = Field(default_factory=list)
     policies: list[str] = Field(default_factory=list)
     relevance_score: float = 0.0
+    match_reasons: list[str] = Field(default_factory=list)
+    relevance_tier: Literal["exact", "related", "weak"] = "weak"
+    matched_city: bool = False
+    matched_sectors: list[str] = Field(default_factory=list)
+    matched_policies: list[str] = Field(default_factory=list)
+
+
+class CaseStudyMatchContext(BaseModel):
+    city: str | None = None
+    sectors: list[str] = Field(default_factory=list)
+    policies: list[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
+    sector_directions: dict[str, Literal["positive", "negative", "mixed"]] = Field(default_factory=dict)
+
+
+class CaseRetrievalAudit(BaseModel):
+    query_city: str | None = None
+    query_sectors: list[str] = Field(default_factory=list)
+    query_policies: list[str] = Field(default_factory=list)
+    returned_count: int = 0
+    omitted_weak_count: int = 0
+    retrieval_mode: Literal["strict"] = "strict"
 
 
 @dataclass
@@ -121,6 +143,10 @@ class SimulationParams:
     horizon_months: int
     city_config: Any
     assumptions: list[str] = field(default_factory=list)
+    realtime_snapshot: Any | None = None
+    evidence_pack: dict[str, Any] | None = None
+    coefficient_adjustments: dict[str, Any] = field(default_factory=dict)
+    coefficient_factors: dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -130,6 +156,10 @@ class SimulationParams:
             "public_works_zone": self.public_works_zone,
             "horizon_months": self.horizon_months,
             "assumptions": self.assumptions,
+            "snapshot_id": getattr(self.realtime_snapshot, "id", None),
+            "mode": "real_time" if getattr(self.realtime_snapshot, "is_realtime", False) else "demo",
+            "evidence_pack": self.evidence_pack,
+            "coefficient_adjustments": self.coefficient_adjustments,
         }
 
 
@@ -159,6 +189,36 @@ class GridState:
     last_delta_e: np.ndarray | None = None
     active_effects: list[str] = field(default_factory=list)
     public_dist_cache: dict[int, np.ndarray] = field(default_factory=dict)
+    snapshot_id: str | None = None
+    data_mode: str = "demo"
+    source_manifest: dict[str, Any] = field(default_factory=dict)
+    snapshot_quality_score: float = 0.0
+
+    # Per-cell confidence arrays — same shape as the corresponding metric arrays
+    confidence_K: np.ndarray | None = None
+    confidence_R: np.ndarray | None = None
+    confidence_T: np.ndarray | None = None
+    confidence_H: np.ndarray | None = None
+    confidence_F: np.ndarray | None = None
+    confidence_M: np.ndarray | None = None
+    data_origins: dict[str, str] = field(default_factory=dict)
+
+    # Overlay modifiers from real-time data (set by overlay.py)
+    economic_modifier: np.ndarray | None = None
+    migration_modifier: np.ndarray | None = None
+    investment_confidence: np.ndarray | None = None
+    overlay_summary: dict[str, Any] = field(default_factory=dict)
+    metric_metadata: dict[str, Any] = field(default_factory=dict)
+    migration_balance: float = 0.0
+
+    # Per-cell confidence arrays (same shape as the metric arrays)
+    confidence_K: np.ndarray | None = None
+    confidence_R: np.ndarray | None = None
+    confidence_T: np.ndarray | None = None
+    confidence_H: np.ndarray | None = None
+    confidence_F: np.ndarray | None = None
+    confidence_M: np.ndarray | None = None
+    data_origins: dict[str, str] = field(default_factory=dict)
 
     @property
     def n_cells(self) -> int:
