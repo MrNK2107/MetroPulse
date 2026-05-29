@@ -123,13 +123,24 @@ export function formatDelta(delta: number): string {
 
 /**
  * Normalize a metric value to [0, 100] for HeatmapLayer (requires non-negative weights).
- * Preserves sign for delta: -0.15→0, 0→50, +0.15→100.
+ * For delta, we want absolute deviation from 0.0 to glow (0% change = 0 weight, 15%+ change = 100 weight)
+ * raised to a power to suppress small fluctuations.
+ * For sequential metrics, we suppress low background values using a power of 2.
  */
 export function heatmapWeight(value: number, metric: MapMetricKey): number {
-  if (Number.isNaN(value)) return 0;
+  if (Number.isNaN(value) || value === undefined) return 0;
   const { clamp } = METRIC_SCALES[metric];
+
+  if (metric === "delta") {
+    // For delta, absolute deviation from 0.0 (maximum expected is 0.15)
+    const absVal = Math.abs(value);
+    const normalized = absVal / 0.15;
+    return Math.max(0, Math.min(100, Math.pow(normalized, 1.8) * 100));
+  }
+
   const normalized = (value - clamp[0]) / (clamp[1] - clamp[0]);
-  return Math.max(0, Math.min(100, normalized * 100));
+  const clamped = Math.max(0, Math.min(1.0, normalized));
+  return Math.max(0, Math.min(100, Math.pow(clamped, 2.0) * 100));
 }
 
 /**

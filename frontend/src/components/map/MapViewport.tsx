@@ -99,34 +99,97 @@ export function MapViewport() {
 
     if (currentFrame) {
       if (activeVisualizationMode === "heatmap") {
-        // Use a constant screen-space radius so heatmap blobs stay visually stable
-        // regardless of zoom level. radiusMinPixels / radiusMaxPixels prevent extremes.
-        result.push(
-          new HeatmapLayer({
-            id: `heatmap-layer-${activeMetric}`,
-            data: currentFrame.cells,
-            getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
-            getWeight: (d: HexCellState) => {
-              const val = getMetricVal(d, activeMetric);
-              return heatmapWeight(val, activeMetric);
-            },
-            radiusPixels: 18,
-            radiusMinPixels: 6,
-            radiusMaxPixels: 60,
-            intensity: 1.4,
-            threshold: 0.05,
-            colorRange: heatmapColorRange(activeMetric),
-            // Clip heatmap to the exact city boundary polygon using MaskExtension
-            extensions: maskData ? [MASK_EXTENSION] : [],
-            maskId: maskData ? "city-boundary-mask" : undefined,
-            maskByInstance: false,
-            maskInverted: false,
-            updateTriggers: {
-              getWeight: [activeMetric],
-              colorRange: [activeMetric],
-            },
-          })
-        );
+        if (activeMetric === "delta") {
+          // Render two separate heatmap layers to distinguish growth (blue) and stress (red)
+          const positiveCells = currentFrame.cells.filter((c) => c.delta > 0);
+          const negativeCells = currentFrame.cells.filter((c) => c.delta < 0);
+
+          const posColorRange: [number, number, number][] = [
+            [15, 23, 42],     // dark slate base
+            [56, 189, 248],   // Sky-400
+            [14, 165, 233],   // Sky-500
+            [2, 132, 199],    // Sky-600
+            [29, 78, 216],    // Blue-700
+            [30, 58, 138],    // Blue-900
+          ];
+
+          const negColorRange: [number, number, number][] = [
+            [15, 23, 42],     // dark slate base
+            [253, 186, 116],  // Orange-300
+            [249, 115, 22],   // Orange-500
+            [234, 88, 12],    // Orange-600
+            [220, 38, 38],    // Red-600
+            [153, 27, 27],    // Red-800
+          ];
+
+          result.push(
+            new HeatmapLayer({
+              id: `heatmap-layer-delta-positive`,
+              data: positiveCells,
+              getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
+              getWeight: (d: HexCellState) => d.delta,
+              radiusPixels: 22,
+              radiusMinPixels: 6,
+              radiusMaxPixels: 60,
+              intensity: 1.6,
+              threshold: 0.08,
+              colorRange: posColorRange,
+              extensions: maskData ? [MASK_EXTENSION] : [],
+              maskId: maskData ? "city-boundary-mask" : undefined,
+              maskByInstance: false,
+              maskInverted: false,
+              updateTriggers: {
+                getWeight: [],
+              },
+            })
+          );
+
+          result.push(
+            new HeatmapLayer({
+              id: `heatmap-layer-delta-negative`,
+              data: negativeCells,
+              getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
+              getWeight: (d: HexCellState) => -d.delta,
+              radiusPixels: 22,
+              radiusMinPixels: 6,
+              radiusMaxPixels: 60,
+              intensity: 1.6,
+              threshold: 0.08,
+              colorRange: negColorRange,
+              extensions: maskData ? [MASK_EXTENSION] : [],
+              maskId: maskData ? "city-boundary-mask" : undefined,
+              maskByInstance: false,
+              maskInverted: false,
+              updateTriggers: {
+                getWeight: [],
+              },
+            })
+          );
+        } else {
+          // Render a single heatmap layer for sequential metrics
+          result.push(
+            new HeatmapLayer({
+              id: `heatmap-layer-${activeMetric}`,
+              data: currentFrame.cells,
+              getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
+              getWeight: (d: HexCellState) => getMetricVal(d, activeMetric),
+              radiusPixels: 22,
+              radiusMinPixels: 6,
+              radiusMaxPixels: 60,
+              intensity: 1.6,
+              threshold: 0.08,
+              colorRange: heatmapColorRange(activeMetric),
+              extensions: maskData ? [MASK_EXTENSION] : [],
+              maskId: maskData ? "city-boundary-mask" : undefined,
+              maskByInstance: false,
+              maskInverted: false,
+              updateTriggers: {
+                getWeight: [activeMetric],
+                colorRange: [activeMetric],
+              },
+            })
+          );
+        }
       } else {
         result.push(
           new H3HexagonLayer<HexCellState>({
@@ -166,12 +229,25 @@ export function MapViewport() {
       }
     }
 
-    // Render the city boundary as a subtle outline for visual alignment reference.
-    // In heatmap mode this layer also serves as the mask source for MaskExtension.
+    // Mask definition layer (operation: 'mask' ensures it registers in DeckGL's mask buffer)
     if (maskData) {
       result.push(
         new GeoJsonLayer({
           id: "city-boundary-mask",
+          data: maskData,
+          stroked: false,
+          filled: true,
+          pickable: false,
+          operation: "mask",
+        })
+      );
+    }
+
+    // Render the visible city boundary outline for screen rendering
+    if (maskData) {
+      result.push(
+        new GeoJsonLayer({
+          id: "city-boundary-outline",
           data: maskData,
           stroked: true,
           filled: false,
@@ -179,7 +255,6 @@ export function MapViewport() {
           getLineColor: [148, 163, 184, 180], // slate-400 with some transparency
           getLineWidth: 1.5,
           pickable: false,
-          // This layer is used as a mask source; operation is drawn as outline
           operation: "draw",
         })
       );
@@ -355,6 +430,17 @@ export function MapViewport() {
               <div className="flex justify-between gap-4">
                 <span className="text-blue-400">Flood Risk</span>
                 <span className="text-blue-300 font-mono font-medium">{(hoveredCell.cell.floodRisk * 100).toFixed(0)}%</span>
+              </div>
+            )}
+            {hoveredCell.cell.confidence != null && (
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">Confidence</span>
+                <span className={`font-mono font-medium ${
+                  hoveredCell.cell.confidence >= 0.6 ? "text-emerald-400" :
+                  hoveredCell.cell.confidence >= 0.4 ? "text-amber-400" : "text-red-400"
+                }`}>
+                  {(hoveredCell.cell.confidence * 100).toFixed(0)}%
+                </span>
               </div>
             )}
             <div className="mt-2.5 max-w-[220px] border-t border-dark-100 pt-2 text-[10px] text-gray-500 italic leading-relaxed">

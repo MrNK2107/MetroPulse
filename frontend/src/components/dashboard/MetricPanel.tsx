@@ -17,9 +17,10 @@ interface MetricChartProps {
   color: string;
   formatter: (value: number) => string;
   currentValue: number | null;
+  metadata?: { confidence: number; confidence_label: string; origin: string; sources: string[] };
 }
 
-const CHART_CONFIGS: Omit<MetricChartProps, "currentValue">[] = [
+const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
   {
     title: "GDP Δ",
     unit: "Change from baseline",
@@ -64,7 +65,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue">[] = [
   },
 ];
 
-const MetricChart = React.memo(function MetricChart({ title, unit, dataKey, color, formatter, currentValue }: MetricChartProps) {
+const MetricChart = React.memo(function MetricChart({ title, unit, dataKey, color, formatter, currentValue, metadata }: MetricChartProps) {
   const metrics = useSimulationStore((s) => s.metrics);
 
   const chartData = useMemo(() => {
@@ -80,6 +81,11 @@ const MetricChart = React.memo(function MetricChart({ title, unit, dataKey, colo
         <div>
           <Title className="text-gray-300 text-xs font-semibold uppercase tracking-wider">{title}</Title>
           <Text className="text-gray-500 text-[10px]">{unit}</Text>
+          {metadata && (
+            <Text className="text-gray-500 text-[10px]">
+              Confidence: {metadata.confidence_label} · Origin: {metadata.origin.replace(/_/g, " ")}
+            </Text>
+          )}
         </div>
         {currentValue !== null && (
           <span className={`text-xs font-mono font-bold ${
@@ -128,6 +134,7 @@ export function MetricPanel() {
   const prediction = useSimulationStore((s) => s.prediction);
   const caseStudies = useSimulationStore((s) => s.caseStudies);
   const evidence = useSimulationStore((s) => s.evidence);
+  const snapshot = useSimulationStore((s) => s.snapshot);
   const metrics = useSimulationStore((s) => s.metrics);
 
   const isBottomDrawerOpen = useSimulationStore((s) => s.isBottomDrawerOpen);
@@ -141,6 +148,9 @@ export function MetricPanel() {
       metrics,
       caseStudies,
       evidence,
+      snapshotId: snapshot?.id ?? frames[frames.length - 1]?.proof?.snapshotId ?? null,
+      source_manifest: snapshot?.sourceManifest ?? frames[frames.length - 1]?.proof?.dataSources ?? {},
+      quality_score: snapshot?.qualityScore ?? frames[frames.length - 1]?.proof?.qualityScore ?? 0,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
@@ -171,9 +181,18 @@ export function MetricPanel() {
           </h2>
           {isRunning && (
             <span className="text-[9px] font-bold bg-yellow-500/10 border border-yellow-500/25 text-yellow-500 px-1.5 py-0.5 rounded-full animate-pulse">
-              LIVE
+              RUNNING
             </span>
           )}
+          <span className={`text-[9px] font-bold border px-1.5 py-0.5 rounded-full ${
+            snapshot?.status === "fresh"
+              ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
+              : snapshot?.status === "degraded"
+                ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
+                : "bg-sky-500/10 border-sky-500/25 text-sky-400"
+          }`}>
+            {snapshot?.status === "fresh" ? "DATA-INFORMED" : snapshot?.status === "degraded" ? "PARTIAL CONTEXT" : "ESTIMATED"}
+          </span>
         </div>
 
         {isDataAvailable && (
@@ -195,7 +214,7 @@ export function MetricPanel() {
         )}
       </div>
 
-      {/* Summary Pills Grid (Shows live current metrics) */}
+      {/* Summary Pills Grid (Shows current scenario-estimate metrics) */}
       {!isDataAvailable ? (
         <div className="h-10 flex items-center justify-center border border-dashed border-dark-100/50 rounded-xl bg-dark-300/10 py-6">
           <Text className="text-gray-500 text-xs font-medium">Run a simulation prompt to inspect timeline metrics.</Text>
@@ -205,6 +224,7 @@ export function MetricPanel() {
           {CHART_CONFIGS.map((config) => {
             const rawVal = currentMetrics ? currentMetrics[config.dataKey] : null;
             const valStr = rawVal !== null ? config.formatter(rawVal) : "—";
+            const metadata = currentFrame?.metric_metadata?.[config.dataKey];
             
             // Enforce unified semantic color-coding: green for growth/healthy, red for stress/drop, slate for stable
             let valColor = "text-gray-300";
@@ -237,6 +257,14 @@ export function MetricPanel() {
                   <span className="text-[8px] text-gray-600 font-mono truncate">{config.unit}</span>
                 </div>
                 <span className={`text-[11px] font-mono ${valColor} ml-2 shrink-0`}>{valStr}</span>
+                {metadata && (
+                  <span
+                    className="ml-2 rounded-full border border-dark-100/40 bg-dark-300/60 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-gray-400"
+                    title="Confidence reflects input data quality, evidence coverage, and model assumptions. It is not a probability."
+                  >
+                    {metadata.confidence_label}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -251,6 +279,7 @@ export function MetricPanel() {
               key={config.dataKey}
               {...config}
               currentValue={currentMetrics[config.dataKey]}
+              metadata={currentFrame?.metric_metadata?.[config.dataKey]}
             />
           ))}
         </div>

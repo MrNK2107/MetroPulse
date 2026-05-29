@@ -10,6 +10,7 @@ import type {
   PipelineStage,
   Prediction,
   SimulationFrame,
+  SnapshotSummary,
   WSGroupScoresMessage,
   WSNeedsInputMessage,
 } from "@/types/simulation";
@@ -57,6 +58,7 @@ interface SimulationStore {
   error: string | null;
   errorStage: PipelineStage | null;
   simulationId: string | null;
+  snapshot: SnapshotSummary | null;
 
   // Conversation state
   conversationMessages: ConversationMessage[];
@@ -88,7 +90,7 @@ interface SimulationStore {
 
   setScenarioText: (value: string) => void;
   setStage: (stage: PipelineStage, message: string) => void;
-  setParsedScenario: (params: ParsedScenario) => void;
+  setParsedScenario: (params: ParsedScenario, snapshot?: SnapshotSummary) => void;
   setPrediction: (prediction: Prediction) => void;
   addFrame: (frame: SimulationFrame) => void;
   setCaseStudies: (studies: CaseStudy[]) => void;
@@ -155,6 +157,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   error: null,
   errorStage: null,
   simulationId: null,
+  snapshot: null,
 
   conversationMessages: [],
   conversationMode: "quick",
@@ -192,8 +195,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       };
     }),
 
-  setParsedScenario: (params) => {
-    set({ parsedScenario: params, publicWorksZone: params.public_works_zone });
+  setParsedScenario: (params, snapshot) => {
+    set({ parsedScenario: params, publicWorksZone: params.public_works_zone, snapshot: snapshot ?? null });
     // Automatically center map viewport on resolved city
     const resolvedCity = params.city.toLowerCase().replace(" ", "_");
     const cityConfig = get().cityCoords[resolvedCity];
@@ -331,7 +334,32 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
   setPendingQuestion: (question) => set({ pendingQuestion: question }),
 
-  setConversationMode: (mode) => set({ conversationMode: mode }),
+  setConversationMode: (mode) =>
+    set((state) => {
+      const nextState: Partial<SimulationStore> = { conversationMode: mode };
+      if (mode === "deep" && !state.parsedScenario) {
+        nextState.parsedScenario = {
+          city: "mumbai",
+          sector_deltas: {
+            it_ites: 0,
+            manufacturing: 0,
+            real_estate: 0,
+            trade_hospitality: 0,
+            transport_logistics: 0,
+            informal: 0,
+            public_admin: 0,
+          },
+          policies_active: [],
+          public_works_zone: null,
+          horizon_months: 24,
+          causal_chain: "Direct parameter specification",
+          keywords: ["mumbai"],
+          confidence: "high",
+          assumptions: ["Direct numeric specification by user."],
+        };
+      }
+      return nextState;
+    }),
 
   setGroupScores: (msg) =>
     set({
@@ -371,6 +399,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       error: null,
       errorStage: null,
       simulationId: null,
+      snapshot: null,
       activeFrameIndex: -1,
       conversationMessages: [],
       pendingQuestion: null,
@@ -392,6 +421,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       error: null,
       errorStage: null,
       simulationId: null,
+      snapshot: null,
       conversationMessages: [],
       pendingQuestion: null,
       groupScores: [],

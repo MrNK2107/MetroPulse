@@ -27,7 +27,7 @@ export function useWebSocket() {
       const client = new WebSocketClient(wsUrl, {
         onStage: (msg) => useSimulationStore.getState().setStage(msg.stage, msg.message),
         onParsed: (msg) => {
-          useSimulationStore.getState().setParsedScenario(msg.params);
+          useSimulationStore.getState().setParsedScenario(msg.params, msg.snapshot);
           if (msg.boundary) {
             useSimulationStore.getState().setRegionBoundary(msg.boundary);
           }

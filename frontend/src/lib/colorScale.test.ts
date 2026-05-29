@@ -39,16 +39,16 @@ describe('colorScale', () => {
       expect(result).toBeLessThanOrEqual(100)
     })
 
-    it('returns 50 for midpoint of delta (0.0)', () => {
+    it('returns 0 for midpoint of delta (0.0)', () => {
       const weight = heatmapWeight(0.0, 'delta')
-      expect(weight).toBeCloseTo(50, 0)
-    })
-
-    it('returns 0 for minimum clamp value', () => {
-      const weight = heatmapWeight(-0.15, 'delta')
       expect(weight).toBeCloseTo(0, 0)
     })
-
+ 
+    it('returns 100 for minimum clamp value due to absolute deviation mapping', () => {
+      const weight = heatmapWeight(-0.15, 'delta')
+      expect(weight).toBeCloseTo(100, 0)
+    })
+ 
     it('returns 100 for maximum clamp value', () => {
       const weight = heatmapWeight(0.15, 'delta')
       expect(weight).toBeCloseTo(100, 0)

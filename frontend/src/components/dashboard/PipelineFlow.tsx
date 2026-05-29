@@ -6,7 +6,7 @@ import type { PipelineStage } from "@/types/simulation";
 
 const STEPS: { stage: PipelineStage; label: string }[] = [
   { stage: "parsing", label: "Prompt" },
-  { stage: "predicting", label: "Prediction" },
+  { stage: "predicting", label: "Expectation" },
   { stage: "simulating", label: "Simulation" },
   { stage: "retrieving", label: "Evidence" },
   { stage: "synthesizing", label: "Social Impact" },

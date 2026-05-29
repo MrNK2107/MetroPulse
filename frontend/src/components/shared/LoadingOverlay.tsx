@@ -4,7 +4,7 @@ import { useSimulationStore } from "@/store/simulationStore";
 
 const ERROR_HINTS: Record<string, string> = {
   parsing: "Could not understand the scenario. Try including a city name and a sector change.",
-  predicting: "Prediction generation failed. The simulation will still run with default predictions.",
+  predicting: "Scenario expectation generation failed. The simulation will still run with default assumptions.",
   simulating: "Simulation failed. The scenario may be too extreme — try a shorter horizon or smaller sector changes.",
   retrieving: "Could not retrieve case studies. This is non-critical — the simulation results are still valid.",
   synthesizing: "Evidence synthesis failed. The simulation results are available but the report may be incomplete.",

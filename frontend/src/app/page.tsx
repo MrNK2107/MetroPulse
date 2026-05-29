@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { ConversationPanel } from "@/components/controls/ConversationPanel";
 import { FrameScrubber } from "@/components/controls/FrameScrubber";
 import { EvidencePanel } from "@/components/dashboard/EvidencePanel";
+import { DataFreshnessPanel } from "@/components/dashboard/DataFreshnessPanel";
 import { GroupImpactPanel } from "@/components/dashboard/GroupImpactPanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
 import { PipelineFlow } from "@/components/dashboard/PipelineFlow";
@@ -121,6 +122,12 @@ export default function Home() {
       {/* 5. Drawing Tool Overlay */}
       <div className="absolute right-4 top-20 z-10">
         <DrawingToolbar />
+      </div>
+
+      <div className="absolute left-1/2 top-20 z-10 w-[min(92vw,560px)] -translate-x-1/2 pointer-events-none">
+        <div className="pointer-events-auto">
+          <DataFreshnessPanel />
+        </div>
       </div>
 
       {/* 6. Dynamic Bottom Drawer overlay: Playback controls and detailed metrics */}
