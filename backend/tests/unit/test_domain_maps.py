@@ -5,9 +5,13 @@ from engine.nl_engine.domain_maps import (
     CAUSE_EFFECT_CHAINS,
     SOCIAL_GROUPS,
     SENTIMENT_WORDS,
+    NEGATIVE_WORDS,
+    POSITIVE_WORDS,
+    EVENT_KEYWORDS,
     resolve_sector,
     resolve_city,
     get_event_effects,
+    has_word_boundary_match,
 )
 
 
@@ -69,3 +73,51 @@ def test_social_group_weights_sum_to_one():
 def test_sentiment_words_have_both_directions():
     assert len(SENTIMENT_WORDS["positive"]) > 0
     assert len(SENTIMENT_WORDS["negative"]) > 0
+
+
+def test_fuel_import_stop_event_exists():
+    effects = get_event_effects("fuel_import_stop")
+    assert effects["transport_logistics"] < 0
+    assert effects["manufacturing"] < 0
+    assert effects["informal"] < 0
+    assert effects["trade_hospitality"] < 0
+
+
+def test_fuel_import_stop_keywords_exist():
+    keywords = EVENT_KEYWORDS["fuel_import_stop"]
+    assert any("petrol" in kw for kw in keywords)
+    assert any("import" in kw for kw in keywords)
+
+
+def test_cessation_words_in_negative():
+    for word in ("stopped", "halt", "ban", "banned", "cease", "embargo", "suspended"):
+        assert word in NEGATIVE_WORDS, f"'{word}' missing from NEGATIVE_WORDS"
+
+
+def test_inflected_forms_in_negative():
+    for word in ("devastates", "crashed", "plummeted", "destroying", "damaged"):
+        assert word in NEGATIVE_WORDS, f"'{word}' missing from NEGATIVE_WORDS"
+
+
+def test_inflected_forms_in_positive():
+    for word in ("increased", "soared", "grew", "boosted", "improving"):
+        assert word in POSITIVE_WORDS, f"'{word}' missing from POSITIVE_WORDS"
+
+
+def test_word_boundary_match_basic():
+    assert has_word_boundary_match("stopped importing petrol", NEGATIVE_WORDS)
+    assert not has_word_boundary_match("the waterfalls are beautiful", ["fall"])
+
+
+def test_word_boundary_match_no_false_positive():
+    # "fall" should NOT match inside "waterfalls"
+    assert not has_word_boundary_match("waterfalls", ["fall"])
+    # "cut" should NOT match inside "shortcut"
+    assert not has_word_boundary_match("shortcut", ["cut"])
+    # "rise" should NOT match inside "surprise"
+    assert not has_word_boundary_match("surprise", ["rise"])
+
+
+def test_word_boundary_match_positive():
+    assert has_word_boundary_match("the economy will rise", POSITIVE_WORDS)
+    assert has_word_boundary_match("investment is growing", POSITIVE_WORDS)

@@ -23,4 +23,8 @@ def test_serializer_includes_visual_proof_fields():
     assert "proof" in frame["cells"][0]
     assert "visualCue" in frame["cells"][0]
     assert "proof" in frame
+    assert "metric_metadata" in frame
+    assert frame["metric_metadata"]["gdpDelta"]["origin"]
+    assert frame["metric_metadata"]["gdpDelta"]["confidence_label"] in {"Low", "Medium", "High"}
+    assert frame["proof"]["confidenceLabel"] in {"Low", "Medium", "High"}
     assert "informalEmployment" in frame["metrics"]

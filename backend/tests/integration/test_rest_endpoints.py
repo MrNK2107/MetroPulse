@@ -57,3 +57,31 @@ async def test_list_simulations():
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_realtime_data_sources_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/data-sources?city=bengaluru")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert {source["domain"] for source in data["data"]} == {
+            "mobility",
+            "jobs",
+            "land_value",
+            "census",
+            "news",
+        }
+
+
+@pytest.mark.asyncio
+async def test_latest_snapshot_endpoint_returns_quality_meta():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/snapshots/latest?city=bengaluru")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["meta"]["quality"]["status"] in {"unavailable", "demo", "degraded", "fresh"}

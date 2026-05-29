@@ -68,3 +68,20 @@ def test_parse_increased_by_format(parser):
     result = parser.parse("Fuel increased by 15% in Delhi")
     assert result.city == "delhi_ncr"
     assert result.sector_deltas["transport_logistics"] == 15.0
+
+
+def test_parse_fuel_import_stop(parser):
+    result = parser.parse("What if we stopped importing petrol at once in Chennai")
+    assert result.city == "chennai"
+    # "stopped" should make transport_logistics negative
+    assert result.sector_deltas["transport_logistics"] < 0
+    # fuel_import_stop cause-effect chain should fire
+    assert result.sector_deltas["manufacturing"] < 0
+    assert result.sector_deltas["informal"] < 0
+    # IT/ITES should NOT be falsely triggered
+    assert result.sector_deltas["it_ites"] == 0.0
+
+
+def test_parse_standalone_it_sector(parser):
+    result = parser.parse("IT sector grows 25% in Bengaluru")
+    assert result.sector_deltas["it_ites"] == 25.0
