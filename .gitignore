@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -43,6 +44,11 @@ backend/data/
 
 # Logs
 *.log
+
+# Docs (generated / agent-only)
+docs/
+*.md
+!README.md
 
 # OpenCode
 .opencode/
