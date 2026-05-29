@@ -8,6 +8,12 @@ import { PresetSelector } from "./PresetSelector";
 import { TemporalSlider } from "./TemporalSlider";
 import { FDISliders } from "./FDISliders";
 
+const SUPPORTED_CITIES = [
+  "Hyderabad", "Bengaluru", "Mumbai", "Chennai", "Pune",
+  "Ahmedabad", "Kolkata", "Delhi", "Jaipur", "Lucknow",
+  "Kochi", "Coimbatore",
+];
+
 const EXAMPLES = [
   "What happens to Hyderabad if pharma FDI drops 40% but Smart City Mission continues for 24 months?",
   "Simulate a Bengaluru tech boom with Digital India and pressure on housing over two years.",
@@ -71,13 +77,26 @@ export function ScenarioPanel() {
               value={scenarioText}
               onChange={(e) => setScenarioText(e.target.value)}
               rows={5}
-              placeholder="Describe a city-level event or policy intervention..."
+              placeholder="Describe a scenario for any Indian city... e.g. 'What if Hyderabad pharma FDI drops 40%?'"
               className="w-full resize-none rounded-xl border border-dark-100/70 bg-dark-300/60 px-3.5 py-3 text-xs leading-relaxed text-gray-200 outline-none focus:border-blue-500/70 focus:bg-dark-300 transition-all font-sans"
             />
             <div className="absolute right-2.5 bottom-2.5 text-[9px] text-gray-600 font-mono">
               {scenarioText.length} chars
             </div>
           </div>
+        </div>
+
+        {/* Supported Cities */}
+        <div className="flex flex-wrap gap-1.5">
+          {SUPPORTED_CITIES.map((city) => (
+            <button
+              key={city}
+              onClick={() => setScenarioText(`What happens to ${city} if `)}
+              className="rounded-lg bg-dark-300/50 border border-dark-100/40 px-2 py-1 text-[10px] text-gray-500 hover:text-gray-300 hover:border-blue-500/40 transition-all"
+            >
+              {city}
+            </button>
+          ))}
         </div>
 
         {/* Simulation Horizon */}
