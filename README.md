@@ -836,3 +836,8 @@ github.com/MrNK2107/MetroPulse
 ```
 
 </div>
+# MetroPulse
+
+MetroPulse is an interactive urban scenario sandbox that combines real-time signals, estimated city baselines, historical evidence retrieval, and transparent simulation models to explore possible consequences of economic and infrastructure interventions.
+
+MetroPulse produces data-informed scenario estimates. It does not predict city outcomes, forecast the future, or provide decision-grade policy recommendations.
