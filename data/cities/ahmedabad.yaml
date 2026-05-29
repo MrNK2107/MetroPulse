@@ -82,3 +82,19 @@ policies:
   mission_name: Ahmedabad Smart City
   amrut: true
   metro_phase: 2
+urban_anchors:
+  - name: CG Road CBD
+    type: cbd
+    lat: 23.0225
+    lng: 72.5714
+    weight: 1.0
+  - name: GIFT City
+    type: commercial
+    lat: 23.1600
+    lng: 72.6800
+    weight: 0.8
+  - name: Naroda Industrial
+    type: industrial
+    lat: 23.0700
+    lng: 72.6500
+    weight: 0.6

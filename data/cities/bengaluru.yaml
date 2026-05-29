@@ -88,3 +88,24 @@ policies:
   mission_name: Bengaluru Smart City
   amrut: true
   metro_phase: 3
+urban_anchors:
+  - name: MG Road CBD
+    type: cbd
+    lat: 12.9758
+    lng: 77.6068
+    weight: 1.0
+  - name: Whitefield IT
+    type: commercial
+    lat: 12.9698
+    lng: 77.7500
+    weight: 0.8
+  - name: Electronic City
+    type: industrial
+    lat: 12.8458
+    lng: 77.6553
+    weight: 0.7
+  - name: Hebbal Residential
+    type: residential
+    lat: 13.0358
+    lng: 77.5970
+    weight: 0.5

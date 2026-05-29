@@ -81,3 +81,24 @@ policies:
   mission_name: Pune Smart City
   amrut: true
   metro_phase: 2
+urban_anchors:
+  - name: Shivajinagar CBD
+    type: cbd
+    lat: 18.5308
+    lng: 73.8478
+    weight: 1.0
+  - name: Hinjewadi IT Park
+    type: commercial
+    lat: 18.5912
+    lng: 73.7389
+    weight: 0.8
+  - name: Chakan Auto Cluster
+    type: industrial
+    lat: 18.7600
+    lng: 73.8600
+    weight: 0.6
+  - name: Kothrud Residential
+    type: residential
+    lat: 18.5074
+    lng: 73.8077
+    weight: 0.5

@@ -81,3 +81,24 @@ policies:
   mission_name: Hyderabad Smart City
   amrut: true
   metro_phase: 2
+urban_anchors:
+  - name: Banjara Hills CBD
+    type: cbd
+    lat: 17.4156
+    lng: 78.4347
+    weight: 1.0
+  - name: HITEC City
+    type: commercial
+    lat: 17.4435
+    lng: 78.3772
+    weight: 0.8
+  - name: Genome Valley
+    type: industrial
+    lat: 17.5500
+    lng: 78.5200
+    weight: 0.6
+  - name: Secunderabad Residential
+    type: residential
+    lat: 17.4399
+    lng: 78.4983
+    weight: 0.5

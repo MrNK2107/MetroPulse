@@ -75,3 +75,14 @@ policies:
   mission_name: Bhubaneswar Smart City
   amrut: true
   metro_phase: 0
+urban_anchors:
+  - name: Master Canteen CBD
+    type: cbd
+    lat: 20.2961
+    lng: 85.8245
+    weight: 1.0
+  - name: Infocity IT
+    type: commercial
+    lat: 20.3500
+    lng: 85.8100
+    weight: 0.7

@@ -81,3 +81,24 @@ policies:
   mission_name: Chennai Smart City
   amrut: true
   metro_phase: 2
+urban_anchors:
+  - name: T Nagar CBD
+    type: cbd
+    lat: 13.0405
+    lng: 80.2337
+    weight: 1.0
+  - name: Siruseri IT Corridor
+    type: commercial
+    lat: 12.8276
+    lng: 80.2214
+    weight: 0.7
+  - name: Ambattur Industrial
+    type: industrial
+    lat: 13.1143
+    lng: 80.1548
+    weight: 0.6
+  - name: Port Area
+    type: transport
+    lat: 13.1005
+    lng: 80.2930
+    weight: 0.5

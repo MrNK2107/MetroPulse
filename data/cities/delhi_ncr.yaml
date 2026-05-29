@@ -81,3 +81,24 @@ policies:
   mission_name: Delhi Smart City
   amrut: true
   metro_phase: 4
+urban_anchors:
+  - name: Connaught Place CBD
+    type: cbd
+    lat: 28.6315
+    lng: 77.2167
+    weight: 1.0
+  - name: Gurugram Cyber City
+    type: commercial
+    lat: 28.4595
+    lng: 77.0266
+    weight: 0.8
+  - name: Noida SEZ
+    type: industrial
+    lat: 28.5355
+    lng: 77.3910
+    weight: 0.7
+  - name: Dwarka Residential
+    type: residential
+    lat: 28.5921
+    lng: 77.0460
+    weight: 0.5
