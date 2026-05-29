@@ -17,14 +17,14 @@ beforeEach(() => {
 describe('ScenarioPanel', () => {
   it('renders textarea with default scenario text', () => {
     render(<ScenarioPanel />)
-    const textarea = screen.getByPlaceholderText(/Describe a city-level event/)
+    const textarea = screen.getByPlaceholderText(/Describe a scenario/)
     expect(textarea).toBeInTheDocument()
     expect(textarea).toHaveValue(useSimulationStore.getState().scenarioText)
   })
 
   it('calls setScenarioText on input change', () => {
     render(<ScenarioPanel />)
-    const textarea = screen.getByPlaceholderText(/Describe a city-level event/)
+    const textarea = screen.getByPlaceholderText(/Describe a scenario/)
     fireEvent.change(textarea, { target: { value: 'new scenario' } })
     expect(useSimulationStore.getState().scenarioText).toBe('new scenario')
   })
