@@ -1,6 +1,8 @@
 """Shared knowledge backbone for all NLP parsing paths."""
 from __future__ import annotations
 
+import re
+
 # ── City aliases (30+ entries including neighborhoods) ──────────────────────
 
 CITY_ALIASES: dict[str, str] = {
@@ -46,7 +48,7 @@ SECTOR_SYNONYMS: dict[str, str] = {
     "transport": "transport_logistics", "delivery": "transport_logistics",
     # IT & tech
     "tech": "it_ites", "software": "it_ites", "startup": "it_ites",
-    "it": "it_ites", "digital": "it_ites", "ai": "it_ites",
+    "it": "it_ites", "digital": "it_ites",
     "coding": "it_ites", "wfh": "it_ites", "outsourcing": "it_ites",
     "ites": "it_ites", "data center": "it_ites", "saas": "it_ites",
     "fintech": "it_ites", "ecommerce": "it_ites",
@@ -153,6 +155,12 @@ CAUSE_EFFECT_CHAINS: dict[str, dict[str, float]] = {
         "trade_hospitality": -0.10,
         "real_estate": -0.08,
     },
+    "fuel_import_stop": {
+        "transport_logistics": -0.25,
+        "manufacturing": -0.12,
+        "informal": -0.15,
+        "trade_hospitality": -0.10,
+    },
 }
 
 # ── Event keyword triggers ─────────────────────────────────────────────────
@@ -170,6 +178,11 @@ EVENT_KEYWORDS: dict[str, list[str]] = {
     "flood": ["flood", "inundation", "waterlogging"],
     "government_spending": ["government spending", "infra push", "public investment"],
     "global_recession": ["recession", "global downturn", "economic crisis"],
+    "fuel_import_stop": [
+        "stop importing petrol", "fuel import ban", "petrol embargo",
+        "fuel shortage", "oil import ban", "stopped importing",
+        "fuel import stop", "oil embargo",
+    ],
 }
 
 # ── Sentiment words (magnitude inference) ──────────────────────────────────
@@ -194,6 +207,16 @@ MAGNITUDE_MAP: dict[str, float] = {
     "strong": 25.0,
     "moderate": 15.0,
     "mild": 8.0,
+}
+
+# Scale factors for cause-effect chain deltas based on intensity words.
+# When a user says "petrol prices spike" vs "petrol prices increase slightly",
+# the base event deltas should scale accordingly.
+EVENT_SCALE_MAP: dict[str, float] = {
+    "extreme": 2.0,   # "spike", "crash", "skyrocketed", "collapse"
+    "strong": 1.5,    # "surge", "plummet", "sharp rise", "major drop"
+    "moderate": 1.0,  # "increase", "decline", "rise", "drop" (default)
+    "mild": 0.5,      # "slight", "minor", "gradual", "dip"
 }
 
 # ── Social group definitions ───────────────────────────────────────────────
@@ -268,14 +291,37 @@ POLICY_KEYWORDS: dict[str, list[str]] = {
 # ── Direction words (positive / negative) ──────────────────────────────────
 
 NEGATIVE_WORDS: list[str] = [
-    "drop", "drops", "decline", "falls", "fall", "cut", "loss", "crisis",
-    "shock", "reduce", "reduced", "devastate", "crash", "plummet", "slump",
-    "destroyed", "destroy", "ruin", "damage",
+    "drop", "drops", "dropped", "dropping", "decline", "declines", "declined",
+    "falls", "fall", "fallen", "falling", "cut", "cuts", "cutting",
+    "loss", "crisis", "shock", "shocks", "shocked",
+    "reduce", "reduces", "reduced", "reducing",
+    "devastate", "devastates", "devastated", "devastating",
+    "crash", "crashes", "crashed", "crashing",
+    "plummet", "plummets", "plummeted",
+    "slump", "slumps", "slumped",
+    "destroyed", "destroy", "destroys", "destroying",
+    "ruin", "ruins", "ruined",
+    "damage", "damages", "damaged",
+    # Cessation / stop words
+    "stop", "stops", "stopped", "stopping",
+    "halt", "halts", "halted",
+    "ban", "bans", "banned",
+    "cease", "ceased",
+    "embargo", "suspend", "suspended",
+    "disrupt", "disrupted", "shutdown", "shut",
 ]
 
 POSITIVE_WORDS: list[str] = [
-    "increase", "increases", "rise", "rises", "boom", "growth", "boost",
-    "push", "investment", "improve", "surge", "soar", "gain", "grows",
+    "increase", "increases", "increased", "increasing",
+    "rise", "rises", "risen", "rising",
+    "boom", "growth", "boost", "boosted",
+    "push", "pushed", "pushing",
+    "investment", "invested", "investing",
+    "improve", "improved", "improving",
+    "surge", "surges", "surged", "surging",
+    "soar", "soars", "soared", "soaring",
+    "gain", "gains", "gained", "gaining",
+    "grows", "grew", "growing",
 ]
 
 
@@ -321,3 +367,27 @@ def detect_sentiment(text: str) -> tuple[str, float]:
             if any(w in lowered for w in words):
                 return direction, MAGNITUDE_MAP[level]
     return "neutral", 0.0
+
+
+def get_event_scale(text: str) -> float:
+    """Detect intensity modifiers in text and return a scale factor for event deltas.
+
+    Returns a multiplier: extreme=2.0, strong=1.5, moderate=1.0, mild=0.5.
+    Used to scale cause-effect chain base deltas based on how strong the user's
+    wording is (e.g., "petrol prices spike" → 2.0x, "slight fuel increase" → 0.5x).
+    """
+    lowered = text.lower()
+    for level in ("extreme", "strong", "mild", "moderate"):
+        if any(w in lowered for w in SENTIMENT_WORDS["negative"][level]):
+            return EVENT_SCALE_MAP[level]
+        if any(w in lowered for w in SENTIMENT_WORDS["positive"][level]):
+            return EVENT_SCALE_MAP[level]
+    return 1.0  # moderate default — no scaling
+
+
+def has_word_boundary_match(text: str, words: list[str]) -> bool:
+    """Check if any word from the list appears as a whole word in text."""
+    for w in words:
+        if re.search(r'\b' + re.escape(w) + r'\b', text):
+            return True
+    return False

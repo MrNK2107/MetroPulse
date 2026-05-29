@@ -1,6 +1,7 @@
 """Path 2: spaCy NER + domain knowledge extraction."""
 from __future__ import annotations
 
+import re
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -17,6 +18,8 @@ from engine.nl_engine.domain_maps import (
     DEFAULT_DELTA,
     detect_event,
     detect_sentiment,
+    get_event_scale,
+    has_word_boundary_match,
 )
 
 # Magnitude adjectives mapped to delta values
@@ -89,13 +92,14 @@ class SpacyParser:
                 magnitude = self._infer_magnitude(text)
                 sector_deltas[sector] = magnitude
 
-        # Apply cause-effect chains
+        # Apply cause-effect chains — scale base deltas by intensity words
         if event:
             effects = CAUSE_EFFECT_CHAINS.get(event, {})
+            scale = get_event_scale(text)
             for sector, delta in effects.items():
                 if sector not in mentioned_sectors:
                     mentioned_sectors.append(sector)
-                    sector_deltas[sector] = delta * 100
+                    sector_deltas[sector] = delta * 100 * scale
 
         # Vague prompt fallback
         if not mentioned_sectors and not event:
@@ -162,11 +166,11 @@ class SpacyParser:
     def _extract_sectors(self, doc: Any) -> list[str]:
         sectors: set[str] = set()
 
-        # Check noun phrases against synonyms
+        # Check noun phrases against synonyms (word-boundary match to avoid false positives)
         for chunk in doc.noun_chunks:
             chunk_lower = chunk.text.lower()
             for synonym, sector in SECTOR_SYNONYMS.items():
-                if synonym in chunk_lower:
+                if re.search(r'\b' + re.escape(synonym) + r'\b', chunk_lower):
                     sectors.add(sector)
 
         # Check individual tokens against synonyms AND canonical names
@@ -205,16 +209,16 @@ class SpacyParser:
 
     def _apply_direction(self, text: str, magnitude: float) -> float:
         lowered = text.lower()
-        if any(w in lowered for w in NEGATIVE_WORDS):
+        if has_word_boundary_match(lowered, NEGATIVE_WORDS):
             return -abs(magnitude)
-        if any(w in lowered for w in POSITIVE_WORDS):
+        if has_word_boundary_match(lowered, POSITIVE_WORDS):
             return abs(magnitude)
         return magnitude
 
     def _infer_magnitude(self, text: str) -> float:
         lowered = text.lower()
         for word, magnitude in MAGNITUDE_ADJECTIVES.items():
-            if word in lowered:
+            if re.search(r'\b' + re.escape(word) + r'\b', lowered):
                 return magnitude
         # Fall back to sentiment detection
         direction, magnitude = detect_sentiment(text)

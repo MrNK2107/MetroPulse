@@ -15,6 +15,8 @@ from engine.nl_engine.domain_maps import (
     DEFAULT_DELTA,
     detect_event,
     detect_sentiment,
+    get_event_scale,
+    has_word_boundary_match,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,14 +64,15 @@ class RegexParser:
         for sector in mentioned_sectors:
             sector_deltas[sector] = self._infer_delta(lowered, explicit_delta)
 
-        # Cause-effect chain detection
+        # Cause-effect chain detection — scale base deltas by intensity words
         event = detect_event(lowered)
         if event:
             effects = CAUSE_EFFECT_CHAINS.get(event, {})
+            scale = get_event_scale(lowered)
             for sector, delta in effects.items():
                 if sector not in mentioned_sectors:
                     mentioned_sectors.append(sector)
-                    sector_deltas[sector] = delta * 100  # Convert to percentage
+                    sector_deltas[sector] = delta * 100 * scale  # Convert to % and scale
 
         # Sentiment-based delta if no explicit number and sectors found
         if explicit_delta is None and mentioned_sectors:
@@ -153,9 +156,9 @@ class RegexParser:
         if magnitude > 50:
             magnitude = 50.0
 
-        if any(w in text for w in NEGATIVE_WORDS):
+        if has_word_boundary_match(text, NEGATIVE_WORDS):
             return -magnitude
-        if any(w in text for w in POSITIVE_WORDS):
+        if has_word_boundary_match(text, POSITIVE_WORDS):
             return magnitude
         return magnitude
 
