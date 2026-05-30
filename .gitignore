@@ -45,10 +45,5 @@ backend/data/
 # Logs
 *.log
 
-# Docs (generated / agent-only)
-docs/
-*.md
-!README.md
-
 # OpenCode
 .opencode/
