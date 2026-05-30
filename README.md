@@ -37,6 +37,58 @@
 
 ---
 
+## How MetroPulse Works
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│  User: "What if Hyderabad gets a pharma SEZ?"                       │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  1. PARSE — IntentRouter (regex → spaCy) extracts city, sectors,    │
+│     policies, horizon, and deltas from natural language             │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  2. RETRIEVE — RAG engine scans 15 Indian urban case studies,       │
+│     computes relevance, adjusts sector coefficients within clamps   │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  3. OVERLAY — Real-time news signals (Google News RSS, GDELT)       │
+│     converted into per-cell H3 spatial modifiers                    │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  4. SIMULATE — Three deterministic loops run per month:             │
+│     Primary: capital + employment shocks (NumPy vectorized)         │
+│     Secondary: real estate, transit, migration cascades             │
+│     Tertiary: evidence synthesis, plain-language translation        │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  5. EXPLAIN — Driver breakdown, confidence scores, ₹ amounts,      │
+│     case studies, and "Why this result?" evidence drawer            │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key design decisions:**
+
+- **No database writes mid-loop** — simulation runs in-memory, batch-saves only after completion
+- **Confidence decays per month** — primary ×0.90, secondary ×0.80, monsoon ×0.75
+- **Coefficients are clamped** — RAG adjustments bounded to [0.65, 1.10], cannot invent unsupported effects
+- **All parameters are per-city configurable** — no hardcoded values in simulation logic
+- **Real-time data is a proxy** — news sentiment adjusts starting state, not a direct measurement
+
+For full architecture details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
 ## ◉ System Boot
 
 ```text
