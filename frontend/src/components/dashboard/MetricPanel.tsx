@@ -259,10 +259,15 @@ export function MetricPanel() {
                 <span className={`text-[11px] font-mono ${valColor} ml-2 shrink-0`}>{valStr}</span>
                 {metadata && (
                   <span
-                    className="ml-2 rounded-full border border-dark-100/40 bg-dark-300/60 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-gray-400"
+                    className="ml-2 flex flex-col items-end gap-0.5"
                     title="Confidence reflects input data quality, evidence coverage, and model assumptions. It is not a probability."
                   >
-                    {metadata.confidence_label}
+                    <span className="rounded-full border border-dark-100/40 bg-dark-300/60 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-gray-400">
+                      {metadata.confidence_label}
+                    </span>
+                    <span className="text-[7px] text-gray-600 font-mono">
+                      {metadata.origin.replace(/_/g, " ")}
+                    </span>
                   </span>
                 )}
               </div>
