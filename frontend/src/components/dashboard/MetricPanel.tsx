@@ -14,6 +14,27 @@ import type { AggregateMetrics } from "@/types/simulation";
 type RequiredMetricKey = {
   [K in keyof AggregateMetrics]-?: AggregateMetrics[K] extends number ? K : never
 }[keyof AggregateMetrics];
+/** Compute trend direction and delta between last two metrics entries */
+function computeTrend(
+  metrics: AggregateMetrics[],
+  dataKey: RequiredMetricKey
+): { direction: "up" | "down" | "flat"; delta: string; arrow: string } {
+  if (metrics.length < 2) return { direction: "flat", delta: "", arrow: "" };
+  const prev = metrics[metrics.length - 2][dataKey];
+  const curr = metrics[metrics.length - 1][dataKey];
+  if (prev === undefined || curr === undefined || prev === null || curr === null)
+    return { direction: "flat", delta: "", arrow: "" };
+  const diff = curr - prev;
+  const absDiff = Math.abs(diff);
+  if (absDiff < 0.0001) return { direction: "flat", delta: "", arrow: "→" };
+  const direction = diff > 0 ? "up" : "down";
+  const arrow = diff > 0 ? "↑" : "↓";
+  // Format delta as percentage points or absolute
+  const delta = absDiff < 1
+    ? `${(absDiff * 100).toFixed(1)}pp`
+    : absDiff.toFixed(2);
+  return { direction, delta, arrow };
+}
 
 interface MetricChartProps {
   title: string;
@@ -266,6 +287,7 @@ export function MetricPanel() {
           <div className="flex gap-2">
             <button
               onClick={handleExport}
+              data-export-btn
               className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 px-2.5 py-1 rounded-lg transition-all"
             >
               Export JSON
@@ -325,11 +347,21 @@ export function MetricPanel() {
               }
             }
 
+            // Compute trend from frame history
+            const trend = computeTrend(metrics, config.dataKey);
+            const trendColor = trend.direction === "up"
+              ? (config.dataKey === "gdpDelta" || config.dataKey === "realEstateIndex" || config.dataKey === "housingAffordability"
+                  ? "text-emerald-400" : "text-red-400")
+              : trend.direction === "down"
+                ? (config.dataKey === "gdpDelta" || config.dataKey === "realEstateIndex" || config.dataKey === "housingAffordability"
+                    ? "text-red-400" : "text-emerald-400")
+                : "text-gray-500";
+
             return (
               <button
                 key={config.dataKey}
                 onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                aria-label={`${config.title}: ${valStr}`}
+                aria-label={`${config.title}: ${valStr}${trend.direction !== "flat" ? ` (${trend.arrow} ${trend.delta})` : ""}`}
                 title={config.tooltip}
                 className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
               >
@@ -339,7 +371,15 @@ export function MetricPanel() {
                   </span>
                   <span className="text-[8px] text-gray-600 font-mono truncate">{config.unit}</span>
                 </div>
-                <span className={`text-[11px] font-mono ${valColor} ml-2 shrink-0`}>{valStr}</span>
+                <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                  {trend.direction !== "flat" && (
+                    <span className="flex flex-col items-end leading-none">
+                      <span className={`text-[10px] font-bold ${trendColor}`}>{trend.arrow}</span>
+                      <span className="text-[7px] text-gray-500 font-mono">{trend.delta}</span>
+                    </span>
+                  )}
+                  <span className={`text-[11px] font-mono ${valColor}`}>{valStr}</span>
+                </div>
                 {metadata && (
                   <span
                     className="ml-2 flex flex-col items-end gap-0.5"

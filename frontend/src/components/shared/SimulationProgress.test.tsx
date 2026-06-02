@@ -86,7 +86,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
 
     expect(screen.getByText(/Error:/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Simulation failed/)
+      screen.getByText(/Try reducing the scenario intensity/)
     ).toBeInTheDocument()
   })
 
@@ -100,7 +100,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Could not understand the scenario/)
+      screen.getByText(/Try including a city name/)
     ).toBeInTheDocument()
   })
 
@@ -114,7 +114,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Scenario expectation generation failed/)
+      screen.getByText(/The AI couldn't generate expectations/)
     ).toBeInTheDocument()
   })
 
@@ -128,7 +128,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Could not retrieve case studies/)
+      screen.getByText(/Case study retrieval failed/)
     ).toBeInTheDocument()
   })
 
@@ -142,7 +142,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Evidence synthesis failed/)
+      screen.getByText(/Report generation had issues/)
     ).toBeInTheDocument()
   })
 

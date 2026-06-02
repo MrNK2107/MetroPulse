@@ -108,6 +108,9 @@ interface SimulationStore {
   publicWorksZone: GeoJSON.GeoJSON | null;
   activeFrameIndex: number;
   regionBoundary: GeoJSON.GeoJSON | null;
+  comparisonMode: boolean;
+  comparisonSimulation: SimulationHistoryEntry | null;
+  loadingCities: boolean;
 
   // Visual Overlay & Layout HUD States
   activeVisualizationMode: "heatmap" | "flat" | "3d";
@@ -225,6 +228,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   publicWorksZone: null,
   activeFrameIndex: -1,
   regionBoundary: null,
+  comparisonMode: false,
+  comparisonSimulation: null,
+  loadingCities: false,
 
   // HUD Defaults: Trace Heatmap as requested, collapsible sidebars open initially
   activeVisualizationMode: "flat",
@@ -437,6 +443,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     }),
 
   loadCityCoords: async () => {
+    set({ loadingCities: true });
     try {
       const res = await fetch("/api/regions");
       if (!res.ok) return;
@@ -449,9 +456,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
           dynamic[r.id] = { center: r.center, zoom: r.zoom, name: r.name };
         }
       }
-      set({ cityCoords: { ...CITY_COORDS, ...dynamic } });
+      set({ cityCoords: { ...CITY_COORDS, ...dynamic }, loadingCities: false });
     } catch {
       // API unavailable — keep static fallback
+      set({ loadingCities: false });
     }
   },
 
@@ -474,6 +482,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       pendingQuestion: null,
       groupScores: [],
       citizenSatisfaction: null,
+      comparisonMode: false,
+      comparisonSimulation: null,
     }),
 
   resetAll: () =>

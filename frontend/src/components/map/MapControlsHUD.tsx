@@ -11,6 +11,7 @@ export const MapControlsHUD = React.memo(function MapControlsHUD() {
   const setActiveMetric = useSimulationStore((s) => s.setActiveMetric);
   const flyToCity = useSimulationStore((s) => s.flyToCity);
   const cityCoords = useSimulationStore((s) => s.cityCoords);
+  const loadingCities = useSimulationStore((s) => s.loadingCities);
   const parsedScenario = useSimulationStore((s) => s.parsedScenario);
 
   const handleCityChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -30,6 +31,9 @@ export const MapControlsHUD = React.memo(function MapControlsHUD() {
       {/* City Selector */}
       <div className="flex items-center gap-1.5 rounded-lg border border-dark-100/50 bg-dark-200/85 px-2.5 py-1.5 text-xs text-gray-200 backdrop-blur-md shadow-lg">
         <span className="text-gray-400 font-medium">City:</span>
+        {loadingCities && (
+          <span className="text-[9px] text-blue-400 animate-pulse">Loading…</span>
+        )}
         <select
           value={activeCityId}
           onChange={handleCityChange}

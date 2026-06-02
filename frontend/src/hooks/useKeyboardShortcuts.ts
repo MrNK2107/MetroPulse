@@ -26,6 +26,31 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Ctrl+E — Export simulation results
+      if ((e.ctrlKey || e.metaKey) && e.key === "e") {
+        e.preventDefault();
+        const exportBtn = document.querySelector("[data-export-btn]") as HTMLButtonElement | null;
+        if (exportBtn) {
+          exportBtn.click();
+        } else {
+          // Fallback: trigger export event for components that listen
+          window.dispatchEvent(new CustomEvent("metropulse-export"));
+        }
+        return;
+      }
+
+      // Ctrl+Shift+S — Share simulation
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
+        e.preventDefault();
+        const shareBtn = document.querySelector("[data-share-btn]") as HTMLButtonElement | null;
+        if (shareBtn) {
+          shareBtn.click();
+        } else {
+          window.dispatchEvent(new CustomEvent("metropulse-share"));
+        }
+        return;
+      }
+
       if (e.key === "Escape" && drawMode !== "none") {
         setDrawMode("none");
         e.preventDefault();

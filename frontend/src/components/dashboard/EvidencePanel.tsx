@@ -64,6 +64,22 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   const pipelineStage = useSimulationStore((s) => s.pipelineStage);
   const currentFrame = useSimulationStore(selectCurrentFrame);
   const simulationHistory = useSimulationStore((s) => s.simulationHistory);
+  const comparisonMode = useSimulationStore((s) => s.comparisonMode);
+  const comparisonSimulation = useSimulationStore((s) => s.comparisonSimulation);
+
+  const handleCompare = useCallback((entry: typeof simulationHistory[0]) => {
+    useSimulationStore.setState({
+      comparisonMode: true,
+      comparisonSimulation: entry,
+    });
+  }, []);
+
+  const handleClearComparison = useCallback(() => {
+    useSimulationStore.setState({
+      comparisonMode: false,
+      comparisonSimulation: null,
+    });
+  }, []);
 
   const translation: TranslationResult = useMemo(() => ({
     headline: evidence?.translation?.headline ?? "",
@@ -471,6 +487,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                     <div className="flex justify-end">
                       <button
                         onClick={handleShare}
+                        data-share-btn
                         className="flex items-center gap-1.5 rounded-lg border border-dark-100/50 bg-dark-300/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-200 hover:border-blue-500/30 transition-all"
                       >
                         🔗 Share
@@ -804,6 +821,20 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                 {/* Tab: History (simulation history from localStorage) */}
                 {activeTab === "history" && (
                   <div className="space-y-3" role="tabpanel" id="tabpanel-history" aria-labelledby="tab-history">
+                    {comparisonMode && comparisonSimulation && (
+                      <div className="rounded-xl border border-blue-500/30 bg-blue-950/20 p-3 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Comparing with: </span>
+                          <span className="text-[11px] text-gray-300">{comparisonSimulation.city} — {comparisonSimulation.scenario.slice(0, 60)}…</span>
+                        </div>
+                        <button
+                          onClick={handleClearComparison}
+                          className="text-[9px] font-bold text-red-400 hover:text-red-300 border border-red-500/20 px-2 py-1 rounded-lg transition-colors"
+                        >
+                          ✕ Clear
+                        </button>
+                      </div>
+                    )}
                     {simulationHistory.length > 0 ? (
                       simulationHistory.map((entry) => (
                         <div key={entry.id} className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-4 hover:border-dark-100 transition-all">
@@ -817,7 +848,19 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                           {entry.verdict && (
                             <p className="mt-2 text-[10px] text-emerald-400/80 italic">{entry.verdict}</p>
                           )}
-                          <div className="mt-2 text-[9px] text-gray-600 font-mono">ID: {entry.id}</div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-[9px] text-gray-600 font-mono">ID: {entry.id}</span>
+                            <button
+                              onClick={() => handleCompare(entry)}
+                              className={`text-[9px] font-bold px-2 py-1 rounded-lg border transition-colors ${
+                                comparisonSimulation?.id === entry.id
+                                  ? "text-blue-300 border-blue-500/40 bg-blue-950/30"
+                                  : "text-gray-400 hover:text-blue-400 border-dark-100/30 hover:border-blue-500/20"
+                              }`}
+                            >
+                              {comparisonSimulation?.id === entry.id ? "✓ Comparing" : "⇔ Compare"}
+                            </button>
+                          </div>
                         </div>
                       ))
                     ) : (
