@@ -3,11 +3,26 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from engine.models import Prediction, SectorPrediction, SECTOR_LABELS, SECTOR_NAMES, SimulationParams
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class LLMConfig:
+    """LLM configuration passed in from the app layer.
+
+    Keeps engine/ free of app.config imports.
+    """
+    provider: str = ""
+    api_key: str = ""
+    base_url: str = ""
+    model: str = ""
+    timeout_ms: int = 10_000
+
 
 _PREDICTION_PROMPT = """You are an urban economics analyst specializing in Indian cities.
 Given this scenario for {city_name} over {horizon_months} months:
@@ -107,52 +122,49 @@ def _parse_llm_response(text: str, params: SimulationParams) -> Prediction:
     )
 
 
-async def _call_gemini(prompt: str, timeout_ms: int) -> str:
+async def _call_gemini(prompt: str, cfg: LLMConfig) -> str:
     from google import genai
-    from app.config import settings
 
-    client = genai.Client(api_key=settings.gemini_api_key)
+    client = genai.Client(api_key=cfg.api_key)
     response = await asyncio.wait_for(
         asyncio.to_thread(
             client.models.generate_content,
-            model=settings.resolved_llm_model or "gemini-2.0-flash",
+            model=cfg.model or "gemini-2.0-flash",
             contents=prompt,
         ),
-        timeout=timeout_ms / 1000.0,
+        timeout=cfg.timeout_ms / 1000.0,
     )
     return response.text
 
 
-async def _call_openai(prompt: str, timeout_ms: int) -> str:
+async def _call_openai(prompt: str, cfg: LLMConfig) -> str:
     from openai import AsyncOpenAI
-    from app.config import settings
 
-    client = AsyncOpenAI(api_key=settings.openai_api_key)
+    client = AsyncOpenAI(api_key=cfg.api_key)
     response = await asyncio.wait_for(
         client.chat.completions.create(
-            model=settings.resolved_llm_model or "gpt-4o-mini",
+            model=cfg.model or "gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
         ),
-        timeout=timeout_ms / 1000.0,
+        timeout=cfg.timeout_ms / 1000.0,
     )
     return response.choices[0].message.content
 
 
-async def _call_mimo(prompt: str, timeout_ms: int) -> str:
+async def _call_mimo(prompt: str, cfg: LLMConfig) -> str:
     from openai import AsyncOpenAI
-    from app.config import settings
 
-    client = AsyncOpenAI(api_key=settings.mimo_api_key, base_url=settings.mimo_base_url)
+    client = AsyncOpenAI(api_key=cfg.api_key, base_url=cfg.base_url)
     response = await asyncio.wait_for(
         client.chat.completions.create(
-            model=settings.resolved_llm_model or "mimo-v2.5-pro",
+            model=cfg.model or "mimo-v2.5-pro",
             messages=[
                 {"role": "system", "content": "You are a JSON-only API. Respond with valid JSON only, no markdown fences."},
                 {"role": "user", "content": prompt},
             ],
         ),
-        timeout=timeout_ms / 1000.0,
+        timeout=cfg.timeout_ms / 1000.0,
     )
     return response.choices[0].message.content
 
@@ -210,17 +222,20 @@ def _deterministic_prediction(params: SimulationParams) -> Prediction:
     )
 
 
-async def generate_prediction(params: SimulationParams) -> Prediction:
-    """Generate prediction via LLM with deterministic fallback."""
-    from app.config import settings
+async def generate_prediction(params: SimulationParams, llm_config: LLMConfig | None = None) -> Prediction:
+    """Generate prediction via LLM with deterministic fallback.
 
-    provider = settings.llm_provider.lower()
-    has_key = (
-        (provider == "gemini" and settings.gemini_api_key)
-        or (provider == "openai" and settings.openai_api_key)
-        or (provider == "mimo" and settings.mimo_api_key)
-        or (provider == "ollama")
-    )
+    Parameters
+    ----------
+    params : SimulationParams
+    llm_config : LLMConfig | None
+        Injected by the app layer.  When *None* or when no API key is
+        configured, falls back to the deterministic rule-based prediction.
+    """
+    cfg = llm_config or LLMConfig()
+
+    provider = cfg.provider.lower()
+    has_key = bool(cfg.api_key) or provider == "ollama"
 
     if not has_key:
         logger.info("No LLM key configured for %s, using deterministic prediction", provider)
@@ -230,11 +245,11 @@ async def generate_prediction(params: SimulationParams) -> Prediction:
 
     try:
         if provider == "gemini":
-            text = await _call_gemini(prompt, settings.llm_timeout_ms)
+            text = await _call_gemini(prompt, cfg)
         elif provider == "openai":
-            text = await _call_openai(prompt, settings.llm_timeout_ms)
+            text = await _call_openai(prompt, cfg)
         elif provider == "mimo":
-            text = await _call_mimo(prompt, settings.llm_timeout_ms)
+            text = await _call_mimo(prompt, cfg)
         else:
             logger.warning("Unsupported LLM provider %s, using deterministic prediction", provider)
             return _deterministic_prediction(params)

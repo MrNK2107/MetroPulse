@@ -106,6 +106,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["it_ites", "congestion", "housing"],
         sectors=["it_ites", "real_estate"],
         policies=["Digital India"],
+        observed_effects={
+            "gdp_delta": 3.5,
+            "employment_delta": 5.0,
+            "real_estate_delta": 12.0,
+            "congestion_delta": 15.0,
+            "migration_delta": 8.0,
+        },
+        relevance_tags=["tech_hub", "congestion", "housing_affordability", "it_growth"],
     ),
     CaseStudy(
         id="hyderabad-pharma-sez",
@@ -118,6 +126,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["manufacturing", "sez", "pharma"],
         sectors=["manufacturing", "transport_logistics"],
         policies=["SEZ Notification", "Make in India"],
+        observed_effects={
+            "gdp_delta": 2.0,
+            "employment_delta": 3.5,
+            "real_estate_delta": 8.0,
+            "congestion_delta": 5.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["sez", "pharma_cluster", "manufacturing_growth", "logistics"],
     ),
     CaseStudy(
         id="delhi-metro-property",
@@ -130,6 +146,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["transport_logistics", "real_estate", "metro"],
         sectors=["transport_logistics", "real_estate"],
         policies=["Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 1.0,
+            "employment_delta": 2.0,
+            "real_estate_delta": 15.0,
+            "congestion_delta": -10.0,
+            "migration_delta": 3.0,
+        },
+        relevance_tags=["metro", "transit_investment", "property_premium", "commuting"],
     ),
     CaseStudy(
         id="mumbai-mill-land",
@@ -142,6 +166,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["manufacturing", "real_estate", "housing"],
         sectors=["manufacturing", "real_estate"],
         policies=["RERA Compliance"],
+        observed_effects={
+            "gdp_delta": 0.5,
+            "employment_delta": -2.0,
+            "real_estate_delta": 18.0,
+            "congestion_delta": 5.0,
+            "migration_delta": -1.0,
+        },
+        relevance_tags=["land_use_change", "affordability", "deindustrialization", "real_estate"],
     ),
     CaseStudy(
         id="chennai-port-corridor",
@@ -154,6 +186,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["manufacturing", "transport_logistics", "port"],
         sectors=["manufacturing", "transport_logistics"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 2.5,
+            "employment_delta": 3.0,
+            "real_estate_delta": 8.0,
+            "congestion_delta": 12.0,
+            "migration_delta": 2.5,
+        },
+        relevance_tags=["port", "auto_sector", "logistics_corridor", "manufacturing"],
     ),
     CaseStudy(
         id="pune-it-corridor",
@@ -166,6 +206,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["it_ites", "transport", "housing"],
         sectors=["it_ites", "transport_logistics"],
         policies=["Digital India", "Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 3.0,
+            "employment_delta": 4.5,
+            "real_estate_delta": 10.0,
+            "congestion_delta": 18.0,
+            "migration_delta": 5.0,
+        },
+        relevance_tags=["it_corridor", "mobility_imbalance", "commute", "housing"],
     ),
     CaseStudy(
         id="jaipur-tourism-heritage",
@@ -178,6 +226,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["trade_hospitality", "real_estate", "heritage"],
         sectors=["trade_hospitality", "real_estate"],
         policies=["Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 1.8,
+            "employment_delta": 3.0,
+            "real_estate_delta": 10.0,
+            "congestion_delta": 8.0,
+            "migration_delta": 1.5,
+        },
+        relevance_tags=["tourism", "heritage", "hospitality", "old_city_pressure"],
     ),
     CaseStudy(
         id="lucknow-metro-informal",
@@ -190,6 +246,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["transport_logistics", "informal", "displacement"],
         sectors=["transport_logistics", "informal"],
         policies=["Smart City Mission", "AMRUT"],
+        observed_effects={
+            "gdp_delta": 0.8,
+            "employment_delta": -1.5,
+            "real_estate_delta": 6.0,
+            "congestion_delta": -8.0,
+            "migration_delta": -0.5,
+        },
+        relevance_tags=["informal_displacement", "metro", "street_vendors", "transit_formalization"],
     ),
     CaseStudy(
         id="kolkata-port-logistics",
@@ -202,6 +266,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["transport_logistics", "manufacturing", "congestion"],
         sectors=["transport_logistics", "manufacturing"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 1.5,
+            "employment_delta": 2.0,
+            "real_estate_delta": 5.0,
+            "congestion_delta": 10.0,
+            "migration_delta": 1.0,
+        },
+        relevance_tags=["port_modernization", "freight_congestion", "air_quality", "logistics"],
     ),
     CaseStudy(
         id="ahmedabad-textile-decline",
@@ -214,6 +286,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["manufacturing", "real_estate", "informal"],
         sectors=["manufacturing", "real_estate"],
         policies=["RERA Compliance"],
+        observed_effects={
+            "gdp_delta": 0.5,
+            "employment_delta": -3.0,
+            "real_estate_delta": 14.0,
+            "congestion_delta": 3.0,
+            "migration_delta": -2.0,
+        },
+        relevance_tags=["textile_decline", "urban_renewal", "displacement", "land_conversion"],
     ),
     CaseStudy(
         id="chandigarh-planned-infrastructure",
@@ -226,6 +306,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["housing", "transport", "planning"],
         sectors=["real_estate", "public_admin"],
         policies=["AMRUT", "PM Awas Yojana"],
+        observed_effects={
+            "gdp_delta": 1.2,
+            "employment_delta": 1.5,
+            "real_estate_delta": 6.0,
+            "congestion_delta": -5.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["planned_city", "housing_affordability", "green_space", "infrastructure"],
     ),
     CaseStudy(
         id="bhubaneswar-smart-city",
@@ -238,6 +326,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["smart_city", "transport", "digital"],
         sectors=["public_admin", "transport_logistics"],
         policies=["Smart City Mission", "AMRUT"],
+        observed_effects={
+            "gdp_delta": 1.0,
+            "employment_delta": 2.0,
+            "real_estate_delta": 8.0,
+            "congestion_delta": -8.0,
+            "migration_delta": 1.5,
+        },
+        relevance_tags=["smart_city", "command_centre", "transit_upgrade", "digital"],
     ),
     CaseStudy(
         id="pmay-national-housing",
@@ -250,6 +346,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["housing", "affordable", "policy"],
         sectors=["real_estate", "informal"],
         policies=["PM Awas Yojana"],
+        observed_effects={
+            "gdp_delta": 1.5,
+            "employment_delta": 3.0,
+            "real_estate_delta": 5.0,
+            "congestion_delta": 4.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["affordable_housing", "pmay", "periurban", "transit_connectivity"],
     ),
     CaseStudy(
         id="amrut-water-sanitation",
@@ -262,6 +366,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["water", "sanitation", "infrastructure"],
         sectors=["public_admin"],
         policies=["AMRUT"],
+        observed_effects={
+            "gdp_delta": 0.5,
+            "employment_delta": 1.0,
+            "real_estate_delta": 4.0,
+            "congestion_delta": -3.0,
+            "migration_delta": 0.5,
+        },
+        relevance_tags=["water_supply", "sanitation", "amrut", "municipal_capacity"],
     ),
     CaseStudy(
         id="make-in-india-corridors",
@@ -274,6 +386,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["manufacturing", "corridor", "logistics"],
         sectors=["manufacturing", "transport_logistics"],
         policies=["Make in India", "SEZ Notification"],
+        observed_effects={
+            "gdp_delta": 2.5,
+            "employment_delta": 4.0,
+            "real_estate_delta": 10.0,
+            "congestion_delta": 8.0,
+            "migration_delta": 3.0,
+        },
+        relevance_tags=["industrial_corridor", "dmic", "freight", "formal_jobs"],
     ),
     # ── New case studies: Indore ──────────────────────────────────────
     CaseStudy(
@@ -287,6 +407,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["sanitation", "smart_city", "waste_management", "swachh_bharat"],
         sectors=["public_admin", "trade_hospitality"],
         policies=["Smart City Mission", "Swachh Bharat Mission"],
+        observed_effects={
+            "gdp_delta": 1.2,
+            "employment_delta": 3.0,
+            "real_estate_delta": 12.0,
+            "congestion_delta": 0.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["sanitation", "civic_brand", "waste_management", "swachh_bharat"],
     ),
     CaseStudy(
         id="indore-smart-city-bus-rapid",
@@ -299,6 +427,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["transport", "smart_city", "brt", "mobility"],
         sectors=["transport_logistics", "real_estate"],
         policies=["Smart City Mission", "AMRUT"],
+        observed_effects={
+            "gdp_delta": 0.8,
+            "employment_delta": 1.5,
+            "real_estate_delta": 8.0,
+            "congestion_delta": -10.0,
+            "migration_delta": 1.5,
+        },
+        relevance_tags=["brts", "smart_city", "mobility", "transit_oriented"],
     ),
     # ── New case studies: Surat ──────────────────────────────────────
     CaseStudy(
@@ -312,6 +448,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["diamonds", "manufacturing", "cluster", "informal", "exports"],
         sectors=["manufacturing", "informal"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 8.0,
+            "employment_delta": 6.0,
+            "real_estate_delta": 15.0,
+            "congestion_delta": 20.0,
+            "migration_delta": 5.0,
+        },
+        relevance_tags=["cluster_economy", "informal_labour", "single_sector_risk", "exports"],
     ),
     CaseStudy(
         id="surat-textile-revival",
@@ -324,6 +468,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["textiles", "manufacturing", "cluster", "gst", "trade"],
         sectors=["manufacturing", "trade_hospitality"],
         policies=["Make in India", "GST"],
+        observed_effects={
+            "gdp_delta": 4.0,
+            "employment_delta": 3.5,
+            "real_estate_delta": 10.0,
+            "congestion_delta": 12.0,
+            "migration_delta": 3.0,
+        },
+        relevance_tags=["textile_cluster", "gst_impact", "mass_employment", "global_competition"],
     ),
     CaseStudy(
         id="surat-urban-resilience-flood",
@@ -336,6 +488,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["flood_management", "resilience", "infrastructure", "climate"],
         sectors=["public_admin", "real_estate"],
         policies=["AMRUT", "Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 3.5,
+            "employment_delta": 2.0,
+            "real_estate_delta": 20.0,
+            "congestion_delta": -5.0,
+            "migration_delta": 3.0,
+        },
+        relevance_tags=["flood_resilience", "disaster_recovery", "climate_adaptation", "riverfront"],
     ),
     # ── New case studies: Nagpur ──────────────────────────────────────
     CaseStudy(
@@ -349,6 +509,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["metro", "sez", "logistics", "smart_city", "aviation"],
         sectors=["transport_logistics", "manufacturing", "it_ites"],
         policies=["Smart City Mission", "Make in India", "SEZ Notification"],
+        observed_effects={
+            "gdp_delta": 1.5,
+            "employment_delta": 2.0,
+            "real_estate_delta": 18.0,
+            "congestion_delta": -5.0,
+            "migration_delta": 1.0,
+        },
+        relevance_tags=["metro", "sez", "logistics_hub", "aviation_mro"],
     ),
     CaseStudy(
         id="nagpur-orange-economy-agriculture",
@@ -361,6 +529,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["agriculture", "food_processing", "cold_chain", "exports"],
         sectors=["agriculture", "manufacturing", "transport_logistics"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 2.0,
+            "employment_delta": 2.5,
+            "real_estate_delta": 5.0,
+            "congestion_delta": 1.0,
+            "migration_delta": -1.0,
+        },
+        relevance_tags=["agri_processing", "cold_chain", "rural_urban_linkage", "food_exports"],
     ),
     # ── New case studies: Visakhapatnam ──────────────────────────────
     CaseStudy(
@@ -374,6 +550,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["steel", "port", "manufacturing", "heavy_industry", "exports"],
         sectors=["manufacturing", "transport_logistics"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 4.0,
+            "employment_delta": 3.0,
+            "real_estate_delta": 10.0,
+            "congestion_delta": 15.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["steel", "port", "heavy_industry", "freight_congestion"],
     ),
     CaseStudy(
         id="visakhapatnam-it-corridor",
@@ -386,6 +570,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["it_ites", "startup", "tier2_city", "digital"],
         sectors=["it_ites", "real_estate"],
         policies=["Digital India", "Make in India"],
+        observed_effects={
+            "gdp_delta": 1.5,
+            "employment_delta": 5.0,
+            "real_estate_delta": 22.0,
+            "congestion_delta": 8.0,
+            "migration_delta": 3.0,
+        },
+        relevance_tags=["tier2_it_hub", "startup", "talent_retention", "digital_infrastructure"],
     ),
     CaseStudy(
         id="visakhapatnam-cyclone-resilience",
@@ -398,6 +590,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["disaster", "cyclone", "resilience", "reconstruction"],
         sectors=["public_admin", "real_estate", "construction"],
         policies=["AMRUT"],
+        observed_effects={
+            "gdp_delta": -5.0,
+            "employment_delta": -4.0,
+            "real_estate_delta": -15.0,
+            "congestion_delta": -10.0,
+            "migration_delta": -5.0,
+        },
+        relevance_tags=["cyclone", "disaster_recovery", "resilience", "reconstruction"],
     ),
     # ── New case studies: Kochi ──────────────────────────────────────
     CaseStudy(
@@ -411,6 +611,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["metro", "water_transport", "transit", "smart_city"],
         sectors=["transport_logistics", "real_estate"],
         policies=["Smart City Mission", "AMRUT"],
+        observed_effects={
+            "gdp_delta": 1.2,
+            "employment_delta": 2.0,
+            "real_estate_delta": 15.0,
+            "congestion_delta": -12.0,
+            "migration_delta": 1.0,
+        },
+        relevance_tags=["metro", "water_metro", "tier2_transit", "innovative_construction"],
     ),
     CaseStudy(
         id="kochi-smart-city-fort-kochi",
@@ -423,6 +631,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["smart_city", "it_ites", "tourism", "heritage"],
         sectors=["it_ites", "trade_hospitality", "real_estate"],
         policies=["Smart City Mission", "Digital India"],
+        observed_effects={
+            "gdp_delta": 2.0,
+            "employment_delta": 3.5,
+            "real_estate_delta": 20.0,
+            "congestion_delta": 10.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["dual_economy", "heritage_tourism", "it_diversification", "infrastructure_strain"],
     ),
     # ── New case studies: Coimbatore ──────────────────────────────────
     CaseStudy(
@@ -436,6 +652,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["engineering", "manufacturing", "cluster", "pumps", "msme"],
         sectors=["manufacturing", "informal"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 6.0,
+            "employment_delta": 4.0,
+            "real_estate_delta": 8.0,
+            "congestion_delta": 5.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["msme_cluster", "engineering", "diversified_manufacturing", "import_competition"],
     ),
     CaseStudy(
         id="coimbatore-wetlands-development",
@@ -448,6 +672,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["wetlands", "urban_sprawl", "flooding", "environment"],
         sectors=["real_estate", "public_admin"],
         policies=["AMRUT"],
+        observed_effects={
+            "gdp_delta": 3.0,
+            "employment_delta": 5.0,
+            "real_estate_delta": 12.0,
+            "congestion_delta": 8.0,
+            "migration_delta": 1.5,
+        },
+        relevance_tags=["wetland_loss", "flood_risk", "urban_sprawl", "ecological_cost"],
     ),
     # ── New case studies: Patna ──────────────────────────────────────
     CaseStudy(
@@ -461,6 +693,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["riverfront", "urban_renewal", "infrastructure", "gentrification"],
         sectors=["real_estate", "public_admin", "trade_hospitality"],
         policies=["AMRUT", "Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 0.8,
+            "employment_delta": 1.5,
+            "real_estate_delta": 25.0,
+            "congestion_delta": 8.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["riverfront", "gentrification", "displacement", "urban_renewal"],
     ),
     CaseStudy(
         id="patna-education-hub",
@@ -473,6 +713,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["education", "coaching", "student_economy", "migration"],
         sectors=["education", "real_estate", "informal"],
         policies=["National Education Policy"],
+        observed_effects={
+            "gdp_delta": 2.5,
+            "employment_delta": 3.0,
+            "real_estate_delta": 15.0,
+            "congestion_delta": 12.0,
+            "migration_delta": 5.0,
+        },
+        relevance_tags=["coaching_economy", "student_migration", "education_hub", "housing_pressure"],
     ),
     # ── New case studies: Bhopal ──────────────────────────────────────
     CaseStudy(
@@ -486,6 +734,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["smart_city", "lake_restoration", "green_infrastructure", "brt"],
         sectors=["public_admin", "real_estate", "transport_logistics"],
         policies=["Smart City Mission", "AMRUT"],
+        observed_effects={
+            "gdp_delta": 1.0,
+            "employment_delta": 1.5,
+            "real_estate_delta": 10.0,
+            "congestion_delta": -8.0,
+            "migration_delta": 0.5,
+        },
+        relevance_tags=["lake_restoration", "green_infrastructure", "smart_city", "water_quality"],
     ),
     CaseStudy(
         id="bhopal-gas-tragedy-long-term",
@@ -498,6 +754,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["industrial_disaster", "remediation", "environmental_justice", "redevelopment"],
         sectors=["manufacturing", "public_admin"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": -1.0,
+            "employment_delta": -2.0,
+            "real_estate_delta": -20.0,
+            "congestion_delta": 0.0,
+            "migration_delta": -3.0,
+        },
+        relevance_tags=["industrial_disaster", "remediation", "environmental_justice", "diversification"],
     ),
     # ── Disaster case studies ──────────────────────────────────────────
     CaseStudy(
@@ -511,6 +775,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["floods", "disaster", "climate", "resilience", "wetlands"],
         sectors=["real_estate", "public_admin", "manufacturing"],
         policies=["AMRUT", "Smart City Mission"],
+        observed_effects={
+            "gdp_delta": -3.0,
+            "employment_delta": -4.0,
+            "real_estate_delta": -20.0,
+            "congestion_delta": 25.0,
+            "migration_delta": -3.0,
+        },
+        relevance_tags=["floods", "disaster", "wetland_encroachment", "stormwater"],
     ),
     CaseStudy(
         id="kerala-floods-2018",
@@ -523,6 +795,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["floods", "disaster", "climate", "tourism", "agriculture", "resilience"],
         sectors=["public_admin", "trade_hospitality", "agriculture"],
         policies=["AMRUT"],
+        observed_effects={
+            "gdp_delta": -2.5,
+            "employment_delta": -3.5,
+            "real_estate_delta": -15.0,
+            "congestion_delta": 10.0,
+            "migration_delta": -6.0,
+        },
+        relevance_tags=["floods", "disaster", "diaspora_recovery", "hillside_risk"],
     ),
     CaseStudy(
         id="mumbai-monsoon-disruptions",
@@ -535,6 +815,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["monsoon", "floods", "transport_disruption", "climate", "infrastructure"],
         sectors=["transport_logistics", "public_admin", "informal"],
         policies=["AMRUT"],
+        observed_effects={
+            "gdp_delta": -0.5,
+            "employment_delta": -1.0,
+            "real_estate_delta": -5.0,
+            "congestion_delta": 20.0,
+            "migration_delta": -1.0,
+        },
+        relevance_tags=["monsoon", "recurring_disruption", "transport_disruption", "daily_wage_impact"],
     ),
     # ── Policy-specific case studies ──────────────────────────────────
     CaseStudy(
@@ -548,6 +836,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["upi", "digital_payments", "fintech", "informal_economy", "financial_inclusion"],
         sectors=["informal", "trade_hospitality", "it_ites"],
         policies=["Digital India", "Jan Dhan Yojana"],
+        observed_effects={
+            "gdp_delta": 1.0,
+            "employment_delta": 2.0,
+            "real_estate_delta": 3.0,
+            "congestion_delta": -2.0,
+            "migration_delta": 1.0,
+        },
+        relevance_tags=["upi", "digital_payments", "fintech", "financial_inclusion"],
     ),
     CaseStudy(
         id="gst-informal-economy-impact",
@@ -560,6 +856,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["gst", "taxation", "informal_economy", "msme", "formalisation"],
         sectors=["informal", "manufacturing", "trade_hospitality"],
         policies=["GST"],
+        observed_effects={
+            "gdp_delta": -0.5,
+            "employment_delta": -3.0,
+            "real_estate_delta": 3.0,
+            "congestion_delta": 0.0,
+            "migration_delta": -1.0,
+        },
+        relevance_tags=["gst", "formalisation", "msme_compliance", "informal_sector"],
     ),
     CaseStudy(
         id="smart-city-mission-outcomes",
@@ -572,6 +876,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["smart_city", "urban_infrastructure", "digital", "command_centre"],
         sectors=["public_admin", "transport_logistics", "it_ites"],
         policies=["Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 1.0,
+            "employment_delta": 2.0,
+            "real_estate_delta": 15.0,
+            "congestion_delta": -10.0,
+            "migration_delta": 1.0,
+        },
+        relevance_tags=["smart_city", "area_based_development", "command_centre", "cctv_safety"],
     ),
     CaseStudy(
         id="amrut-mission-urban-infrastructure",
@@ -584,6 +896,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["amrut", "water_supply", "sewerage", "urban_infrastructure"],
         sectors=["public_admin"],
         policies=["AMRUT"],
+        observed_effects={
+            "gdp_delta": 0.5,
+            "employment_delta": 4.0,
+            "real_estate_delta": 9.0,
+            "congestion_delta": -3.0,
+            "migration_delta": 0.5,
+        },
+        relevance_tags=["amrut", "water_supply", "sewerage", "municipal_capacity"],
     ),
     CaseStudy(
         id="pmay-housing-periurban",
@@ -596,6 +916,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["pmay", "affordable_housing", "construction", "periurban"],
         sectors=["real_estate", "construction", "informal"],
         policies=["PM Awas Yojana"],
+        observed_effects={
+            "gdp_delta": 1.5,
+            "employment_delta": 3.0,
+            "real_estate_delta": 8.0,
+            "congestion_delta": 5.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["pmay", "affordable_housing", "periurban", "commute_tradeoff"],
     ),
     # ── Sector-specific case studies ──────────────────────────────────
     CaseStudy(
@@ -609,6 +937,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["pharma", "biotech", "manufacturing", "exports", "cluster"],
         sectors=["manufacturing", "it_ites"],
         policies=["Make in India", "SEZ Notification"],
+        observed_effects={
+            "gdp_delta": 5.0,
+            "employment_delta": 4.0,
+            "real_estate_delta": 30.0,
+            "congestion_delta": 10.0,
+            "migration_delta": 4.0,
+        },
+        relevance_tags=["pharma_cluster", "biotech", "global_exports", "rnd"],
     ),
     CaseStudy(
         id="bengaluru-startup-ecosystem",
@@ -621,6 +957,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["startup", "venture_capital", "it_ites", "fintech", "ecosystem"],
         sectors=["it_ites", "real_estate"],
         policies=["Digital India", "Startup India"],
+        observed_effects={
+            "gdp_delta": 8.0,
+            "employment_delta": 6.0,
+            "real_estate_delta": 35.0,
+            "congestion_delta": 20.0,
+            "migration_delta": 8.0,
+        },
+        relevance_tags=["startup_ecosystem", "venture_capital", "silkicon_valley", "infrastructure_gap"],
     ),
     CaseStudy(
         id="delhi-ncr-bfsi-hub",
@@ -633,6 +977,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["bfsi", "financial_services", "fintech", "gurugram", "noida"],
         sectors=["bfsi", "it_ites", "real_estate"],
         policies=["Digital India"],
+        observed_effects={
+            "gdp_delta": 4.0,
+            "employment_delta": 3.5,
+            "real_estate_delta": 40.0,
+            "congestion_delta": 18.0,
+            "migration_delta": 5.0,
+        },
+        relevance_tags=["bfsi", "financial_hub", "gurugram", "transport_imbalance"],
     ),
     CaseStudy(
         id="ahmedabad-sabarmati-riverfront",
@@ -645,6 +997,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["riverfront", "urban_renewal", "tourism", "gentrification", "housing"],
         sectors=["real_estate", "trade_hospitality", "public_admin"],
         policies=["Smart City Mission", "AMRUT"],
+        observed_effects={
+            "gdp_delta": 1.5,
+            "employment_delta": 2.0,
+            "real_estate_delta": 40.0,
+            "congestion_delta": 8.0,
+            "migration_delta": -2.0,
+        },
+        relevance_tags=["riverfront", "gentrification", "displacement", "tourism"],
     ),
     CaseStudy(
         id="pune-automotive-cluster",
@@ -657,6 +1017,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["automotive", "manufacturing", "cluster", "corridor"],
         sectors=["manufacturing", "transport_logistics"],
         policies=["Make in India"],
+        observed_effects={
+            "gdp_delta": 5.0,
+            "employment_delta": 4.0,
+            "real_estate_delta": 20.0,
+            "congestion_delta": 15.0,
+            "migration_delta": 4.0,
+        },
+        relevance_tags=["automotive", "manufacturing_cluster", "corridor", "fringe_pressure"],
     ),
     CaseStudy(
         id="jaipur-jewellery-gems-sector",
@@ -669,6 +1037,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["gems", "jewellery", "exports", "msme", "informal"],
         sectors=["manufacturing", "informal"],
         policies=["Make in India", "SEZ Notification"],
+        observed_effects={
+            "gdp_delta": 4.0,
+            "employment_delta": 5.0,
+            "real_estate_delta": 12.0,
+            "congestion_delta": 15.0,
+            "migration_delta": 3.0,
+        },
+        relevance_tags=["gems_cluster", "exports", "informal_labour", "old_city"],
     ),
     CaseStudy(
         id="kolkata-it-sector-salt-lake",
@@ -681,6 +1057,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["it_ites", "tech_hub", "salt_lake", "new_town"],
         sectors=["it_ites", "real_estate"],
         policies=["Digital India", "Smart City Mission"],
+        observed_effects={
+            "gdp_delta": 2.0,
+            "employment_delta": 3.0,
+            "real_estate_delta": 15.0,
+            "congestion_delta": 10.0,
+            "migration_delta": -1.0,
+        },
+        relevance_tags=["it_hub", "talent_gap", "salary_benchmark", "sector_v"],
     ),
     CaseStudy(
         id="lucknow-up-economy-agriculture-reform",
@@ -693,6 +1077,14 @@ LOCAL_CASE_STUDIES: list[CaseStudy] = [
         tags=["agriculture", "mandi", "digital", "supply_chain", "rural_urban"],
         sectors=["agriculture", "trade_hospitality", "transport_logistics"],
         policies=["Digital India"],
+        observed_effects={
+            "gdp_delta": 0.3,
+            "employment_delta": 1.0,
+            "real_estate_delta": 5.0,
+            "congestion_delta": 2.0,
+            "migration_delta": 2.0,
+        },
+        relevance_tags=["mandi_reform", "enam", "agriculture_digital", "rural_urban"],
     ),
 ]
 

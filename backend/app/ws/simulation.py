@@ -14,7 +14,7 @@ from app.rag import build_evidence_pack, coefficient_factors, extract_coefficien
 from app.realtime import build_demo_manifest, snapshot_quality
 from app.realtime_models import SnapshotData, utc_now
 from engine.models import AggregateMetrics, StartScenarioMessage, InputResponseMessage
-from engine.prediction_generator import generate_prediction
+from engine.prediction_generator import generate_prediction, LLMConfig
 from engine.runner import run_simulation, SimulationTimeoutError
 from engine.scenario_parser import ScenarioParseError, build_params
 from engine.tertiary_loop import synthesize_evidence
@@ -187,8 +187,23 @@ async def simulation_websocket(websocket: WebSocket):
         # ── Prediction stage ─────────────────────────────────────────
         prediction_source = "llm"
         await _send_stage(websocket, "predicting", "Generating a before-simulation expectation.")
+
+        # Build LLM config from app settings and inject into engine
+        _llm_cfg = LLMConfig(
+            provider=settings.llm_provider,
+            api_key=(
+                settings.gemini_api_key if settings.llm_provider == "gemini"
+                else settings.openai_api_key if settings.llm_provider == "openai"
+                else settings.mimo_api_key if settings.llm_provider == "mimo"
+                else ""
+            ),
+            base_url=settings.mimo_base_url if settings.llm_provider == "mimo" else "",
+            model=settings.resolved_llm_model,
+            timeout_ms=settings.llm_timeout_ms,
+        )
+
         try:
-            prediction = await generate_prediction(params)
+            prediction = await generate_prediction(params, llm_config=_llm_cfg)
         except Exception as e:
             logger.warning("Prediction generation failed, using deterministic fallback: %s", e)
             from engine.prediction_generator import _deterministic_prediction

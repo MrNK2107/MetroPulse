@@ -153,7 +153,9 @@ def test_verdict_confirmed_when_gdp_above_threshold(
     gdp_delta, expected,
 ):
     mock_translate.return_value = _make_translation_result()
-    params = _make_params()
+    # Use matching sector shocks for the GDP direction so "Confirmed" is produced
+    sector_deltas = {"it_ites": 10.0} if gdp_delta > 0 else {"transport_logistics": -15.0}
+    params = _make_params(sector_deltas=sector_deltas)
     prediction = _make_prediction()
     frame = _make_final_frame(metrics=_make_metrics(gdpDelta=gdp_delta))
     case_studies = [_make_case_study()]
@@ -167,12 +169,12 @@ def test_verdict_confirmed_when_gdp_above_threshold(
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
-def test_verdict_surprise_when_gdp_drops_but_sectors_positive(
+def test_verdict_surprise_counter_intuitive_when_gdp_drops_but_sectors_positive(
     mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
-    # GDP drops below -2% AND some sector deltas are positive
-    params = _make_params(sector_deltas={"transport_logistics": -15.0, "it_ites": 5.0})
+    # GDP drops AND only positive sector shocks → "Surprise — Counter-Intuitive"
+    params = _make_params(sector_deltas={"it_ites": 5.0})
     prediction = _make_prediction()
     frame = _make_final_frame(metrics=_make_metrics(gdpDelta=-0.03))
     case_studies = [_make_case_study()]
@@ -180,23 +182,24 @@ def test_verdict_surprise_when_gdp_drops_but_sectors_positive(
     from engine.tertiary_loop import synthesize_evidence
     result = synthesize_evidence(params, prediction, frame, case_studies)
 
-    assert result["verdict"] == "Surprise"
+    assert result["verdict"] == "Surprise — Counter-Intuitive"
 
 
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
-def test_verdict_partially_confirmed_when_no_prediction(
+def test_verdict_surprise_resilience_when_no_prediction(
     mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
-    frame = _make_final_frame(metrics=_make_metrics(gdpDelta=0.008))  # > 0.005 but no prediction
+    frame = _make_final_frame(metrics=_make_metrics(gdpDelta=0.008))  # positive GDP + negative shocks, no prediction
 
     from engine.tertiary_loop import synthesize_evidence
     result = synthesize_evidence(params, None, frame, [])
 
-    assert result["verdict"] == "Partially Confirmed"
+    # No prediction + negative shocks + positive GDP → "Surprise — Resilience"
+    assert result["verdict"] == "Surprise — Resilience"
 
 
 # ── Markdown output ─────────────────────────────────────────────────────────
@@ -273,7 +276,7 @@ def test_empty_case_studies_produces_no_precedent_message(
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
-def test_missing_prediction_produces_partially_confirmed(
+def test_missing_prediction_produces_baseline_estimate(
     mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
@@ -283,7 +286,8 @@ def test_missing_prediction_produces_partially_confirmed(
     from engine.tertiary_loop import synthesize_evidence
     result = synthesize_evidence(params, None, frame, [])
 
-    assert result["verdict"] == "Partially Confirmed"
+    # No prediction + no positive shocks + negative GDP → "Baseline Estimate"
+    assert result["verdict"] == "Baseline Estimate"
     assert result["translation"] is not None
     assert "headline" in result["translation"]
 
