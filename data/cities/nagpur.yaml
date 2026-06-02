@@ -1,0 +1,78 @@
+# Nagpur, Maharashtra — Orange City
+name: Nagpur
+state: Maharashtra
+country: India
+center: [21.1458, 79.0882]
+zoom: 11
+population: 3000000
+city_type: tier2
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.048
+  gdp_per_capita: 210000
+  informal_share: 0.52
+  slum_pct: 0.20
+  avg_rent_2bhk: 9000
+
+sector_weights:
+  it_ites: 0.12
+  manufacturing: 0.20
+  real_estate: 0.12
+  trade_hospitality: 0.18
+  transport_logistics: 0.18
+  informal: 0.14
+  public_admin: 0.06
+
+constants:
+  alpha: 0.50
+  beta_informal: 0.42
+  gamma_realestate: 0.10
+  delta_congestion: 0.08
+
+special_zones:
+  - name: MIHAN SEZ
+    type: sez
+    lat: 21.0700
+    lng: 79.0500
+  - name: Butibori Industrial Area
+    type: industrial
+    lat: 20.9900
+    lng: 79.0300
+
+policies:
+  - name: MIHAN Expansion
+    type: economic
+    effect: employment_boost
+  - name: Nagpur Metro (MAHA-METRO)
+    type: transport
+    effect: congestion_reduction
+
+urban_anchors:
+  - name: Sitabuldi
+    type: cbd
+    lat: 21.1460
+    lng: 79.0780
+    weight: 0.25
+  - name: MIHAN SEZ
+    type: industrial
+    lat: 21.0700
+    lng: 79.0500
+    weight: 0.25
+  - name: Dharampeth
+    type: commercial
+    lat: 21.1400
+    lng: 79.0600
+    weight: 0.20
+  - name: Nagpur Railway Station
+    type: transport
+    lat: 21.1500
+    lng: 79.0850
+    weight: 0.15
+  - name: Wardhaman Nagar
+    type: residential
+    lat: 21.1750
+    lng: 79.1100
+    weight: 0.15

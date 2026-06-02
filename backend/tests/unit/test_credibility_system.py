@@ -83,7 +83,7 @@ def test_realtime_snapshot_changes_grid_values_and_provenance():
     )
 
     base = GridFactory.initialize(boundary, base_params)
-    live = GridFactory.initialize(boundary, live_params)
+    live = GridFactory.initialize(boundary, live_params, overlay_fn=generate_overlay)
 
     assert not np.allclose(np.sum(base.K, axis=1), np.sum(live.K, axis=1))
     assert live.overlay_summary["applied"] is True

@@ -4,6 +4,7 @@ import numpy as np
 
 from engine.grid import public_zone_mask
 from engine.models import GridState, SECTOR_INDEX, SECTOR_NAMES, SimulationParams
+from engine.provenance import PRIMARY_LOOP_DECAY
 
 
 def step(state: GridState, params: SimulationParams, month: int) -> GridState:
@@ -18,22 +19,26 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         )
         rates = rates * factors
     monthly_rates = rates / max(params.horizon_months, 1)
-    alpha = float(state.constants.get("alpha_default", 0.55))
-    beta_informal = float(state.constants.get("beta_informal", 0.35))
+    alpha = float(state.constants.get("alpha", 0.45))
+    beta_informal = float(state.constants.get("beta_informal", 0.55))
 
     # Read policy boost factors from city constants (with sensible defaults)
-    di_it_boost = float(state.constants.get("policy_digital_india_it_boost", 0.015))
-    mii_mfg_boost = float(state.constants.get("policy_make_in_india_mfg_boost", 0.012))
-    sez_multiplier = float(state.constants.get("policy_sez_multiplier", 0.01))
-    pw_boost = float(state.constants.get("public_works_boost", 0.018))
-    pw_decay = float(state.constants.get("public_works_decay", 0.04))
+    di_it_boost = float(state.constants.get("policy_digital_india_it_boost", 0.0))
+    mii_mfg_boost = float(state.constants.get("policy_make_in_india_mfg_boost", 0.0))
+    sez_multiplier = float(state.constants.get("policy_sez_multiplier", 0.0))
+    pw_boost = float(state.constants.get("public_works_boost", 0.015))
+    pw_decay = float(state.constants.get("public_works_decay", 0.035))
 
     # Employment pressure weights per sector (read from city config)
-    _default_epw = [0.7, 0.65, 0.5, 0.8, 0.6, 0.45, 0.4]
+    _default_epw = [0.65, 0.70, 0.45, 0.60, 0.55, 0.80, 0.40]
     epw_raw = state.constants.get("employment_pressure_weights", _default_epw)
     employment_pressure_weights = np.array(epw_raw, dtype=np.float64)
 
-    delta_k = state.K * monthly_rates[None, :] * state.sector_weights[None, :]
+    # NOTE: sector_weights are already baked into K during GridFactory.initialize()
+    # (K = K_total * weights), so they must NOT be applied again here — doing so
+    # double-dampens the shock (a 25% IT shock would only produce 25%*0.15 = 3.75%
+    # growth in IT K instead of the intended 25%).
+    delta_k = state.K * monthly_rates[None, :]
     effects: list[str] = []
 
     if np.any(rates != 0):
@@ -73,12 +78,26 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         delta_k[:, SECTOR_INDEX["public_admin"]] += state.K[:, SECTOR_INDEX["public_admin"]] * boost
         effects.append("public works distance boost")
 
+    # Capture K totals BEFORE updating, for proportional employment conversion
+    K_total_before = np.sum(state.K, axis=1)
+
     state.K = np.maximum(state.K + delta_k, 0.0)
     total_delta_k = np.sum(delta_k, axis=1)
-    sector_employment_pressure = np.dot(delta_k, employment_pressure_weights)
-    delta_formal = alpha * sector_employment_pressure
+
+    # Employment grows proportionally to per-cell GDP growth, not as a fixed
+    # additive delta.  This ensures that (a) employment elasticity is realistic
+    # (~0.6 for India) and (b) cells with more jobs create proportionally more
+    # new jobs (diminishing-returns / scale effect).
+    gdp_growth = np.divide(
+        total_delta_k, K_total_before,
+        out=np.zeros_like(total_delta_k), where=K_total_before > 0,
+    )
+    delta_formal = state.E_formal * alpha * gdp_growth
     lag = 0.6 if month > 1 else 0.25
-    delta_informal = beta_informal * lag * delta_formal + state.M * 0.002 * np.maximum(state.E_formal, 1.0)
+    delta_informal = (
+        state.E_informal * beta_informal * lag * gdp_growth
+        + state.M * 0.002 * np.maximum(state.E_formal, 1.0)
+    )
 
     state.E_formal = np.maximum(state.E_formal + delta_formal, 0.0)
     state.E_informal = np.maximum(state.E_informal + delta_informal, 0.0)
@@ -87,7 +106,6 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     state.active_effects = effects or ["baseline drift"]
 
     # Confidence propagation — each step accumulates uncertainty
-    from engine.provenance import PRIMARY_LOOP_DECAY
     if state.confidence_K is not None:
         state.confidence_K = np.clip(state.confidence_K * PRIMARY_LOOP_DECAY, 0.1, 1.0)
         if params.coefficient_adjustments:

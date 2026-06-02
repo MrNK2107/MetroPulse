@@ -214,8 +214,11 @@ export function MapViewport() {
             extruded: activeVisualizationMode === "3d",
             coverage: 1.0, // Continuous filled grid overlay without gaps
             filled: true,
-            stroked: false, // No borders separating cells
-            opacity: 0.5, // 50% opacity as requested (40% - 60%)
+            stroked: true,
+            getLineColor: [255, 255, 255, 80],
+            getLineWidth: 0.5,
+            lineWidthMinPixels: 0.5,
+            opacity: 0.65,
             wireframe: false,
             pickable: true,
             autoHighlight: true,

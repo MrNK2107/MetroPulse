@@ -1,0 +1,78 @@
+# Rajkot, Gujarat — Engineering Hub of Saurashtra
+name: Rajkot
+state: Gujarat
+country: India
+center: [22.3039, 70.8022]
+zoom: 11
+population: 1600000
+city_type: manufacturing
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.045
+  gdp_per_capita: 210000
+  informal_share: 0.46
+  slum_pct: 0.15
+  avg_rent_2bhk: 8000
+
+sector_weights:
+  it_ites: 0.08
+  manufacturing: 0.28
+  real_estate: 0.12
+  trade_hospitality: 0.18
+  transport_logistics: 0.12
+  informal: 0.16
+  public_admin: 0.06
+
+constants:
+  alpha: 0.52
+  beta_informal: 0.40
+  gamma_realestate: 0.10
+  delta_congestion: 0.07
+
+special_zones:
+  - name: GIDC Metoda
+    type: industrial
+    lat: 22.2200
+    lng: 70.7500
+  - name: Aji Industrial Estate
+    type: industrial
+    lat: 22.3200
+    lng: 70.7800
+
+policies:
+  - name: Rajkot Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: Rajkot Metro / BRTS Expansion
+    type: transport
+    effect: congestion_reduction
+
+urban_anchors:
+  - name: Dhebar Road / Jubilee Garden
+    type: cbd
+    lat: 22.3000
+    lng: 70.8000
+    weight: 0.25
+  - name: Aji Industrial Estate
+    type: industrial
+    lat: 22.3200
+    lng: 70.7800
+    weight: 0.25
+  - name: Kalawad Road
+    type: commercial
+    lat: 22.2800
+    lng: 70.8000
+    weight: 0.20
+  - name: Rajkot Junction
+    type: transport
+    lat: 22.3100
+    lng: 70.8000
+    weight: 0.15
+  - name: University Road
+    type: residential
+    lat: 22.2900
+    lng: 70.7700
+    weight: 0.15

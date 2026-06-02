@@ -1,0 +1,78 @@
+# Amritsar, Punjab — City of the Golden Temple
+name: Amritsar
+state: Punjab
+country: India
+center: [31.6340, 74.8723]
+zoom: 11
+population: 1500000
+city_type: heritage
+port_city: false
+monsoon_season: [7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.056
+  gdp_per_capita: 170000
+  informal_share: 0.52
+  slum_pct: 0.18
+  avg_rent_2bhk: 7500
+
+sector_weights:
+  it_ites: 0.05
+  manufacturing: 0.18
+  real_estate: 0.10
+  trade_hospitality: 0.25
+  transport_logistics: 0.12
+  informal: 0.18
+  public_admin: 0.12
+
+constants:
+  alpha: 0.46
+  beta_informal: 0.44
+  gamma_realestate: 0.08
+  delta_congestion: 0.06
+
+special_zones:
+  - name: Golden Temple Complex
+    type: tourism
+    lat: 31.6200
+    lng: 74.8760
+  - name: Attari Border Trade Point
+    type: trade
+    lat: 31.6100
+    lng: 74.6000
+
+policies:
+  - name: Amritsar Heritage Walk Development
+    type: tourism
+    effect: tourism_boost
+  - name: Integrated Check Post Attari
+    type: trade
+    effect: trade_facilitation
+
+urban_anchors:
+  - name: Hall Bazaar / Golden Temple Area
+    type: cbd
+    lat: 31.6250
+    lng: 74.8760
+    weight: 0.25
+  - name: Lawrence Road
+    type: commercial
+    lat: 31.6400
+    lng: 74.8600
+    weight: 0.25
+  - name: Focal Point Industrial Area
+    type: industrial
+    lat: 31.6600
+    lng: 74.8400
+    weight: 0.20
+  - name: Amritsar Junction
+    type: transport
+    lat: 31.6300
+    lng: 74.8750
+    weight: 0.15
+  - name: Ranjit Avenue
+    type: residential
+    lat: 31.6500
+    lng: 74.8600
+    weight: 0.15

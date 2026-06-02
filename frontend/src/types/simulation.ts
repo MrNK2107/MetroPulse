@@ -6,6 +6,10 @@ export const SECTOR_LABELS: Record<string, string> = {
   transport_logistics: "Transport & Logistics",
   informal: "Informal Economy",
   public_admin: "Public Administration",
+  agriculture: "Agriculture",
+  textiles: "Textiles",
+  pharmaceuticals: "Pharmaceuticals",
+  bfsi: "BFSI",
 };
 
 export type PipelineStage =
@@ -119,6 +123,9 @@ export interface AggregateMetrics {
   housingAffordability: number;
   floodDisruption: number;
   migrationBalance: number;
+  airQualityIndex?: number;
+  waterStressIndex?: number;
+  slumDensity?: number;
 }
 
 export interface MetricMetadata {
@@ -325,4 +332,6 @@ export type MetricKey =
   | "realEstateIndex"
   | "transitCongestion"
   | "informalEmployment"
-  | "housingAffordability";
+  | "housingAffordability"
+  | "airQuality"
+  | "waterStress";

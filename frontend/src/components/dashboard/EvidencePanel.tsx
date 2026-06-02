@@ -24,6 +24,7 @@ function LaTeX({ math, block = false }: { math: string; block?: boolean }) {
       displayMode: block,
       throwOnError: false,
     });
+    // Safe: html is produced by KaTeX renderToString, which escapes all user input and produces trusted markup
     return <span dangerouslySetInnerHTML={{ __html: html }} className={block ? "block my-2" : "inline-block"} />;
   } catch {
     return <span className="font-mono">{math}</span>;
@@ -68,7 +69,14 @@ export function EvidencePanel() {
   });
 
   const hasSimpleView = Boolean(evidence?.translation?.sector_impacts?.length);
-  const [activeTab, setActiveTab] = useState<ActiveTab>(hasSimpleView ? "simple" : "detailed");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("detailed");
+
+  // Switch to simple tab when evidence with simpleView arrives after mount
+  useEffect(() => {
+    if (hasSimpleView && activeTab === "detailed") {
+      setActiveTab("simple");
+    }
+  }, [hasSimpleView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDataAvailable = Boolean(evidence || currentFrame);
   const activeLoop = currentFrame?.activeLoop ?? (evidence?.proof?.activeEffects?.join(" -> ") || "complete");
@@ -140,7 +148,7 @@ export function EvidencePanel() {
   }, [evidence?.markdown, visibleWords]);
 
   return (
-    <aside className="w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
+    <aside className="w-full md:w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
       {/* Panel Header */}
       <div className="border-b border-dark-100/40 p-5 bg-dark-300/40 select-none">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-100">

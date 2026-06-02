@@ -43,6 +43,24 @@ export const CITY_COORDS: Record<string, { center: [number, number]; zoom: numbe
   lucknow: { center: [80.9462, 26.8467], zoom: 11, name: "Lucknow" },
   chandigarh: { center: [76.7794, 30.7333], zoom: 12, name: "Chandigarh" },
   bhubaneswar: { center: [85.8245, 20.2961], zoom: 12, name: "Bhubaneswar" },
+  indore: { center: [75.8577, 22.7196], zoom: 11, name: "Indore" },
+  surat: { center: [72.8311, 21.1702], zoom: 11, name: "Surat" },
+  nagpur: { center: [79.0882, 21.1458], zoom: 11, name: "Nagpur" },
+  visakhapatnam: { center: [83.3013, 17.6868], zoom: 11, name: "Visakhapatnam" },
+  kochi: { center: [76.2674, 9.9312], zoom: 11, name: "Kochi" },
+  coimbatore: { center: [76.9558, 11.0168], zoom: 11, name: "Coimbatore" },
+  patna: { center: [85.1376, 25.6093], zoom: 11, name: "Patna" },
+  bhopal: { center: [77.4126, 23.2599], zoom: 11, name: "Bhopal" },
+  vadodara: { center: [73.1812, 22.3072], zoom: 11, name: "Vadodara" },
+  ludhiana: { center: [75.8573, 30.9010], zoom: 11, name: "Ludhiana" },
+  agra: { center: [78.0081, 27.1767], zoom: 11, name: "Agra" },
+  varanasi: { center: [82.9739, 25.3176], zoom: 11, name: "Varanasi" },
+  rajkot: { center: [70.8022, 22.3039], zoom: 11, name: "Rajkot" },
+  amritsar: { center: [74.8723, 31.6340], zoom: 11, name: "Amritsar" },
+  ranchi: { center: [85.3096, 23.3441], zoom: 11, name: "Ranchi" },
+  guwahati: { center: [91.7362, 26.1445], zoom: 11, name: "Guwahati" },
+  mysuru: { center: [76.6394, 12.2958], zoom: 11, name: "Mysuru" },
+  dehradun: { center: [78.0322, 30.3165], zoom: 11, name: "Dehradun" },
 };
 
 interface SimulationStore {
@@ -51,6 +69,7 @@ interface SimulationStore {
   prediction: Prediction | null;
   frames: SimulationFrame[];
   metrics: AggregateMetrics[];
+  getMetrics: () => AggregateMetrics[];
   caseStudies: CaseStudy[];
   evidence: EvidenceReport | null;
   pipelineStage: PipelineStage;
@@ -112,7 +131,7 @@ interface SimulationStore {
   setLeftSidebarOpen: (open: boolean) => void;
   setRightSidebarOpen: (open: boolean) => void;
   setBottomDrawerOpen: (open: boolean) => void;
-  setMapViewState: (viewState: any) => void;
+  setMapViewState: (viewState: SimulationStore["mapViewState"]) => void;
   flyToCity: (cityId: string) => void;
   loadCityCoords: () => Promise<void>;
 
@@ -198,7 +217,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   setParsedScenario: (params, snapshot) => {
     set({ parsedScenario: params, publicWorksZone: params.public_works_zone, snapshot: snapshot ?? null });
     // Automatically center map viewport on resolved city
-    const resolvedCity = params.city.toLowerCase().replace(" ", "_");
+    const resolvedCity = params.city.toLowerCase().replaceAll(" ", "_");
     const cityConfig = get().cityCoords[resolvedCity];
     if (cityConfig) {
       set({
@@ -226,6 +245,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     }),
 
   setCaseStudies: (studies) => set({ caseStudies: studies }),
+
+  getMetrics: () => get().frames.map((f) => f.metrics),
 
   setEvidence: (report) => set({ evidence: report }),
 

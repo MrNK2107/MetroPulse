@@ -1,0 +1,78 @@
+# Agra, Uttar Pradesh — City of the Taj
+name: Agra
+state: Uttar Pradesh
+country: India
+center: [27.1767, 78.0081]
+zoom: 11
+population: 1800000
+city_type: heritage
+port_city: false
+monsoon_season: [7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.062
+  gdp_per_capita: 160000
+  informal_share: 0.56
+  slum_pct: 0.22
+  avg_rent_2bhk: 7000
+
+sector_weights:
+  it_ites: 0.07
+  manufacturing: 0.18
+  real_estate: 0.10
+  trade_hospitality: 0.25
+  transport_logistics: 0.10
+  informal: 0.20
+  public_admin: 0.10
+
+constants:
+  alpha: 0.45
+  beta_informal: 0.46
+  gamma_realestate: 0.08
+  delta_congestion: 0.06
+
+special_zones:
+  - name: Taj Ganj Tourism Zone
+    type: tourism
+    lat: 27.1750
+    lng: 78.0420
+  - name: Foundry Nagar Industrial Area
+    type: industrial
+    lat: 27.1900
+    lng: 77.9900
+
+policies:
+  - name: Taj Trapezium Zone Protection
+    type: environmental
+    effect: pollution_reduction
+  - name: Agra Metro Phase 1
+    type: transport
+    effect: congestion_reduction
+
+urban_anchors:
+  - name: Sanjay Place
+    type: cbd
+    lat: 27.1850
+    lng: 78.0050
+    weight: 0.25
+  - name: Taj Ganj
+    type: commercial
+    lat: 27.1750
+    lng: 78.0420
+    weight: 0.25
+  - name: Foundry Nagar
+    type: industrial
+    lat: 27.1900
+    lng: 77.9900
+    weight: 0.20
+  - name: Agra Cantt
+    type: transport
+    lat: 27.1600
+    lng: 77.9900
+    weight: 0.15
+  - name: Kamla Nagar
+    type: residential
+    lat: 27.2000
+    lng: 78.0100
+    weight: 0.15

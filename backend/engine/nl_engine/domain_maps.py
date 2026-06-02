@@ -288,6 +288,19 @@ POLICY_KEYWORDS: dict[str, list[str]] = {
     "Digital India": ["digital india"],
 }
 
+# ── Sector keywords (sector → list of trigger words) ─────────────────────
+#  Used by scenario_parser for NLP-based sector detection.
+
+SECTOR_KEYWORDS: dict[str, list[str]] = {
+    "it_ites": ["it", "tech", "software", "startup", "digital", "ites"],
+    "manufacturing": ["manufacturing", "factory", "auto", "pharma", "textile", "industrial"],
+    "real_estate": ["real estate", "housing", "construction", "property", "rent"],
+    "trade_hospitality": ["trade", "retail", "hospitality", "tourism", "hotel"],
+    "transport_logistics": ["transport", "logistics", "metro", "port", "rail", "freight"],
+    "informal": ["informal", "street vendor", "slum", "casual labor"],
+    "public_admin": ["public administration", "government", "municipal", "civic"],
+}
+
 # ── Direction words (positive / negative) ──────────────────────────────────
 
 NEGATIVE_WORDS: list[str] = [

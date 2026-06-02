@@ -73,6 +73,11 @@ class ConversationManager:
 
         return ["Mild", "Moderate", "Severe"]
 
+    # TODO: advance() is available for richer multi-turn conversation tracking
+    # (state machine: IDLE → PARSING → CONFIRMED → SIMULATING → DONE).
+    # Currently the WebSocket handler in app/ws/simulation.py manages flow
+    # directly without calling this.  Wire it in if multi-turn state tracking
+    # is needed (e.g. to show a progress indicator or enable pause/resume).
     def advance(self) -> ConversationState:
         """Advance conversation state."""
         self.turn_count += 1

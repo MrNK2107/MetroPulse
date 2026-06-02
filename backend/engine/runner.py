@@ -7,8 +7,6 @@ from engine import primary_loop, secondary_loop, serializer
 from engine.grid import GridFactory
 from engine.models import SimulationParams
 
-SIMULATION_TIMEOUT_MS = 3000
-
 
 class SimulationTimeoutError(Exception):
     pass
@@ -20,8 +18,9 @@ async def run_simulation(
     db: Any = None,
     deadline: float | None = None,
     state_ref: list | None = None,
+    overlay_fn=None,
 ) -> AsyncGenerator[dict[str, Any], None]:
-    state = GridFactory.initialize(region_boundary, params)
+    state = GridFactory.initialize(region_boundary, params, overlay_fn=overlay_fn, city_name=params.city)
     last_frame: dict[str, Any] | None = None
 
     for month in range(1, params.horizon_months + 1):
@@ -37,10 +36,9 @@ async def run_simulation(
     # Expose final state for explainability
     if state_ref is not None:
         state_ref.append(state)
-
     if db is not None and last_frame is not None:
         await db.save_simulation(
-            region_id=None,
+            region_id=params.city,
             params=params.to_dict(),
             horizon_months=params.horizon_months,
             result_summary=last_frame["metrics"],

@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-25  
 **Scope:** Complete simulation engine rewrite + India data pipeline  
-**Status:** Proposed
+**Status:** In Progress — see Phase Status below
 
 ---
 
@@ -462,7 +462,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 
 ## 7. Implementation Roadmap
 
-### Phase 0 — Data Pipeline (2 weeks)
+### Phase 0 — Data Pipeline (2 weeks) ✅ COMPLETE
 | Task | Files | Depends On |
 |------|-------|------------|
 | 0.1 | City boundary GeoJSONs (12 cities) | `data/cities/*.geojson` | — |
@@ -476,7 +476,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 | 0.9 | Employment baseline compilation | `data/employment_baselines.py` | — |
 | 0.10 | Indian case study data (12 entries) | `scripts/seed_case_studies.py` update | — |
 
-### Phase 1 — Engine Rewrite (2 weeks)
+### Phase 1 — Engine Rewrite (2 weeks) ✅ COMPLETE
 | Task | Files | Depends On |
 |------|-------|------------|
 | 1.1 | Multi-sector GridState with new dimensions | `engine/grid.py` rewrite | 0.1-0.9 |
@@ -489,7 +489,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 | 1.8 | Vectorize: k-d tree neighbor, public works, flood | `engine/grid.py` + `engine/primary_loop.py` | 1.1 |
 | 1.9 | Runner: orchestrate 5 loops, deadline check | `engine/runner.py` rewrite | 1.3-1.7 |
 
-### Phase 2 — Database & API (1 week)
+### Phase 2 — Database & API (1 week) ✅ COMPLETE
 | Task | Files | Depends On |
 |------|-------|------------|
 | 2.1 | Real Supabase integration (remove mock) | `app/db.py` rewrite | — |
@@ -498,7 +498,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 | 2.4 | Policy param schema in API | `engine/models.py` update | 1.6 |
 | 2.5 | Simulation persistence & historical queries | `app/routes/simulations.py` | 2.1 |
 
-### Phase 3 — Frontend Overhaul (1.5 weeks)
+### Phase 3 — Frontend Overhaul (1.5 weeks) ✅ COMPLETE
 | Task | Files | Depends On |
 |------|-------|------------|
 | 3.1 | City selector with live preview | `components/controls/CitySelector.tsx` **NEW** | 0.1 |
@@ -510,7 +510,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 | 3.7 | India case study seed embed | `scripts/seed_case_studies.py` | 0.10 |
 | 3.8 | A/B comparison UI | `components/controls/ABComparer.tsx` **NEW** | 2.1 |
 
-### Phase 4 — Polish & Performance (1 week)
+### Phase 4 — Polish & Performance (1 week) 🔶 PARTIAL
 | Task | Files | Depends On |
 |------|-------|------------|
 | 4.1 | Benchmark 24-month sim for Mumbai (~1400 cells) | `tests/performance/` | 1.9 |
@@ -519,7 +519,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 | 4.4 | Permessage-deflate WS compression | `app/ws/simulation.py` | — |
 | 4.5 | Indian Mapbox/CartoDB style | `lib/mapConfig.ts` | — |
 
-### Phase 5 — Testing & Validation (1 week)
+### Phase 5 — Testing & Validation (1 week) 🔶 PARTIAL
 | Task | Files | Depends On |
 |------|-------|------------|
 | 5.1 | Unit tests: spatial_init, climate, policy loops | `tests/unit/` | 1.2-1.4 |

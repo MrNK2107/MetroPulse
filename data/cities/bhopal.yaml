@@ -1,0 +1,78 @@
+# Bhopal, Madhya Pradesh — City of Lakes
+name: Bhopal
+state: Madhya Pradesh
+country: India
+center: [23.2599, 77.4126]
+zoom: 11
+population: 2500000
+city_type: capital
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.055
+  gdp_per_capita: 190000
+  informal_share: 0.54
+  slum_pct: 0.20
+  avg_rent_2bhk: 8000
+
+sector_weights:
+  it_ites: 0.12
+  manufacturing: 0.18
+  real_estate: 0.12
+  trade_hospitality: 0.16
+  transport_logistics: 0.10
+  informal: 0.14
+  public_admin: 0.18
+
+constants:
+  alpha: 0.48
+  beta_informal: 0.44
+  gamma_realestate: 0.10
+  delta_congestion: 0.06
+
+special_zones:
+  - name: Mandideep Industrial Area
+    type: industrial
+    lat: 23.0900
+    lng: 77.5100
+  - name: BHEL Bhopal
+    type: industrial
+    lat: 23.2200
+    lng: 77.4600
+
+policies:
+  - name: Bhopal Metro Rail
+    type: transport
+    effect: congestion_reduction
+  - name: Bhopal Smart City
+    type: infrastructure
+    effect: modernization
+
+urban_anchors:
+  - name: MP Nagar
+    type: cbd
+    lat: 23.2320
+    lng: 77.4020
+    weight: 0.25
+  - name: New Market
+    type: commercial
+    lat: 23.2350
+    lng: 77.4050
+    weight: 0.25
+  - name: Mandideep Industrial Area
+    type: industrial
+    lat: 23.0900
+    lng: 77.5100
+    weight: 0.20
+  - name: Bhopal Junction
+    type: transport
+    lat: 23.2680
+    lng: 77.4140
+    weight: 0.15
+  - name: Arera Colony
+    type: residential
+    lat: 23.2250
+    lng: 77.4300
+    weight: 0.15

@@ -1,0 +1,82 @@
+# Surat, Gujarat — Diamond City of India
+name: Surat
+state: Gujarat
+country: India
+center: [21.1702, 72.8311]
+zoom: 11
+population: 7000000
+city_type: manufacturing
+port_city: true
+monsoon_season: [6, 7, 8, 9]
+metro_system: true
+
+baselines:
+  unemployment_rate: 0.032
+  gdp_per_capita: 260000
+  informal_share: 0.46
+  slum_pct: 0.15
+  avg_rent_2bhk: 11000
+
+sector_weights:
+  it_ites: 0.08
+  manufacturing: 0.30
+  real_estate: 0.15
+  trade_hospitality: 0.20
+  transport_logistics: 0.12
+  informal: 0.10
+  public_admin: 0.05
+
+constants:
+  alpha: 0.55
+  beta_informal: 0.38
+  gamma_realestate: 0.14
+  delta_congestion: 0.10
+
+special_zones:
+  - name: Surat Special Economic Zone
+    type: sez
+    lat: 21.2100
+    lng: 72.8400
+  - name: Hazira Industrial Area
+    type: industrial
+    lat: 21.1100
+    lng: 72.6100
+  - name: Diamond Bourse
+    type: commercial
+    lat: 21.1900
+    lng: 72.7900
+
+policies:
+  - name: Surat Metro Phase 1
+    type: transport
+    effect: congestion_reduction
+  - name: Diamond Research & Mercantile City
+    type: infrastructure
+    effect: employment_boost
+
+urban_anchors:
+  - name: Ring Road
+    type: cbd
+    lat: 21.1860
+    lng: 72.8310
+    weight: 0.25
+  - name: Hazira Industrial Area
+    type: industrial
+    lat: 21.1100
+    lng: 72.6100
+    weight: 0.25
+  - name: Adajan
+    type: residential
+    lat: 21.1920
+    lng: 72.7920
+    weight: 0.20
+  - name: Surat Railway Station
+    type: transport
+    lat: 21.1950
+    lng: 72.8360
+    weight: 0.15
+  - name: Athwa
+    type: commercial
+    lat: 21.1700
+    lng: 72.8000
+    weight: 0.15
