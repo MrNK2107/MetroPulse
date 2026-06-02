@@ -208,7 +208,10 @@ export function ConversationPanel() {
                     </button>
                   )}
                   <button
-                    onClick={resetAll}
+                    onClick={() => {
+                      if (!window.confirm('Reset will discard all simulation data. Continue?')) return;
+                      resetAll();
+                    }}
                     className="rounded-xl border border-dark-100/80 bg-dark-300/50 px-4 py-2.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-all active:scale-95"
                   >
                     Reset
@@ -390,7 +393,10 @@ export function ConversationPanel() {
                 </button>
               )}
               <button
-                onClick={resetAll}
+                onClick={() => {
+                  if (!window.confirm('Reset will discard all simulation data. Continue?')) return;
+                  resetAll();
+                }}
                 className="rounded-xl border border-dark-100/80 bg-dark-300/50 px-4 py-2.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-all active:scale-95"
               >
                 Reset

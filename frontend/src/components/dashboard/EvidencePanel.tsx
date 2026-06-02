@@ -69,7 +69,14 @@ export function EvidencePanel() {
   });
 
   const hasSimpleView = Boolean(evidence?.translation?.sector_impacts?.length);
-  const [activeTab, setActiveTab] = useState<ActiveTab>(hasSimpleView ? "simple" : "detailed");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("detailed");
+
+  // Switch to simple tab when evidence with simpleView arrives after mount
+  useEffect(() => {
+    if (hasSimpleView && activeTab === "detailed") {
+      setActiveTab("simple");
+    }
+  }, [hasSimpleView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDataAvailable = Boolean(evidence || currentFrame);
   const activeLoop = currentFrame?.activeLoop ?? (evidence?.proof?.activeEffects?.join(" -> ") || "complete");

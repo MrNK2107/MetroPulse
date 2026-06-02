@@ -124,6 +124,52 @@ const MetricChart = React.memo(function MetricChart({ title, unit, dataKey, colo
   );
 });
 
+interface AQIPillProps {
+  value: number;
+  isBottomDrawerOpen: boolean;
+  setBottomDrawerOpen: (open: boolean) => void;
+}
+
+function AQIPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: AQIPillProps) {
+  const aqiColor = value <= 100 ? "text-emerald-400 font-bold" : value <= 200 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
+  return (
+    <button
+      onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
+      aria-label={`Air Quality Index: ${value.toFixed(0)}`}
+      className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
+    >
+      <div className="flex flex-col justify-center min-w-0">
+        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">AQI</span>
+        <span className="text-[8px] text-gray-600 font-mono truncate">Air Quality Index</span>
+      </div>
+      <span className={`text-[11px] font-mono ${aqiColor} ml-2 shrink-0`}>{value.toFixed(0)}</span>
+    </button>
+  );
+}
+
+interface WaterStressPillProps {
+  value: number;
+  isBottomDrawerOpen: boolean;
+  setBottomDrawerOpen: (open: boolean) => void;
+}
+
+function WaterStressPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: WaterStressPillProps) {
+  const wsColor = value < 0.4 ? "text-blue-400 font-bold" : value < 0.7 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
+  return (
+    <button
+      onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
+      aria-label={`Water Stress: ${(value * 100).toFixed(0)}%`}
+      className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
+    >
+      <div className="flex flex-col justify-center min-w-0">
+        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Water Stress</span>
+        <span className="text-[8px] text-gray-600 font-mono truncate">Stress Index</span>
+      </div>
+      <span className={`text-[11px] font-mono ${wsColor} ml-2 shrink-0`}>{(value * 100).toFixed(0)}%</span>
+    </button>
+  );
+}
+
 export function MetricPanel() {
   const stage = useSimulationStore((s) => s.pipelineStage);
   const isRunning = stage === "simulating";
@@ -269,40 +315,20 @@ export function MetricPanel() {
               </button>
             );
           })}
-          {currentMetrics?.airQualityIndex !== undefined && (() => {
-            const aqi = currentMetrics.airQualityIndex!;
-            const aqiColor = aqi <= 100 ? "text-emerald-400 font-bold" : aqi <= 200 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
-            return (
-              <button
-                onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                aria-label={`Air Quality Index: ${aqi.toFixed(0)}`}
-                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
-              >
-                <div className="flex flex-col justify-center min-w-0">
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">AQI</span>
-                  <span className="text-[8px] text-gray-600 font-mono truncate">Air Quality Index</span>
-                </div>
-                <span className={`text-[11px] font-mono ${aqiColor} ml-2 shrink-0`}>{aqi.toFixed(0)}</span>
-              </button>
-            );
-          })()}
-          {currentMetrics?.waterStressIndex !== undefined && (() => {
-            const ws = currentMetrics.waterStressIndex!;
-            const wsColor = ws < 0.4 ? "text-blue-400 font-bold" : ws < 0.7 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
-            return (
-              <button
-                onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                aria-label={`Water Stress: ${(ws * 100).toFixed(0)}%`}
-                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
-              >
-                <div className="flex flex-col justify-center min-w-0">
-                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Water Stress</span>
-                  <span className="text-[8px] text-gray-600 font-mono truncate">Stress Index</span>
-                </div>
-                <span className={`text-[11px] font-mono ${wsColor} ml-2 shrink-0`}>{(ws * 100).toFixed(0)}%</span>
-              </button>
-            );
-          })()}
+          {currentMetrics?.airQualityIndex !== undefined && (
+            <AQIPill
+              value={currentMetrics.airQualityIndex}
+              isBottomDrawerOpen={isBottomDrawerOpen}
+              setBottomDrawerOpen={setBottomDrawerOpen}
+            />
+          )}
+          {currentMetrics?.waterStressIndex !== undefined && (
+            <WaterStressPill
+              value={currentMetrics.waterStressIndex}
+              isBottomDrawerOpen={isBottomDrawerOpen}
+              setBottomDrawerOpen={setBottomDrawerOpen}
+            />
+          )}
         </div>
       )}
 

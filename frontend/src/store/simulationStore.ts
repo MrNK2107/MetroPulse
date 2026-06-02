@@ -59,6 +59,7 @@ interface SimulationStore {
   prediction: Prediction | null;
   frames: SimulationFrame[];
   metrics: AggregateMetrics[];
+  getMetrics: () => AggregateMetrics[];
   caseStudies: CaseStudy[];
   evidence: EvidenceReport | null;
   pipelineStage: PipelineStage;
@@ -234,6 +235,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     }),
 
   setCaseStudies: (studies) => set({ caseStudies: studies }),
+
+  getMetrics: () => get().frames.map((f) => f.metrics),
 
   setEvidence: (report) => set({ evidence: report }),
 

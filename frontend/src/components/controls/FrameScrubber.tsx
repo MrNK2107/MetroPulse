@@ -38,7 +38,7 @@ export const FrameScrubber = React.memo(function FrameScrubber() {
     return () => clearInterval(interval);
   }, [isPlaying, total, setActiveFrameIndex]);
 
-  if (pipelineStage !== "done" || total === 0) return null;
+  if (!(pipelineStage === "done" || (pipelineStage === "simulating" && total > 0)) || total === 0) return null;
 
   const togglePlay = () => {
     if (current >= total - 1) {
