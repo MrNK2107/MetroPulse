@@ -168,16 +168,41 @@ interface SimulationStore {
   resetAll: () => void;
 }
 
-const EXAMPLE_SCENARIOS = [
-  "What happens to Hyderabad if pharma FDI drops 40% but Smart City Mission continues for 24 months?",
-  "Bengaluru tech sector grows 25% with Digital India expansion over 2 years",
-  "Mumbai port trade declines 15% due to global shipping disruptions for 12 months",
-  "Chennai manufacturing gets a 30% Make in India boost alongside AMRUT upgrades",
-  "Pune auto industry faces 20% decline while RERA compliance continues for 24 months",
-  "Ahmedabad textile exports surge 35% with new SEZ notification for 60 months",
+interface ScenarioPreset {
+  text: string;
+  category: string;
+}
+
+export const EXAMPLE_SCENARIOS: ScenarioPreset[] = [
+  // Economic Growth
+  { text: "Bengaluru tech sector grows 25% with Digital India expansion over 2 years", category: "growth" },
+  { text: "Hyderabad pharma exports surge 40% with new bulk drug park and FDI incentives for 36 months", category: "growth" },
+  { text: "Chennai manufacturing gets a 30% Make in India boost alongside AMRUT upgrades for 24 months", category: "growth" },
+  { text: "Ahmedabad textile exports surge 35% with new SEZ notification for 60 months", category: "growth" },
+  { text: "Pune IT sector expands 20% with new tech parks and startup incentives for 24 months", category: "growth" },
+  // Economic Crisis
+  { text: "Mumbai port trade declines 15% due to global shipping disruptions for 12 months", category: "crisis" },
+  { text: "Pune auto industry faces 20% decline while RERA compliance continues for 24 months", category: "crisis" },
+  { text: "Hyderabad pharma FDI drops 40% but Smart City Mission continues for 24 months", category: "crisis" },
+  { text: "Surat diamond industry contracts 30% due to global demand drop for 18 months", category: "crisis" },
+  // Infrastructure
+  { text: "Mumbai metro expansion adds 3 new lines reducing transit congestion over 48 months", category: "infrastructure" },
+  { text: "Noida gets a new international airport boosting trade and real estate for 60 months", category: "infrastructure" },
+  { text: "Kolkata East-West metro corridor completes with 25% ridership growth over 36 months", category: "infrastructure" },
+  // Policy
+  { text: "Bhubaneswar Smart City Mission upgrades infrastructure and digital services for 36 months", category: "policy" },
+  { text: "Lucknow AMRUT mission improves water supply and urban mobility for 24 months", category: "policy" },
+  { text: "Jaipur PM Awas Yojana builds 50,000 affordable housing units over 36 months", category: "policy" },
+  // Natural Disaster
+  { text: "Chennai faces major flooding disrupting manufacturing and logistics for 6 months", category: "disaster" },
+  { text: "Ahmedabad earthquake damages 15% of real estate stock requiring reconstruction over 24 months", category: "disaster" },
+  { text: "Kolkata cyclone causes port shutdown and supply chain disruption for 8 months", category: "disaster" },
+  // Social
+  { text: "Bengaluru migration surge of 500,000 IT workers increases housing demand and transit load for 24 months", category: "social" },
+  { text: "Delhi NCR education push with 200 new institutions boosting informal economy for 36 months", category: "social" },
 ];
 
-const EXAMPLE = EXAMPLE_SCENARIOS[Math.floor(Math.random() * EXAMPLE_SCENARIOS.length)];
+const EXAMPLE = EXAMPLE_SCENARIOS[Math.floor(Math.random() * EXAMPLE_SCENARIOS.length)].text;
 
 const HISTORY_KEY = "metropulse-simulation-history";
 

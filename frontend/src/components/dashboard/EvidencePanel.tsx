@@ -18,6 +18,61 @@ function getKatex() {
 
 type ActiveTab = "simple" | "detailed" | "cases" | "technical" | "history";
 
+/** Simulation summary card — shown at top of Simple tab */
+function SimulationSummaryCard() {
+  const parsedScenario = useSimulationStore((s) => s.parsedScenario);
+  const scenarioText = useSimulationStore((s) => s.scenarioText);
+  const simulationDuration = useSimulationStore((s) => s.simulationDuration);
+  const evidence = useSimulationStore((s) => s.evidence);
+  const frames = useSimulationStore((s) => s.frames);
+  const verdict = evidence?.translation?.overall_verdict ?? "";
+  const city = parsedScenario?.city ?? "—";
+  const horizon = parsedScenario?.horizon_months ?? frames.length;
+  const verdictColor = verdict.includes("positive")
+    ? "border-emerald-500/30 bg-emerald-950/15 text-emerald-300"
+    : verdict.includes("negative")
+    ? "border-red-500/30 bg-red-950/15 text-red-300"
+    : "border-amber-500/30 bg-amber-950/15 text-amber-300";
+  return (
+    <div className={`rounded-xl border p-3.5 mb-3 ${verdictColor.split(" ").filter(c => c.startsWith("border") || c.startsWith("bg")).join(" ")}`}>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base">🏙️</span>
+          <div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">City</span>
+            <span className="text-gray-200 font-semibold capitalize">{city.replace(/_/g, " ")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-base">📋</span>
+          <div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">Duration</span>
+            <span className="text-gray-200 font-semibold">{simulationDuration ? `${simulationDuration.toFixed(1)}s` : `${horizon} months`}</span>
+          </div>
+        </div>
+        <div className="col-span-2 flex items-start gap-1.5">
+          <span className="text-base shrink-0">🎯</span>
+          <div className="min-w-0">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">Scenario</span>
+            <span className="text-gray-300 text-[11px] leading-[1.4] line-clamp-2">{scenarioText}</span>
+          </div>
+        </div>
+        {verdict && (
+          <div className="col-span-2 flex items-center gap-1.5 pt-1 border-t border-dark-100/30">
+            <span className="text-base">⚖️</span>
+            <div>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">Verdict</span>
+              <span className={`text-[11px] font-semibold italic ${verdict.includes("positive") ? "text-emerald-300" : verdict.includes("negative") ? "text-red-300" : "text-amber-300"}`}>
+                {verdict}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LaTeX({ math, block = false }: { math: string; block?: boolean }) {
   try {
     const html = getKatex()!.renderToString(math, {
@@ -214,7 +269,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   }, [evidence?.markdown, visibleWords]);
 
   return (
-    <aside ref={panelRef} className="w-full md:w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
+    <aside ref={panelRef} className="w-full md:w-[420px] flex flex-col md:border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
       {/* Panel Header */}
       <div className="border-b border-dark-100/40 p-5 bg-dark-300/40 select-none">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-100">
@@ -343,6 +398,9 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                 {/* Tab: Simple (plain-language view) */}
                 {activeTab === "simple" && evidence?.translation && (
                   <div className="space-y-4" role="tabpanel" id="tabpanel-simple" aria-labelledby="tab-simple">
+                    {/* Simulation summary card */}
+                    <SimulationSummaryCard />
+
                     {/* Hero headline */}
                     <div className={`rounded-xl border p-4 ${
                       translation.overall_verdict.includes("positive")
@@ -507,8 +565,15 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                 {/* Tab: Detailed (original report) */}
                 {activeTab === "detailed" && (
                   <div className="space-y-4" role="tabpanel" id="tabpanel-detailed" aria-labelledby="tab-detailed">
-                    {/* Share button + toast */}
-                    <div className="flex justify-end">
+                    {/* Share + PDF buttons */}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => window.print()}
+                        data-pdf-btn
+                        className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-950/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-300 hover:text-violet-200 hover:border-violet-500/50 transition-all"
+                      >
+                        📄 Download PDF
+                      </button>
                       <button
                         onClick={handleShare}
                         data-share-btn

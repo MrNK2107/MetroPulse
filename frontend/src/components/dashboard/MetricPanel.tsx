@@ -46,13 +46,55 @@ interface MetricChartProps {
   tooltip?: string;
   metadata?: { confidence: number; confidence_label: string; origin: string; sources: string[] };
 }
+/** Tiny inline sparkline using SVG polyline — last N values from frame history */
+function Sparkline({ values, color, width = 48, height = 16 }: { values: number[]; color: string; width?: number; height?: number }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const step = width / (values.length - 1);
+  const points = values
+    .map((v, i) => `${i * step},${height - ((v - min) / range) * (height - 2) - 1}`)
+    .join(" ");
+  return (
+    <svg width={width} height={height} className="inline-block align-middle opacity-70 hover:opacity-100 transition-opacity">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  );
+}
 
-const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
+/** Compute delta between first frame (baseline) and current value */
+function computeBaselineDelta(
+  metrics: AggregateMetrics[],
+  dataKey: RequiredMetricKey,
+  currentValue: number | null
+): { delta: string; direction: "up" | "down" | "flat" } {
+  if (!currentValue || metrics.length < 2) return { delta: "", direction: "flat" };
+  const baseline = metrics[0][dataKey];
+  if (baseline === undefined || baseline === null || baseline === 0) return { delta: "", direction: "flat" };
+  const diff = currentValue - baseline;
+  if (Math.abs(diff) < 0.0001) return { delta: "", direction: "flat" };
+  const pct = (diff / Math.abs(baseline)) * 100;
+  return {
+    delta: `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`,
+    direction: diff > 0 ? "up" : "down",
+  };
+}
+
+const CHART_CONFIGS: (Omit<MetricChartProps, "currentValue" | "metadata"> & { sparkColor: string })[] = [
   {
     title: "GDP Δ",
     unit: "Change from baseline",
     dataKey: "gdpDelta",
     color: "emerald",
+    sparkColor: "#34d399",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
     tooltip: "GDP Δ: Change in city economic output. Positive = growth, negative = contraction. Values above 5% indicate significant expansion. Example: If GDP grows 5%, a city like Bengaluru would see about ₹25,000 crores more economic activity.",
   },
@@ -61,6 +103,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     unit: "Rate",
     dataKey: "unemploymentRate",
     color: "amber",
+    sparkColor: "#fbbf24",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
     tooltip: "Unemployment: Share of workforce actively seeking jobs. Below 6% is healthy; above 8% signals labor stress. Rising rates may indicate economic slowdown. Example: If unemployment rises from 5% to 8%, about 150,000 more people would be looking for jobs in Bengaluru.",
   },
@@ -69,6 +112,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     unit: "Relative value",
     dataKey: "realEstateIndex",
     color: "violet",
+    sparkColor: "#a78bfa",
     formatter: (v: number) => v.toFixed(3),
     tooltip: "Real Estate Index: Relative property value (1.0 = baseline). Above 1.05 = appreciating market; below 0.95 = declining values. Tracks commercial & residential.",
   },
@@ -77,6 +121,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     unit: "Load factor",
     dataKey: "transitCongestion",
     color: "rose",
+    sparkColor: "#fb7185",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
     tooltip: "Transit Congestion: Road & public transport load. Below 25% = smooth flow; above 40% = significant delays. Affects commute times and productivity. Example: If congestion rises from 40% to 60%, average commute time could increase by 20-30 minutes.",
   },
@@ -85,6 +130,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     unit: "Employment mix",
     dataKey: "informalEmployment",
     color: "cyan",
+    sparkColor: "#22d3ee",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
     tooltip: "Informal Share: Portion of workers in unregulated/informal jobs. Higher values suggest weaker labor protections and lower tax base. Purely informational metric.",
   },
@@ -93,6 +139,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     unit: "Housing index",
     dataKey: "housingAffordability",
     color: "indigo",
+    sparkColor: "#818cf8",
     formatter: (v: number) => v.toFixed(2),
     tooltip: "Affordability: Ratio of median income to housing costs. Above 1.0 = affordable; below 0.9 = housing stress. Lower values mean less affordable housing.",
   },
@@ -357,6 +404,18 @@ export function MetricPanel() {
                     ? "text-red-400" : "text-emerald-400")
                 : "text-gray-500";
 
+            // Sparkline: last 10 frames for this metric
+            const sparkValues = metrics.slice(-10).map((m) => m[config.dataKey] as number).filter((v) => v != null);
+            // Baseline delta: first frame vs current
+            const baseline = computeBaselineDelta(metrics, config.dataKey, rawVal);
+            const baselineColor = baseline.direction === "up"
+              ? (config.dataKey === "gdpDelta" || config.dataKey === "realEstateIndex" || config.dataKey === "housingAffordability"
+                  ? "text-emerald-500/70" : "text-red-500/70")
+              : baseline.direction === "down"
+                ? (config.dataKey === "gdpDelta" || config.dataKey === "realEstateIndex" || config.dataKey === "housingAffordability"
+                    ? "text-red-500/70" : "text-emerald-500/70")
+                : "text-gray-600";
+
             return (
               <button
                 key={config.dataKey}
@@ -369,9 +428,19 @@ export function MetricPanel() {
                   <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">
                     {config.title.replace("Delta", "Δ")}
                   </span>
-                  <span className="text-[8px] text-gray-600 font-mono truncate">{config.unit}</span>
+                  <span className="text-[8px] text-gray-600 font-mono truncate flex items-center gap-1">
+                    {config.unit}
+                    {baseline.direction !== "flat" && (
+                      <span className={`text-[7px] font-mono ${baselineColor} ml-1`} title="vs baseline (first frame)">
+                        vs start {baseline.delta}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                  {sparkValues.length >= 2 && (
+                    <Sparkline values={sparkValues} color={config.sparkColor} width={36} height={12} />
+                  )}
                   {trend.direction !== "flat" && (
                     <span className="flex flex-col items-end leading-none">
                       <span className={`text-[10px] font-bold ${trendColor}`}>{trend.arrow}</span>

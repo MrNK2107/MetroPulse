@@ -164,16 +164,24 @@ export default function Home() {
 
       {/* 4. Collapsible Right Panel Overlay: Evidence & Proof */}
       <div
-        className={`absolute right-0 top-0 bottom-0 z-20 transition-all duration-300 transform ${
+        className={`absolute right-0 z-20 transition-all duration-300 transform ${
           isRightSidebarOpen ? "translate-x-0" : "translate-x-full"
-        } w-full md:w-auto`}
+        } w-full md:w-auto md:top-0 md:bottom-0 bottom-0 top-auto max-h-[70vh] md:max-h-none rounded-t-2xl md:rounded-none`}
       >
-        <ErrorBoundary name="Dashboard">
-          <EvidencePanel />
-          <div className="px-4 pb-4">
-            <GroupImpactPanel />
+        <div className="h-full flex flex-col">
+          {/* Mobile drag handle */}
+          <div className="md:hidden flex justify-center py-2 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-dark-100/50" />
           </div>
-        </ErrorBoundary>
+          <div className="flex-1 overflow-hidden">
+            <ErrorBoundary name="Dashboard">
+              <EvidencePanel />
+              <div className="px-4 pb-4">
+                <GroupImpactPanel />
+              </div>
+            </ErrorBoundary>
+          </div>
+        </div>
       </div>
 
       {/* Toggle Right Sidebar Button (desktop) */}
@@ -187,6 +195,18 @@ export default function Home() {
         <span className="text-[10px] font-bold font-mono">
           {isRightSidebarOpen ? "▶" : "◀"}
         </span>
+      </button>
+
+      {/* Mobile Bottom Sheet Button for Evidence Panel */}
+      <button
+        onClick={() => { setRightSidebarOpen(!isRightSidebarOpen); if (!isRightSidebarOpen) setLeftSidebarOpen(false); }}
+        className="md:hidden absolute bottom-[180px] right-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all"
+        aria-label="Toggle evidence panel"
+        title="Toggle evidence panel"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
       </button>
 
       {/* 5. Drawing Tool Overlay */}
@@ -205,8 +225,8 @@ export default function Home() {
       </div>
 
       {/* 6. Dynamic Bottom Drawer overlay: Playback controls and detailed metrics */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-4xl px-4 md:px-0">
-        <div className="flex flex-col gap-2 rounded-xl border border-dark-100/50 bg-dark-200/85 backdrop-blur-md p-3.5 shadow-2xl">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] md:w-full max-w-4xl px-0 md:px-4">
+        <div className="flex flex-col gap-2 rounded-xl border border-dark-100/50 bg-dark-200/85 backdrop-blur-md p-2.5 md:p-3.5 shadow-2xl">
           {/* Metrics summary pills (clickable to expand charts) & Scrubber play block */}
           <ErrorBoundary name="Dashboard">
             <MetricPanel />

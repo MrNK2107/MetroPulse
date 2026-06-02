@@ -112,3 +112,56 @@ input[type="range"]::-moz-range-thumb {
   --tw-prose-bold: #f3f4f6;
   --tw-prose-bullets: #6b7280;
 }
+
+/* Print / PDF export styles */
+@media print {
+  /* Hide interactive and non-essential UI elements */
+  body, html {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  /* Hide map, controls, sidebars, buttons, drawing tools */
+  .absolute.inset-0.z-0,
+  [data-export-btn],
+  [data-pdf-btn],
+  [data-share-btn],
+  button[aria-label="Toggle scenario panel"],
+  button[aria-label="Show keyboard shortcuts"],
+  button[title="Switch to light mode"],
+  button[title="Switch to dark mode"],
+  .hidden.md\:flex.absolute.top-1\/2,
+  .absolute.right-4.top-20,
+  .absolute.left-1\/2.top-20,
+  .absolute.top-4.right-4 {
+    display: none !important;
+  }
+  /* Make panels static and full-width for print */
+  aside, .absolute.right-0 {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+  /* Bottom metrics drawer */
+  .absolute.bottom-4 {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+  }
+  /* Dark background becomes white for print */
+  .bg-dark-400, .bg-dark-200, .bg-dark-300 {
+    background: white !important;
+    color: #111 !important;
+  }
+  .text-gray-100, .text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500 {
+    color: #111 !important;
+  }
+  /* Force color printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
