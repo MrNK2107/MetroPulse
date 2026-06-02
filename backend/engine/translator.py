@@ -26,13 +26,18 @@ COST_PROXIES: dict[str, float] = {
 
 # Reverse lookup: sector → keywords a user might have used
 SECTOR_TO_KEYWORDS: dict[str, list[str]] = {
-    "transport_logistics": ["petrol", "diesel", "fuel", "auto", "bus", "taxi", "delivery", "commute"],
+    "transport_logistics": ["petrol", "diesel", "fuel", "auto-rickshaw", "auto", "bus", "taxi", "delivery", "commute"],
     "it_ites": ["tech", "software", "IT", "startup", "office"],
     "manufacturing": ["factory", "industrial", "production", "plant"],
     "real_estate": ["rent", "housing", "property", "home", "apartment"],
     "trade_hospitality": ["shop", "restaurant", "retail", "tourism", "hotel"],
     "informal": ["street vendor", "daily wage", "gig", "hawker"],
     "public_admin": ["government", "govt", "public sector", "contract"],
+}
+
+# Display-friendly labels for keywords that need adjustment when used in sentences
+_KEYWORD_DISPLAY_LABELS: dict[str, str] = {
+    "auto": "auto-rickshaws",
 }
 
 
@@ -109,7 +114,24 @@ def _find_user_keyword(original_query: str, sector: str) -> str | None:
     return None
 
 
-def _translate_transport(delta_pct: float, city_config: Any, original_query: str = "") -> SectorImpact:
+def _is_disaster_context(original_query: str) -> bool:
+    """Detect if the query describes a disaster/disruption scenario."""
+    lowered = original_query.lower()
+    disaster_words = ["flood", "earthquake", "cyclone", "storm", "disaster", "calamity",
+                      "heavy rain", "landslide", "collapse", "emergency"]
+    return any(w in lowered for w in disaster_words)
+
+
+def _is_multi_sector_shock(sector_deltas: dict[str, float] | None) -> bool:
+    """Check if 3+ sectors have negative deltas > 15 (mass disruption)."""
+    if not sector_deltas:
+        return False
+    hard_hits = sum(1 for v in sector_deltas.values() if v < -15)
+    return hard_hits >= 3
+
+
+def _translate_transport(delta_pct: float, city_config: Any, original_query: str = "",
+                         sector_deltas: dict[str, float] | None = None) -> SectorImpact:
     """Translate transport & logistics delta to plain language."""
     abs_delta = abs(delta_pct)
     daily_fuel = COST_PROXIES["auto_daily_fuel"] * abs_delta / 100
@@ -120,6 +142,9 @@ def _translate_transport(delta_pct: float, city_config: Any, original_query: str
     lowered = original_query.lower()
     is_restriction = any(w in lowered for w in ["ban", "banned", "bans", "banning", "restrict", "restricted", "restriction", "restrictions", "outlaw", "prohibit", "prohibited", "ration", "odd-even"])
 
+    # Fix #4: detect multi-sector disaster for language switching
+    disaster_mode = _is_disaster_context(original_query) or _is_multi_sector_shock(sector_deltas)
+
     if delta_pct < 0:
         if is_restriction:
             return SectorImpact(
@@ -129,15 +154,39 @@ def _translate_transport(delta_pct: float, city_config: Any, original_query: str
                 direction="negative",
                 headline="Transit restrictions reduce mobility",
                 person_example=(
-                    "Commuters experience travel delays and must shift to alternative transit modes. "
-                    "Logistics operators face routing constraints and scheduling overhead."
+                    # Fix #6: plain language instead of corporate jargon
+                    f"An auto-rickshaw driver in {city_config.name} earns about \u20b9{daily_fuel:.0f} less per day "
+                    f"because fewer people can ride. Delivery costs also go up about \u20b9{delivery_cost:.0f} per trip."
                 ),
                 city_wide=(
                     f"City-wide, roughly {jobs_affected:,} transit-dependent workers face daily commute disruption. "
-                    "Pressure on public bus and metro networks increases substantially."
+                    "Bus and metro networks get more crowded."
                 ),
                 numbers={
                     "jobs_affected": jobs_affected,
+                },
+            )
+        # Fix #4: disaster/disruption language when many sectors are hit hard
+        if disaster_mode:
+            return SectorImpact(
+                sector="transport_logistics",
+                sector_label="Transport & Daily Commute",
+                delta_pct=delta_pct,
+                direction="negative",
+                headline="Roads blocked, routes disrupted",
+                person_example=(
+                    f"An auto-rickshaw driver in {city_config.name} loses about \u20b9{daily_fuel:.0f}/day "
+                    f"because roads are blocked and fewer passengers are out. "
+                    f"Delivery costs spike about \u20b9{delivery_cost:.0f} per trip as routes are disrupted."
+                ),
+                city_wide=(
+                    f"About {jobs_affected:,} transport workers hit hard. "
+                    f"Bus services disrupted, roads damaged or blocked, and supply chains face major delays."
+                ),
+                numbers={
+                    "daily_income_loss": round(daily_fuel),
+                    "jobs_affected": jobs_affected,
+                    "delivery_cost_spike": round(delivery_cost),
                 },
             )
         return SectorImpact(
@@ -147,7 +196,7 @@ def _translate_transport(delta_pct: float, city_config: Any, original_query: str
             direction="negative",
             headline="Transport costs go up",
             person_example=(
-                f"Auto-rickshaw and taxi drivers pay about \u20b9{daily_fuel:.0f} more per day for fuel. "
+                f"An auto-rickshaw driver in {city_config.name} pays about \u20b9{daily_fuel:.0f} more per day for fuel. "
                 f"Delivery costs rise roughly \u20b9{delivery_cost:.0f} per trip."
             ),
             city_wide=(
@@ -468,23 +517,26 @@ def _generate_headline(
     lowered_query = original_query.lower()
     is_ban = any(w in lowered_query for w in ["ban", "banned", "bans", "banning", "restrict", "restricted", "restriction", "restrictions", "outlaw", "prohibit", "prohibited", "ration", "odd-even"])
     user_keyword = _find_user_keyword(original_query, dominant_sector)
+    # Apply display label fix (#5)
+    display_keyword = _KEYWORD_DISPLAY_LABELS.get(user_keyword, user_keyword) if user_keyword else user_keyword
 
     if user_keyword:
         if is_ban:
             return (
-                f"If {user_keyword} get restricted or banned in {city_name}, "
+                f"If {display_keyword} get restricted or banned in {city_name}, "
                 f"the biggest impact would be on {SECTOR_LABELS[dominant_sector].lower()} "
                 f"\u2014 here is what that means for daily life."
             )
         elif delta < -10:
+            # Fix #1: negative delta means the sector drops, not costs spike
             return (
-                f"If {user_keyword} costs spike in {city_name}, "
+                f"If {display_keyword} crash in {city_name}, "
                 f"the biggest impact would be on {SECTOR_LABELS[dominant_sector].lower()} "
                 f"\u2014 here is what that means for real people."
             )
         elif delta > 10:
             return (
-                f"If {user_keyword} booms in {city_name}, "
+                f"If {display_keyword} boom in {city_name}, "
                 f"the biggest gains would be in {SECTOR_LABELS[dominant_sector].lower()} "
                 f"\u2014 here is what that means for you."
             )
@@ -523,24 +575,37 @@ def _generate_takeaways(
             f"({gdp_pct:+.1f}%)."
         )
 
-    # Unemployment takeaway
+    # Unemployment takeaway — Fix #7: frame as post-scenario outcome, not just baseline comparison
     unemp = metrics.unemploymentRate * 100
     baseline_unemp = city_config.baselines.get("unemployment_rate", 0.04) * 100
     if abs(unemp - baseline_unemp) > 0.5:
         if unemp > baseline_unemp:
             takeaways.append(
-                f"Unemployment rises from {baseline_unemp:.1f}% to {unemp:.1f}%, "
+                f"After the scenario, unemployment would be {unemp:.1f}% (up from {baseline_unemp:.1f}% baseline), "
                 f"meaning more people are looking for work."
             )
         else:
             takeaways.append(
-                f"Unemployment drops from {baseline_unemp:.1f}% to {unemp:.1f}%, "
+                f"After the scenario, unemployment would be {unemp:.1f}% (down from {baseline_unemp:.1f}% baseline), "
                 f"meaning more jobs are available."
             )
 
-    # Rent/housing takeaway
+    # Rent/housing takeaway — Fix #3: check real_estate sector impact for consistency
     housing = metrics.housingAffordability
-    if housing < 0.9:
+    re_impact = next((s for s in sector_impacts if s.sector == "real_estate"), None)
+    if re_impact and abs(re_impact.delta_pct) > 5:
+        # Use real_estate sector direction to avoid contradictions
+        if re_impact.direction == "negative":
+            takeaways.append(
+                f"Housing becomes more affordable \u2014 rents drop in affected areas "
+                f"and families have more money for other expenses."
+            )
+        elif re_impact.direction == "positive":
+            takeaways.append(
+                f"Housing becomes less affordable \u2014 rents go up and "
+                f"families spend more of their income on housing."
+            )
+    elif housing < 0.9:
         takeaways.append(
             f"Housing becomes less affordable \u2014 rents go up and "
             f"families spend more of their income on housing."
@@ -634,9 +699,13 @@ def translate_to_plain_language(
         translator = _SECTOR_TRANSLATORS.get(sector)
         if translator:
             try:
-                impact = translator(delta, city_config, original_query=original_query)
+                impact = translator(delta, city_config, original_query=original_query,
+                                    sector_deltas=sector_deltas)
             except TypeError:
-                impact = translator(delta, city_config)
+                try:
+                    impact = translator(delta, city_config, original_query=original_query)
+                except TypeError:
+                    impact = translator(delta, city_config)
             sector_impacts.append(impact)
 
     # Sort by absolute delta (most impactful first)
@@ -644,6 +713,25 @@ def translate_to_plain_language(
 
     headline = _generate_headline(sector_deltas, city_config, original_query)
     takeaways = _generate_takeaways(metrics, city_config, sector_impacts)
+
+    # Fix #2: If no sector impacts (e.g. policy-only scenarios), generate a metrics-based summary
+    if not sector_impacts:
+        city_name = city_config.name
+        gdp_pct = metrics.gdpDelta * 100
+        unemp = metrics.unemploymentRate * 100
+        baseline_unemp = city_config.baselines.get("unemployment_rate", 0.04) * 100
+        lines = [f"The city sees a GDP change of {gdp_pct:+.1f}%."]
+        if abs(unemp - baseline_unemp) > 0.3:
+            lines.append(f"Unemployment moves to {unemp:.1f}% (from {baseline_unemp:.1f}% baseline).")
+        if metrics.transitCongestion > 0.6:
+            lines.append("Transit congestion increases.")
+        elif metrics.transitCongestion < 0.4:
+            lines.append("Transit congestion eases.")
+        if metrics.housingAffordability < 0.9:
+            lines.append("Housing affordability worsens — rents may rise.")
+        elif metrics.housingAffordability > 1.1:
+            lines.append("Housing becomes more affordable.")
+        takeaways = lines[:5] + takeaways
 
     # Determine overall provenance
     has_news = any(s.origin == "real" for s in sector_impacts)

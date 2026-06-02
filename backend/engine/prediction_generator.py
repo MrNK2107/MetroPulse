@@ -351,7 +351,22 @@ def _enhanced_deterministic_prediction(params: SimulationParams) -> Prediction:
     if not counter:
         counter.append("Policy effects often lag sector shocks by 6-12 months.")
 
+    # Fix #8: generate a headline for the prediction
+    top_sector = max(params.sector_deltas.items(), key=lambda x: abs(x[1])) if params.sector_deltas else None
+    if top_sector:
+        top_label = SECTOR_LABELS[top_sector[0]]
+        top_delta = top_sector[1]
+        if top_delta < -10:
+            pred_headline = f"{cfg.name} faces a {abs(top_delta):.0f}% hit to {top_label.lower()} \u2014 expect ripple effects across the city."
+        elif top_delta > 10:
+            pred_headline = f"{cfg.name} sees a {top_delta:.0f}% boost in {top_label.lower()} \u2014 growth expected across the city."
+        else:
+            pred_headline = f"{cfg.name} sees modest shifts across sectors."
+    else:
+        pred_headline = f"{cfg.name}: policy effects under analysis."
+
     return Prediction(
+        headline=pred_headline,
         employment_impact=impacts,
         real_estate_impact={
             "direction": re_direction,

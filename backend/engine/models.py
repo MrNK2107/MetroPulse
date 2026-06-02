@@ -71,6 +71,7 @@ class SectorPrediction(BaseModel):
 
 
 class Prediction(BaseModel):
+    headline: str = ""
     employment_impact: dict[str, SectorPrediction] = Field(default_factory=dict)
     real_estate_impact: dict[str, Any] = Field(default_factory=dict)
     transit_impact: dict[str, Any] = Field(default_factory=dict)

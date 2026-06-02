@@ -78,7 +78,7 @@ export function EvidencePanel() {
   };
   const explainabilityTopDrivers = evidence?.explainability?.top_drivers ?? [];
   const hasSimpleView = Boolean(translation.sector_impacts.length);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("detailed");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("simple");
 
   // Switch to simple tab when evidence with simpleView arrives after mount
   useEffect(() => {
@@ -164,7 +164,7 @@ export function EvidencePanel() {
           Evidence & Audit
         </h2>
         <p className="mt-1 text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-          Simulation analysis, precedence, and math checks
+          What this means and why
         </p>
       </div>
 
@@ -209,7 +209,7 @@ export function EvidencePanel() {
                   : "text-gray-400 hover:text-gray-200 hover:bg-dark-300/35"
               }`}
             >
-              Detailed
+              Report
             </button>
             <button
               onClick={() => setActiveTab("cases")}

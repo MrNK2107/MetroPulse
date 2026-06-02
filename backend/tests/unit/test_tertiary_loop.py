@@ -220,12 +220,12 @@ def test_markdown_contains_expected_sections(
     result = synthesize_evidence(params, prediction, frame, case_studies)
 
     md = result["markdown"]
-    assert "## Simulation Results" in md
-    assert "### Expectation vs Model Output" in md
-    assert "### Key Findings" in md
+    assert "## What this means for" in md
+    assert "### What changed and why" in md
+    assert "### What stood out" in md
     assert "### Historical Precedents" in md
-    assert "### Math & Data Proof" in md
-    assert "### Policy Recommendation" in md
+    assert "### How we calculated this" in md
+    assert "### What could help" in md
     # City name should appear
     assert "Mumbai" in md
 

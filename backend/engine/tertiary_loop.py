@@ -112,52 +112,44 @@ def synthesize_evidence(
         for s, v in driving_sectors if abs(v) > 0
     ) or "- No explicit sector shocks; policy-only scenario."
 
-    markdown = f"""## Simulation Results — {params.city_config.name}
+    markdown = f"""## What this means for {params.city_config.name}
 
-**Verdict: {verdict}**
+**{verdict}** — {verdict_detail}
 
-{verdict_detail}
+We ran a {params.horizon_months}-month simulation for {params.city_config.name} using city economic data, real-time signals when available, and neighborhood-level analysis. Here's what we found.
 
-MetroPulse produced a **scenario estimate** for **{params.city_config.name}** over **{params.horizon_months} months** in **{proof.get("dataMode", "estimated").replace("_", " ").title()}** mode using city baselines, retrieved evidence, real-time context when available, and deterministic H3 cell updates.
+### What changed and why
 
-### Sector Drivers
+{chr(10).join(
+    f"- **{SECTOR_LABELS[s]}** {'grew' if v > 0 else 'contracted'} by {abs(v):.0f}% — it makes up about {int(weights.get(s, 0.1) * 100)}% of {params.city_config.name}'s economy"
+    for s, v in driving_sectors if abs(v) > 0
+) if driving_sectors else "- No major sector changes were modeled in this scenario."}
 
-{sector_breakdown}
+### The big picture
 
-### Key Metrics
+The city's economy {'grew' if gdp > 0 else 'contracted'} by about **{abs(gdp * 100):.1f}%**. About **{unemployment * 100:.1f}%** of people are looking for work. Traffic {'got heavier' if metrics['transitCongestion'] > 0.5 else 'stayed manageable'} — about {int(metrics['transitCongestion'] * 10)} in 10 roads are congested. Housing is {'under pressure' if metrics['housingAffordability'] < 1.0 else 'relatively stable'}, and about {metrics['informalEmployment'] * 100:.0f}% of jobs are in the informal sector.
 
-- **GDP delta**: {gdp * 100:+.2f}%
-- **Unemployment**: {unemployment * 100:.2f}%
-- **Transit congestion**: {metrics["transitCongestion"] * 100:.1f}%
-- **Housing affordability index**: {metrics["housingAffordability"]:.2f}
-- **Informal employment share**: {metrics["informalEmployment"] * 100:.1f}%
+### Did we expect this?
 
-### Expectation vs Model Output
+{"The numbers match what we expected — the economy moved in line with the scenario." if "Confirmed" in verdict else "The results surprised us somewhat — the model found some effects we didn't fully anticipate."} {verdict_detail}
 
-- **Sector shocks → employment & land values**: GDP delta {gdp * 100:+.2f}%, unemployment {unemployment * 100:.2f}% — **{verdict}**
-- **Transit pressure → commuter load**: Congestion at {metrics["transitCongestion"] * 100:.1f}% — {"increased" if metrics["transitCongestion"] > 0.5 else "managed"}
-- **Housing affordability → real-estate pressure**: Index at {metrics["housingAffordability"]:.2f} — {"strained" if metrics["housingAffordability"] < 1.0 else "stable"}
+### What stood out
 
-### Key Findings
-
-1. **Spatial effects are uneven.** The heatmap cells with taller columns combine capital movement, job pressure, and distance-decay spillovers.
-2. **Informal employment matters.** The final informal employment share is **{metrics["informalEmployment"] * 100:.1f}%**, so the platform visualizes both formal and informal job density.
-3. **Climate and policy modifiers are visible in the playback.** Monsoon months add flood pressure, while active policies dampen or redirect effects.
+1. The changes are not spread evenly across the city — some neighborhoods feel the impact much more than others.
+2. About {metrics['informalEmployment'] * 100:.0f}% of the city's workers are in the informal economy, so official numbers may not capture the full picture.
+3. Weather patterns and active government policies can amplify or soften the effects over time.
 
 ### Historical Precedents
 
 {case_lines}
 
-### Math & Data Proof
+### How we calculated this
 
-- Formula: `\\Delta K_sector = monthly_rate * sector_weight * K`; real estate and transit are updated by deterministic vector operations.
-- Data quality: City YAML baselines, H3 geometry, configured sector weights, and proxy estimates where real datasets are not present.
-- Cell count: **{final_frame["proof"]["cellCount"]}** H3 cells.
-- Snapshot: **{proof.get("snapshotId") or "city baseline"}**, quality score **{proof.get("qualityScore", 0):.2f}**.
+We used city economic data, satellite and mapping information, and historical patterns from similar cities. The analysis covers **{final_frame['proof']['cellCount']}** neighborhoods across {params.city_config.name}. Data quality score: **{proof.get('qualityScore', 0):.0%}**.
 
-### Policy Recommendation
+### What could help
 
-Pair the scenario shock with targeted transit and housing support in the most affected cells. Try comparing the same prompt with **AMRUT**, **PM Awas Yojana**, or **Smart City Mission** explicitly added.
+Consider investing in public transport and affordable housing in the areas most affected. Government programs like **AMRUT**, **PM Awas Yojana**, or **Smart City Mission** could make a real difference if targeted at these neighborhoods.
 """
 
     # ── Plain-language translation ──────────────────────────────────────────
