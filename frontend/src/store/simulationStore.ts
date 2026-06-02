@@ -96,6 +96,10 @@ interface SimulationStore {
   // Simulation history
   simulationHistory: SimulationHistoryEntry[];
 
+  // Duration tracking
+  simulationStartTime: number | null;
+  simulationDuration: number | null;
+
   // Conversation state
   conversationMessages: ConversationMessage[];
   conversationMode: "quick" | "deep";
@@ -217,6 +221,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   snapshot: null,
   simulationHistory: loadHistory(),
 
+  // Duration tracking
+  simulationStartTime: null,
+  simulationDuration: null,
+
   conversationMessages: [],
   conversationMode: "quick",
   pendingQuestion: null,
@@ -250,9 +258,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       const completed = state.stageHistory.map((entry) =>
         entry.status === "active" ? { ...entry, status: "complete" as const } : entry
       );
+      // Capture start time on first stage transition (when idle)
+      const startTime = state.pipelineStage === "idle" ? Date.now() : state.simulationStartTime;
       return {
         pipelineStage: stage,
         stageHistory: [...completed, { stage, message, status: "active" }],
+        simulationStartTime: startTime,
       };
     }),
 
@@ -315,10 +326,15 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       };
       const updatedHistory = [newEntry, ...state.simulationHistory].slice(0, 10);
       saveHistory(updatedHistory);
+      // Compute duration from start time
+      const duration = state.simulationStartTime
+        ? (Date.now() - state.simulationStartTime) / 1000
+        : null;
       return {
         simulationId: id,
         pipelineStage: "done",
         simulationHistory: updatedHistory,
+        simulationDuration: duration,
         stageHistory: state.stageHistory.map((entry) =>
           entry.status === "active" ? { ...entry, status: "complete" as const } : entry
         ),
@@ -484,6 +500,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       citizenSatisfaction: null,
       comparisonMode: false,
       comparisonSimulation: null,
+      simulationStartTime: null,
+      simulationDuration: null,
     }),
 
   resetAll: () =>
@@ -511,6 +529,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       activeFrameIndex: -1,
       // Maintain UI choices (active visualization / metric)
       mapViewState: DEFAULT_MAP_VIEW_STATE,
+      simulationStartTime: null,
+      simulationDuration: null,
     }),
 }));
 

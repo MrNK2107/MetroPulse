@@ -54,7 +54,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "gdpDelta",
     color: "emerald",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
-    tooltip: "GDP Δ: Change in city economic output. Positive = growth, negative = contraction. Values above 5% indicate significant expansion.",
+    tooltip: "GDP Δ: Change in city economic output. Positive = growth, negative = contraction. Values above 5% indicate significant expansion. Example: If GDP grows 5%, a city like Bengaluru would see about ₹25,000 crores more economic activity.",
   },
   {
     title: "Unemployment",
@@ -62,7 +62,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "unemploymentRate",
     color: "amber",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
-    tooltip: "Unemployment: Share of workforce actively seeking jobs. Below 6% is healthy; above 8% signals labor stress. Rising rates may indicate economic slowdown.",
+    tooltip: "Unemployment: Share of workforce actively seeking jobs. Below 6% is healthy; above 8% signals labor stress. Rising rates may indicate economic slowdown. Example: If unemployment rises from 5% to 8%, about 150,000 more people would be looking for jobs in Bengaluru.",
   },
   {
     title: "Real Estate Index",
@@ -78,7 +78,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "transitCongestion",
     color: "rose",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
-    tooltip: "Transit Congestion: Road & public transport load. Below 25% = smooth flow; above 40% = significant delays. Affects commute times and productivity.",
+    tooltip: "Transit Congestion: Road & public transport load. Below 25% = smooth flow; above 40% = significant delays. Affects commute times and productivity. Example: If congestion rises from 40% to 60%, average commute time could increase by 20-30 minutes.",
   },
   {
     title: "Informal Share",

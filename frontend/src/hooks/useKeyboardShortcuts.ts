@@ -51,6 +51,16 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Ctrl+Shift+R — Reset simulation with confirmation
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "R") {
+        e.preventDefault();
+        const confirmed = window.confirm("Reset the current simulation? This will clear all results.");
+        if (confirmed) {
+          useSimulationStore.getState().resetRun();
+        }
+        return;
+      }
+
       if (e.key === "Escape" && drawMode !== "none") {
         setDrawMode("none");
         e.preventDefault();

@@ -95,6 +95,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   const [caseSearch, setCaseSearch] = useState("");
   const [caseTierFilter, setCaseTierFilter] = useState<string>("all");
   const [showCopyToast, setShowCopyToast] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Filtered case studies
   const filteredCaseStudies = useMemo(() => {
@@ -122,6 +123,13 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
       setActiveTab("simple");
     }
   }, [hasSimpleView]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-scroll to top of evidence panel when simulation completes
+  useEffect(() => {
+    if (pipelineStage === "done" && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [pipelineStage]);
 
   const isDataAvailable = Boolean(evidence || currentFrame);
   const activeLoop = currentFrame?.activeLoop ?? (evidence?.proof?.activeEffects?.join(" -> ") || "complete");
@@ -206,7 +214,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   }, [evidence?.markdown, visibleWords]);
 
   return (
-    <aside className="w-full md:w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
+    <aside ref={panelRef} className="w-full md:w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
       {/* Panel Header */}
       <div className="border-b border-dark-100/40 p-5 bg-dark-300/40 select-none">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-100">
@@ -363,6 +371,10 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                             {impact.delta_pct > 0 ? "+" : ""}{impact.delta_pct.toFixed(0)}%
                           </span>
                           <span className="text-xs font-bold text-gray-200">{impact.headline}</span>
+                          <span
+                            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-dark-100/60 text-[7px] text-gray-400 cursor-help shrink-0"
+                            title={`${impact.sector}: ${impact.direction === "positive" ? "Positive" : "Negative"} impact of ${impact.delta_pct.toFixed(0)}% on the ${impact.sector.replace(/_/g, " ")} sector.`}
+                          >?</span>
                         </div>
                         <p className="text-xs text-gray-200 font-semibold leading-[1.5] mb-1.5">
                           {impact.person_example}
@@ -415,11 +427,23 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                     {/* GDP + Unemployment summary */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-3 text-center">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Economy</p>
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center justify-center gap-1">
+                          Economy
+                          <span
+                            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-dark-100/60 text-[7px] text-gray-400 cursor-help"
+                            title="Change in city GDP from baseline. Positive = economic growth, negative = contraction. Example: If GDP grows 5%, a city like Bengaluru would see about ₹25,000 crores more economic activity."
+                          >?</span>
+                        </p>
                         <p className="text-xs font-bold text-gray-200">{translation.gdp_summary}</p>
                       </div>
                       <div className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-3 text-center">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Jobs</p>
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center justify-center gap-1">
+                          Jobs
+                          <span
+                            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-dark-100/60 text-[7px] text-gray-400 cursor-help"
+                            title="Unemployment rate: Share of workforce actively seeking jobs. Below 6% is healthy; above 8% signals labor stress. Example: If unemployment rises from 5% to 8%, about 150,000 more people would be looking for jobs in Bengaluru."
+                          >?</span>
+                        </p>
                         <p className="text-xs font-bold text-gray-200">{translation.unemployment_summary}</p>
                       </div>
                     </div>

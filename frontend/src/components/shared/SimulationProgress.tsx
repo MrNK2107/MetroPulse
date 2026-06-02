@@ -17,6 +17,7 @@ export function SimulationProgress() {
   const error = useSimulationStore((s) => s.error);
   const frames = useSimulationStore((s) => s.frames);
   const total = useSimulationStore((s) => s.parsedScenario?.horizon_months ?? 0);
+  const simulationDuration = useSimulationStore((s) => s.simulationDuration);
   const [showToast, setShowToast] = useState(false);
 
   // Show success toast when simulation completes
@@ -54,7 +55,7 @@ export function SimulationProgress() {
     return (
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 max-w-lg">
         <div className="rounded-xl border border-emerald-500/30 bg-dark-200/95 px-4 py-3 text-sm text-emerald-300 shadow-lg backdrop-blur-sm" role="alert" aria-live="polite">
-          <span className="font-semibold text-emerald-400">✅</span> Simulation complete! Results are ready.
+          <span className="font-semibold text-emerald-400">✅</span> Simulation complete{simulationDuration ? ` in ${simulationDuration.toFixed(1)} seconds` : ""}! Results are ready.
         </div>
       </div>
     );
