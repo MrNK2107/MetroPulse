@@ -1,0 +1,82 @@
+# Kochi, Kerala — Queen of the Arabian Sea
+name: Kochi
+state: Kerala
+country: India
+center: [9.9312, 76.2674]
+zoom: 11
+population: 2000000
+city_type: port
+port_city: true
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.062
+  gdp_per_capita: 240000
+  informal_share: 0.42
+  slum_pct: 0.12
+  avg_rent_2bhk: 12000
+
+sector_weights:
+  it_ites: 0.15
+  manufacturing: 0.12
+  real_estate: 0.13
+  trade_hospitality: 0.22
+  transport_logistics: 0.18
+  informal: 0.14
+  public_admin: 0.06
+
+constants:
+  alpha: 0.50
+  beta_informal: 0.38
+  gamma_realestate: 0.12
+  delta_congestion: 0.08
+
+special_zones:
+  - name: Infopark Kochi
+    type: tech_park
+    lat: 10.0050
+    lng: 76.3600
+  - name: Cochin Port
+    type: port
+    lat: 9.9680
+    lng: 76.2650
+  - name: SmartCity Kochi
+    type: sez
+    lat: 10.0300
+    lng: 76.3400
+
+policies:
+  - name: Kochi Metro Rail
+    type: transport
+    effect: congestion_reduction
+  - name: Kochi Water Metro
+    type: transport
+    effect: connectivity_boost
+
+urban_anchors:
+  - name: MG Road Ernakulam
+    type: cbd
+    lat: 9.9720
+    lng: 76.2830
+    weight: 0.25
+  - name: Infopark Kochi
+    type: commercial
+    lat: 10.0050
+    lng: 76.3600
+    weight: 0.25
+  - name: Willingdon Island
+    type: industrial
+    lat: 9.9600
+    lng: 76.2600
+    weight: 0.20
+  - name: Ernakulam Junction
+    type: transport
+    lat: 9.9720
+    lng: 76.2850
+    weight: 0.15
+  - name: Kakkanad
+    type: residential
+    lat: 10.0150
+    lng: 76.3400
+    weight: 0.15

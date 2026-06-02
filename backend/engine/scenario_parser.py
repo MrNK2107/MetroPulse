@@ -33,10 +33,19 @@ def build_params(parsed: ParsedScenario):
     from engine.models import SimulationParams
 
     cfg = CityConfig.load(parsed.city)
+    # Merge city-specific policies from YAML config with user-specified ones
+    city_policy_names = [p.get("name", "") for p in cfg.policies if isinstance(p, dict)]
+    # Add city-specific policies that are not already in the user's list
+    all_policies = list(parsed.policies_active)
+    for city_policy in city_policy_names:
+        if city_policy and city_policy not in all_policies:
+            # Only add city policies if user mentioned related keywords or enabled all
+            if any(kw in city_policy.lower() for kw in [w.lower() for w in parsed.keywords]):
+                all_policies.append(city_policy)
     return SimulationParams(
         city=parsed.city,
         sector_deltas={sector: float(parsed.sector_deltas.get(sector, 0.0)) for sector in SECTOR_NAMES},
-        policies_active=parsed.policies_active,
+        policies_active=all_policies,
         public_works_zone=parsed.public_works_zone,
         horizon_months=parsed.horizon_months,
         city_config=cfg,

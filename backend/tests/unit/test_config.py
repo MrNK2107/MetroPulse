@@ -10,9 +10,10 @@ from engine.config import CityConfig, UrbanAnchor, list_available_cities
 # ── Known cities ─────────────────────────────────────────────────────────────
 
 ALL_CITIES = [
-    "ahmedabad", "bengaluru", "bhubaneswar", "chandigarh", "chennai",
-    "delhi_ncr", "hyderabad", "jaipur", "kolkata", "lucknow",
-    "mumbai", "pune",
+    "ahmedabad", "bengaluru", "bhopal", "bhubaneswar", "chandigarh", "chennai",
+    "coimbatore", "delhi_ncr", "hyderabad", "indore", "jaipur", "kochi",
+    "kolkata", "lucknow", "mumbai", "nagpur", "patna", "pune",
+    "surat", "visakhapatnam",
 ]
 
 
@@ -134,9 +135,9 @@ class TestBoundaryPolygon:
 
 class TestListAvailableCities:
 
-    def test_returns_12_cities(self):
+    def test_returns_20_cities(self):
         cities = list_available_cities()
-        assert len(cities) == 12
+        assert len(cities) == 20
 
     def test_each_city_has_required_keys(self):
         cities = list_available_cities()

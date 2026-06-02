@@ -1,0 +1,82 @@
+# Visakhapatnam, Andhra Pradesh — City of Destiny
+name: Visakhapatnam
+state: Andhra Pradesh
+country: India
+center: [17.6868, 83.3013]
+zoom: 11
+population: 2000000
+city_type: port
+port_city: true
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.050
+  gdp_per_capita: 230000
+  informal_share: 0.48
+  slum_pct: 0.22
+  avg_rent_2bhk: 9000
+
+sector_weights:
+  it_ites: 0.15
+  manufacturing: 0.25
+  real_estate: 0.10
+  trade_hospitality: 0.12
+  transport_logistics: 0.18
+  informal: 0.14
+  public_admin: 0.06
+
+constants:
+  alpha: 0.52
+  beta_informal: 0.40
+  gamma_realestate: 0.10
+  delta_congestion: 0.08
+
+special_zones:
+  - name: Visakhapatnam Steel Plant
+    type: industrial
+    lat: 17.7100
+    lng: 83.2700
+  - name: APSEZ Gangavaram Port
+    type: port
+    lat: 17.6300
+    lng: 83.2600
+  - name: Rushikonda IT Park
+    type: tech_park
+    lat: 17.7800
+    lng: 83.3800
+
+policies:
+  - name: Vizag Smart City
+    type: infrastructure
+    effect: modernization
+  - name: Bhogapuram Greenfield Airport
+    type: transport
+    effect: connectivity_boost
+
+urban_anchors:
+  - name: Dwaraka Nagar
+    type: cbd
+    lat: 17.7150
+    lng: 83.3000
+    weight: 0.25
+  - name: Rushikonda IT Park
+    type: commercial
+    lat: 17.7800
+    lng: 83.3800
+    weight: 0.25
+  - name: Visakhapatnam Steel Plant
+    type: industrial
+    lat: 17.7100
+    lng: 83.2700
+    weight: 0.20
+  - name: Visakhapatnam Railway Station
+    type: transport
+    lat: 17.7280
+    lng: 83.2950
+    weight: 0.15
+  - name: MVP Colony
+    type: residential
+    lat: 17.7250
+    lng: 83.3200
+    weight: 0.15

@@ -107,7 +107,16 @@ class CityConfig:
         with open(geojson_path, "r") as f:
             return json.load(f)
 
-    def get_boundary_polygon(self) -> dict[str, Any]:
+    def get_boundary_polygon(self, city_name: str = "") -> dict[str, Any]:
+        # Try loading GeoJSON boundary first, fall back to circle
+        if city_name:
+            try:
+                geojson = CityConfig.load_geojson(city_name)
+                geom = geojson.get("geometry", geojson)
+                if geom.get("type") == "Polygon" and geom.get("coordinates"):
+                    return {"type": "Polygon", "coordinates": geom["coordinates"]}
+            except (FileNotFoundError, Exception):
+                pass
         import math
         lat, lng = self.center
         # Set radius based on population size (mega-cities: 18km, others: 14km)

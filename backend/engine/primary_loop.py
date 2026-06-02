@@ -19,7 +19,7 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         )
         rates = rates * factors
     monthly_rates = rates / max(params.horizon_months, 1)
-    alpha = float(state.constants.get("alpha_default", 0.45))
+    alpha = float(state.constants.get("alpha", 0.45))
     beta_informal = float(state.constants.get("beta_informal", 0.55))
 
     # Read policy boost factors from city constants (with sensible defaults)

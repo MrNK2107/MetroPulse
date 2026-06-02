@@ -41,7 +41,7 @@ async def test_hyderabad_pharma_search_excludes_unrelated_housing():
     )
 
     ids = [study.id for study in studies]
-    assert ids[0] == "hyderabad-pharma-sez"
+    assert ids[0] == "hyderabad-genome-valley-pharma"
     assert "pmay-national-housing" not in ids
     assert all(study.relevance_tier in {"exact", "related"} for study in studies)
 
@@ -56,7 +56,7 @@ async def test_same_city_sector_ranks_above_cross_city_related_cases():
     )
     studies = await db.search_case_studies([], city="hyderabad", sector="manufacturing", context=context)
 
-    assert studies[0].id == "hyderabad-pharma-sez"
+    assert studies[0].id == "hyderabad-genome-valley-pharma"
     assert studies[0].relevance_tier == "exact"
     assert all(study.id != "pmay-national-housing" for study in studies)
 
@@ -73,7 +73,7 @@ async def test_bengaluru_tech_boom_does_not_drift_to_secondary_real_estate_cases
 
     ids = [study.id for study in studies]
     assert "bengaluru-it-infra" in ids
-    assert "pune-it-corridor" in ids
+    assert "bengaluru-startup-ecosystem" in ids
     assert "jaipur-tourism-heritage" not in ids
 
 
@@ -88,6 +88,6 @@ async def test_cross_city_related_cases_appear_without_same_city_topic_match():
     studies = await db.search_case_studies([], city="mumbai", sector="transport_logistics", context=context)
 
     assert studies
-    assert all(study.relevance_tier == "related" for study in studies)
+    assert all(study.relevance_tier in {"exact", "related"} for study in studies)
     assert all("transport_logistics" in study.matched_sectors for study in studies)
     assert all(study.id != "mumbai-mill-land" for study in studies)

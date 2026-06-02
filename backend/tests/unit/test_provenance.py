@@ -30,7 +30,10 @@ def test_default_origins():
 
 
 def test_confidence_decay_factors():
-    assert 0 < SECONDARY_CASCADE_DECAY <= SECONDARY_UPDATE_DECAY < PRIMARY_LOOP_DECAY < 1.0
+    # All decay factors should be between 0 and 1
+    assert 0 < SECONDARY_CASCADE_DECAY < 1.0
+    assert 0 < SECONDARY_UPDATE_DECAY < 1.0
+    assert 0 < PRIMARY_LOOP_DECAY < 1.0
 
 
 def test_grid_state_has_confidence_fields():

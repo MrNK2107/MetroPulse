@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from app.core.provenance import DataOrigin, ORIGIN_CONFIDENCE, DEFAULT_ORIGINS, confidence_label
 
-PRIMARY_LOOP_DECAY = 0.90
-SECONDARY_CASCADE_DECAY = 0.80
+PRIMARY_LOOP_DECAY = 0.97
+SECONDARY_CASCADE_DECAY = 0.95
 SECONDARY_UPDATE_DECAY = 0.85
 MONSOON_DECAY = 0.75
 

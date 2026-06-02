@@ -15,9 +15,21 @@ logger = logging.getLogger(__name__)
 
 class GridFactory:
     @classmethod
-    def initialize(cls, region_boundary: dict[str, Any], params: SimulationParams, overlay_fn=None) -> GridState:
+    def initialize(cls, region_boundary: dict[str, Any], params: SimulationParams, overlay_fn=None, city_name: str | None = None) -> GridState:
         resolution = 8
-        shape = h3.geo_to_h3shape(region_boundary)
+        # Try to load GeoJSON boundary from city config, fall back to provided boundary
+        actual_boundary = region_boundary
+        if city_name:
+            try:
+                from engine.config import CityConfig
+                geojson = CityConfig.load_geojson(city_name)
+                # GeoJSON FeatureCollection → extract first geometry
+                features = geojson.get("features", [])
+                if features:
+                    actual_boundary = features[0].get("geometry", region_boundary)
+            except (FileNotFoundError, Exception):
+                pass  # Fall back to provided boundary
+        shape = h3.geo_to_h3shape(actual_boundary)
         h3_indices = list(h3.h3shape_to_cells(shape, resolution))
         if not h3_indices:
             center_lat, center_lng = params.city_config.center
@@ -49,10 +61,13 @@ class GridFactory:
         weights = weights / max(float(weights.sum()), 1.0)
 
         baselines = params.city_config.baselines
-        total_formal = float(baselines.get("employment_formal", params.city_config.population * 0.10))
-        total_informal = float(baselines.get("employment_informal", params.city_config.population * 0.55))
-        gdp_proxy = float(baselines.get("gdp_estimate_crores", params.city_config.population * 0.0003))
-        slum_pct = float(baselines.get("slum_population_pct", 0.25))
+        population = params.city_config.population
+        informal_share = float(baselines.get("informal_share", 0.55))
+        total_informal = float(baselines.get("employment_informal", population * informal_share))
+        total_formal = float(baselines.get("employment_formal", population * (1.0 - informal_share) * 0.45))
+        gdp_per_capita = float(baselines.get("gdp_per_capita", 200000))
+        gdp_proxy = float(baselines.get("gdp_estimate_crores", population * gdp_per_capita / 100000.0))
+        slum_pct = float(baselines.get("slum_pct", 0.25))
         outer_density = (0.25 + d_norm) / max(float(np.sum(0.25 + d_norm)), 1.0)
 
         E_formal = total_formal * density

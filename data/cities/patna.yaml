@@ -1,0 +1,78 @@
+# Patna, Bihar — Ancient Pataliputra
+name: Patna
+state: Bihar
+country: India
+center: [25.6093, 85.1376]
+zoom: 11
+population: 2500000
+city_type: capital
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.065
+  gdp_per_capita: 150000
+  informal_share: 0.60
+  slum_pct: 0.25
+  avg_rent_2bhk: 7000
+
+sector_weights:
+  it_ites: 0.10
+  manufacturing: 0.10
+  real_estate: 0.12
+  trade_hospitality: 0.18
+  transport_logistics: 0.12
+  informal: 0.20
+  public_admin: 0.18
+
+constants:
+  alpha: 0.45
+  beta_informal: 0.48
+  gamma_realestate: 0.08
+  delta_congestion: 0.06
+
+special_zones:
+  - name: Patna IT Park
+    type: tech_park
+    lat: 25.6150
+    lng: 85.1500
+  - name: Didarganj Industrial Area
+    type: industrial
+    lat: 25.5700
+    lng: 85.2100
+
+policies:
+  - name: Patna Metro Rail
+    type: transport
+    effect: congestion_reduction
+  - name: Patna Smart City
+    type: infrastructure
+    effect: modernization
+
+urban_anchors:
+  - name: Gandhi Maidan
+    type: cbd
+    lat: 25.6150
+    lng: 85.1350
+    weight: 0.25
+  - name: Boring Road
+    type: commercial
+    lat: 25.6200
+    lng: 85.1100
+    weight: 0.25
+  - name: Didarganj Industrial Area
+    type: industrial
+    lat: 25.5700
+    lng: 85.2100
+    weight: 0.20
+  - name: Patna Junction
+    type: transport
+    lat: 25.6100
+    lng: 85.1370
+    weight: 0.15
+  - name: Kankarbagh
+    type: residential
+    lat: 25.5980
+    lng: 85.1400
+    weight: 0.15
