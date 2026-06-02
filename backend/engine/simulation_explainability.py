@@ -162,14 +162,47 @@ def _decompose_realestate_drivers(
     if abs(re_delta) < 0.01:
         return [{"factor": "Stable — near baseline", "contribution": 100}]
 
+    # Compute raw signal weights from actual scenario data
+    # Activity spillover: proportional to weighted sector shocks (capital flow)
+    activity_raw = sum(
+        abs(d) * params.city_config.sector_weights.get(s, 0.1)
+        for s, d in params.sector_deltas.items()
+        if abs(d) > 0
+    ) or 0.1
+
+    # Employment demand: proportional to employment-heavy sector deltas
+    employment_sectors = {"it_ites", "manufacturing", "trade_hospitality", "informal"}
+    employment_raw = sum(
+        abs(d) for s, d in params.sector_deltas.items()
+        if s in employment_sectors and abs(d) > 0
+    ) or 0.05
+
+    # Policy effects
+    policy_raw = 0.0
+    has_rera = "RERA" in str(params.policies_active)
+    has_pmay = "PM Awas Yojana" in str(params.policies_active)
+    if has_rera:
+        policy_raw += 0.15
+    if has_pmay:
+        policy_raw += 0.10
+
+    total_raw = activity_raw + employment_raw + policy_raw
+    if total_raw <= 0:
+        total_raw = 1.0
+
     drivers = [
-        {"factor": "Economic activity spillover", "contribution": 45},
-        {"factor": "Employment-driven demand", "contribution": 30},
+        {"factor": "Economic activity spillover", "contribution": round(activity_raw / total_raw * 100)},
+        {"factor": "Employment-driven demand", "contribution": round(employment_raw / total_raw * 100)},
     ]
-    if "RERA" in str(params.policies_active):
-        drivers.append({"factor": "RERA volatility dampening", "contribution": 15})
-    if "PM Awas Yojana" in str(params.policies_active):
-        drivers.append({"factor": "PMAY housing program", "contribution": 10})
+    if has_rera:
+        drivers.append({"factor": "RERA volatility dampening", "contribution": round(0.15 / total_raw * 100)})
+    if has_pmay:
+        drivers.append({"factor": "PMAY housing program", "contribution": round(0.10 / total_raw * 100)})
+
+    # Baseline gets the remainder to ensure we sum to 100 %
+    used = sum(d["contribution"] for d in drivers)
+    if used < 100:
+        drivers.append({"factor": "Other market forces", "contribution": 100 - used})
 
     return drivers[:4]
 

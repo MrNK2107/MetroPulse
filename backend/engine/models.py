@@ -109,6 +109,8 @@ class CaseStudy(BaseModel):
     tags: list[str] = Field(default_factory=list)
     sectors: list[str] = Field(default_factory=list)
     policies: list[str] = Field(default_factory=list)
+    observed_effects: dict[str, Any] = Field(default_factory=dict)
+    relevance_tags: list[str] = Field(default_factory=list)
     relevance_score: float = 0.0
     match_reasons: list[str] = Field(default_factory=list)
     relevance_tier: Literal["exact", "related", "weak"] = "weak"
@@ -194,19 +196,6 @@ class GridState:
     source_manifest: dict[str, Any] = field(default_factory=dict)
     snapshot_quality_score: float = 0.0
 
-    # Per-cell confidence arrays — same shape as the corresponding metric arrays
-    confidence_K: np.ndarray | None = None
-    confidence_R: np.ndarray | None = None
-    confidence_T: np.ndarray | None = None
-    confidence_H: np.ndarray | None = None
-    confidence_F: np.ndarray | None = None
-    confidence_M: np.ndarray | None = None
-    data_origins: dict[str, str] = field(default_factory=dict)
-
-    # Overlay modifiers from real-time data (set by overlay.py)
-    economic_modifier: np.ndarray | None = None
-    migration_modifier: np.ndarray | None = None
-    investment_confidence: np.ndarray | None = None
     overlay_summary: dict[str, Any] = field(default_factory=dict)
     metric_metadata: dict[str, Any] = field(default_factory=dict)
     migration_balance: float = 0.0

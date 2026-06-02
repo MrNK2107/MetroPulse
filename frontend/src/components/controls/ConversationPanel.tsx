@@ -24,11 +24,12 @@ export function ConversationPanel() {
   const conversationMode = useSimulationStore((s) => s.conversationMode);
   const setConversationMode = useSimulationStore((s) => s.setConversationMode);
   const resetAll = useSimulationStore((s) => s.resetAll);
+  const cityCoords = useSimulationStore((s) => s.cityCoords);
   const { startSimulation, stopSimulation, sendResponse } = useWebSocket();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isRunning = !["idle", "done", "error", "needs_input"].includes(pipelineStage);
-  const canRun = scenarioText.trim().length >= 4 && !isRunning;
+  const canRun = scenarioText.trim().length >= 10 && !isRunning;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -62,7 +63,7 @@ export function ConversationPanel() {
   };
 
   return (
-    <aside className="w-[360px] bg-dark-200/95 border-r border-dark-100/50 h-full overflow-y-auto flex flex-col backdrop-blur-md shadow-2xl no-scrollbar">
+    <aside className="w-full md:w-[360px] bg-dark-200/95 border-r border-dark-100/50 h-full overflow-y-auto flex flex-col backdrop-blur-md shadow-2xl no-scrollbar">
       {/* Header */}
       <div className="p-5 border-b border-dark-100/40 bg-dark-300/40 select-none">
         <div className="flex items-center justify-between">
@@ -207,7 +208,10 @@ export function ConversationPanel() {
                     </button>
                   )}
                   <button
-                    onClick={resetAll}
+                    onClick={() => {
+                      if (!window.confirm('Reset will discard all simulation data. Continue?')) return;
+                      resetAll();
+                    }}
                     className="rounded-xl border border-dark-100/80 bg-dark-300/50 px-4 py-2.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-all active:scale-95"
                   >
                     Reset
@@ -247,7 +251,7 @@ export function ConversationPanel() {
                 }}
                 className="w-full rounded-xl border border-dark-100/70 bg-dark-300/60 px-3 py-2.5 text-xs text-gray-200 outline-none focus:border-blue-500/70 transition-all cursor-pointer font-bold uppercase tracking-wider"
               >
-                {Object.entries(useSimulationStore.getState().cityCoords).map(([id, config]) => (
+                {Object.entries(cityCoords).map(([id, config]) => (
                   <option key={id} value={id} className="bg-dark-200 text-gray-300">
                     {config.name}
                   </option>
@@ -389,7 +393,10 @@ export function ConversationPanel() {
                 </button>
               )}
               <button
-                onClick={resetAll}
+                onClick={() => {
+                  if (!window.confirm('Reset will discard all simulation data. Continue?')) return;
+                  resetAll();
+                }}
                 className="rounded-xl border border-dark-100/80 bg-dark-300/50 px-4 py-2.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-all active:scale-95"
               >
                 Reset

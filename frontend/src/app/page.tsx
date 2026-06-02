@@ -10,6 +10,7 @@ import { GroupImpactPanel } from "@/components/dashboard/GroupImpactPanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
 import { PipelineFlow } from "@/components/dashboard/PipelineFlow";
 import { SimulationProgress } from "@/components/shared/LoadingOverlay";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSimulationStore } from "@/store/simulationStore";
 
@@ -40,20 +41,26 @@ export default function Home() {
     <main className="relative h-screen w-screen overflow-hidden bg-dark-400 text-gray-100 font-sans">
       {/* 1. Full Screen Map Viewport */}
       <div className="absolute inset-0 z-0 w-full h-full">
-        <MapViewport />
+        <ErrorBoundary name="Map">
+          <MapViewport />
+        </ErrorBoundary>
       </div>
 
       {/* 2. Floating Header: Pipeline Stage Status */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4 md:px-0 pointer-events-none">
         <div className="pointer-events-auto">
-          <PipelineFlow />
+          <ErrorBoundary name="Pipeline">
+            <PipelineFlow />
+          </ErrorBoundary>
         </div>
       </div>
 
       {/* Mobile Hamburger Button */}
       <button
-        onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
+        onClick={() => { setLeftSidebarOpen(!isLeftSidebarOpen); if (!isLeftSidebarOpen) setRightSidebarOpen(false); }}
         className="md:hidden absolute top-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all"
+        aria-label="Toggle scenario panel"
+        aria-expanded={isLeftSidebarOpen}
         title="Toggle scenario panel"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,7 +71,7 @@ export default function Home() {
       {/* Mobile Backdrop */}
       {(isLeftSidebarOpen || isRightSidebarOpen) && (
         <div
-          className="md:hidden fixed inset-0 z-15 bg-black/50 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-[15] bg-black/50 backdrop-blur-sm"
           onClick={() => {
             setLeftSidebarOpen(false);
             setRightSidebarOpen(false);
@@ -78,12 +85,14 @@ export default function Home() {
           isLeftSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } w-full md:w-auto`}
       >
-        <ConversationPanel />
+        <ErrorBoundary name="Conversation">
+          <ConversationPanel />
+        </ErrorBoundary>
       </div>
 
       {/* Toggle Left Sidebar Button (desktop) */}
       <button
-        onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
+        onClick={() => { setLeftSidebarOpen(!isLeftSidebarOpen); if (!isLeftSidebarOpen) setRightSidebarOpen(false); }}
         className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-r-xl border border-l-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
           isLeftSidebarOpen ? "left-[360px]" : "left-0"
         }`}
@@ -100,15 +109,17 @@ export default function Home() {
           isRightSidebarOpen ? "translate-x-0" : "translate-x-full"
         } w-full md:w-auto`}
       >
-        <EvidencePanel />
-        <div className="px-4 pb-4">
-          <GroupImpactPanel />
-        </div>
+        <ErrorBoundary name="Dashboard">
+          <EvidencePanel />
+          <div className="px-4 pb-4">
+            <GroupImpactPanel />
+          </div>
+        </ErrorBoundary>
       </div>
 
       {/* Toggle Right Sidebar Button (desktop) */}
       <button
-        onClick={() => setRightSidebarOpen(!isRightSidebarOpen)}
+        onClick={() => { setRightSidebarOpen(!isRightSidebarOpen); if (!isRightSidebarOpen) setLeftSidebarOpen(false); }}
         className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-l-xl border border-r-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
           isRightSidebarOpen ? "right-[420px]" : "right-0"
         }`}
@@ -121,12 +132,16 @@ export default function Home() {
 
       {/* 5. Drawing Tool Overlay */}
       <div className="absolute right-4 top-20 z-10">
-        <DrawingToolbar />
+        <ErrorBoundary name="DrawingTools">
+          <DrawingToolbar />
+        </ErrorBoundary>
       </div>
 
       <div className="absolute left-1/2 top-20 z-10 w-[min(92vw,560px)] -translate-x-1/2 pointer-events-none">
         <div className="pointer-events-auto">
-          <DataFreshnessPanel />
+          <ErrorBoundary name="DataFreshness">
+            <DataFreshnessPanel />
+          </ErrorBoundary>
         </div>
       </div>
 
@@ -134,8 +149,10 @@ export default function Home() {
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-4xl px-4 md:px-0">
         <div className="flex flex-col gap-2 rounded-xl border border-dark-100/50 bg-dark-200/85 backdrop-blur-md p-3.5 shadow-2xl">
           {/* Metrics summary pills (clickable to expand charts) & Scrubber play block */}
-          <MetricPanel />
-          <FrameScrubber />
+          <ErrorBoundary name="Dashboard">
+            <MetricPanel />
+            <FrameScrubber />
+          </ErrorBoundary>
         </div>
       </div>
 

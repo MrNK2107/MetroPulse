@@ -1,19 +1,35 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import h3
 import numpy as np
 
 from engine.models import GridState, N_SECTORS, SECTOR_INDEX, SECTOR_NAMES, SimulationParams
+from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
+
+logger = logging.getLogger(__name__)
 
 
 class GridFactory:
     @classmethod
-    def initialize(cls, region_boundary: dict[str, Any], params: SimulationParams) -> GridState:
+    def initialize(cls, region_boundary: dict[str, Any], params: SimulationParams, overlay_fn=None, city_name: str | None = None) -> GridState:
         resolution = 8
-        shape = h3.geo_to_h3shape(region_boundary)
+        # Try to load GeoJSON boundary from city config, fall back to provided boundary
+        actual_boundary = region_boundary
+        if city_name:
+            try:
+                from engine.config import CityConfig
+                geojson = CityConfig.load_geojson(city_name)
+                # GeoJSON FeatureCollection → extract first geometry
+                features = geojson.get("features", [])
+                if features:
+                    actual_boundary = features[0].get("geometry", region_boundary)
+            except (FileNotFoundError, Exception):
+                pass  # Fall back to provided boundary
+        shape = h3.geo_to_h3shape(actual_boundary)
         h3_indices = list(h3.h3shape_to_cells(shape, resolution))
         if not h3_indices:
             center_lat, center_lng = params.city_config.center
@@ -45,10 +61,13 @@ class GridFactory:
         weights = weights / max(float(weights.sum()), 1.0)
 
         baselines = params.city_config.baselines
-        total_formal = float(baselines.get("employment_formal", params.city_config.population * 0.25))
-        total_informal = float(baselines.get("employment_informal", params.city_config.population * 0.35))
-        gdp_proxy = float(baselines.get("gdp_estimate_crores", params.city_config.population / 100.0))
-        slum_pct = float(baselines.get("slum_population_pct", 0.15))
+        population = params.city_config.population
+        informal_share = float(baselines.get("informal_share", 0.55))
+        total_informal = float(baselines.get("employment_informal", population * informal_share))
+        total_formal = float(baselines.get("employment_formal", population * (1.0 - informal_share) * 0.45))
+        gdp_per_capita = float(baselines.get("gdp_per_capita", 200000))
+        gdp_proxy = float(baselines.get("gdp_estimate_crores", population * gdp_per_capita / 100000.0))
+        slum_pct = float(baselines.get("slum_pct", 0.25))
         outer_density = (0.25 + d_norm) / max(float(np.sum(0.25 + d_norm)), 1.0)
 
         E_formal = total_formal * density
@@ -56,16 +75,14 @@ class GridFactory:
         K_total = gdp_proxy * (0.75 * density + 0.25 / n)
         K = K_total[:, None] * weights[None, :]
 
-        R = np.clip(1.25 * np.exp(-d_norm * 1.8) + 0.35, 0.25, 1.8)
-        T = np.clip(0.25 + 0.55 * np.exp(-d_norm * 1.4), 0.05, 0.95)
+        R = np.clip(1.15 * np.exp(-d_norm * 2.0) + 0.40, 0.25, 1.8)
+        T = np.clip(0.30 + 0.50 * np.exp(-d_norm * 1.6), 0.05, 0.95)
         H = np.clip(1.25 - (R - np.mean(R)) * 0.35 - slum_pct * 0.15, 0.35, 1.6)
         F = _flood_proxy(params.city_config, centers, d_norm)
         M = np.clip(0.15 + d_norm * 0.65 + weights[SECTOR_INDEX["informal"]] * 0.4, 0.0, 1.0)
-        slum_flag = d_norm > np.quantile(d_norm, max(0.55, 1.0 - slum_pct))
+        slum_flag = (np.array([hash(h) % 1000 for h in h3_indices]) / 1000.0 < slum_pct)
 
         # Initialize confidence arrays (all synthetic initially)
-        from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
-
         confidence_K = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
         confidence_R = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
         confidence_T = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
@@ -77,28 +94,32 @@ class GridFactory:
         # Apply real-time overlay from snapshot (city-level signals → per-cell modifiers)
         snapshot = getattr(params, "realtime_snapshot", None)
         overlay_summary: dict[str, Any] = {}
-        if snapshot:
-            from app.simulation.overlay import generate_overlay
-
-            overlay = generate_overlay(snapshot, h3_indices, params.city_config)
+        if snapshot and overlay_fn is not None:
+            overlay = overlay_fn(snapshot, h3_indices, params.city_config)
             if overlay:
                 confidences = []
                 sources: set[str] = set()
                 modified = 0
-                for i, h3_index in enumerate(h3_indices):
-                    mod = overlay.get(h3_index)
-                    if not mod:
-                        continue
-                    modified += 1
-                    K[i, :] *= float(mod["economic_activity_multiplier"])
-                    M[i] *= float(mod["migration_pressure_multiplier"])
-                    R[i] *= float(mod["real_estate_multiplier"])
-                    confidence = float(mod.get("confidence", 0.0))
-                    confidence_K[i] = max(confidence_K[i], confidence)
-                    confidence_M[i] = max(confidence_M[i], confidence)
-                    confidence_R[i] = max(confidence_R[i], confidence * 0.9)
-                    confidences.append(confidence)
-                    sources.update(mod.get("sources", []))
+                # Build arrays of multipliers for cells that have overlay data
+                has_mod = np.array([overlay.get(idx) is not None for idx in h3_indices])
+                k_mult = np.array([float(overlay[idx]["economic_activity_multiplier"]) if idx in overlay else 1.0 for idx in h3_indices])
+                m_mult = np.array([float(overlay[idx]["migration_pressure_multiplier"]) if idx in overlay else 1.0 for idx in h3_indices])
+                r_mult = np.array([float(overlay[idx]["real_estate_multiplier"]) if idx in overlay else 1.0 for idx in h3_indices])
+                conf_arr = np.array([float(overlay[idx].get("confidence", 0.0)) if idx in overlay else 0.0 for idx in h3_indices])
+                modified = int(np.sum(has_mod))
+                if modified > 0:
+                    K *= k_mult[:, None]
+                    M *= m_mult
+                    R *= r_mult
+                    confidence_K = np.maximum(confidence_K, conf_arr)
+                    confidence_M = np.maximum(confidence_M, conf_arr)
+                    confidence_R = np.maximum(confidence_R, conf_arr * 0.9)
+                    confidences = conf_arr[has_mod].tolist()
+                    for idx in h3_indices:
+                        if idx in overlay:
+                            sources.update(overlay[idx].get("sources", []))
+                else:
+                    confidences = []
                 data_origins["K"] = "real_time_context"
                 data_origins["M"] = "real_time_context"
                 data_origins["R"] = "real_time_context"
@@ -121,7 +142,7 @@ class GridFactory:
             pairs_arr = np.array(neighbor_pairs, dtype=np.float64)
             neighbor_i_idx = pairs_arr[:, 0].astype(int)
             neighbor_j_idx = pairs_arr[:, 1].astype(int)
-            lambda_r = float(params.city_config.constants.get("lambda_realestate_cascade", 3.2))
+            lambda_r = float(params.city_config.constants.get("lambda_realestate_cascade", 2.8))
             neighbor_weights = np.exp(-pairs_arr[:, 2] / lambda_r)
 
         return GridState(
@@ -174,7 +195,12 @@ class GridFactory:
     @staticmethod
     def _neighbor_pairs(h3_indices: list[str]) -> list[tuple[int, int, float]]:
         idx_to_pos = {idx: i for i, idx in enumerate(h3_indices)}
-        pairs: list[tuple[int, int, float]] = []
+        pair_i: list[int] = []
+        pair_j: list[int] = []
+        lat_i: list[float] = []
+        lng_i: list[float] = []
+        lat_j: list[float] = []
+        lng_j: list[float] = []
         for i, idx in enumerate(h3_indices):
             center_i = h3.cell_to_latlng(idx)
             for neighbor in h3.grid_disk(idx, 1):
@@ -182,11 +208,23 @@ class GridFactory:
                 if j is None or j == i:
                     continue
                 center_j = h3.cell_to_latlng(neighbor)
-                pairs.append((i, j, _haversine(center_i, center_j)))
-        return pairs
+                pair_i.append(i)
+                pair_j.append(j)
+                lat_i.append(center_i[0])
+                lng_i.append(center_i[1])
+                lat_j.append(center_j[0])
+                lng_j.append(center_j[1])
+        if not pair_i:
+            return []
+        dists = _haversine_vec(
+            np.array(lat_i), np.array(lng_i), np.array(lat_j), np.array(lng_j)
+        )
+        return [(pi, pj, float(d)) for pi, pj, d in zip(pair_i, pair_j, dists)]
 
     @staticmethod
     def _zone_flags(h3_indices: list[str], city_config: Any) -> dict[str, np.ndarray]:
+        import os
+        import re as _re
         flags: dict[str, np.ndarray] = {}
         n = len(h3_indices)
         centers = np.array([h3.cell_to_latlng(idx) for idx in h3_indices], dtype=np.float64)
@@ -198,7 +236,11 @@ class GridFactory:
 
             # Try GeoJSON polygon containment first
             if zone_file:
-                import os
+                # Sanitize zone_file: only allow alphanumeric, underscore, hyphen, dot, forward slash
+                if not _re.fullmatch(r'[a-zA-Z0-9_\-./]+', zone_file) or '..' in zone_file:
+                    logger.warning("Zone file path rejected (potential path traversal): %s", zone_file)
+                    zone_file = None
+            if zone_file:
                 abs_path = os.path.join(os.path.dirname(__file__), "..", "..", zone_file)
                 if os.path.exists(abs_path):
                     try:
@@ -214,8 +256,8 @@ class GridFactory:
                                 if np.any(mask):
                                     flags[name] = mask
                                     continue
-                    except Exception:
-                        pass  # Fall through to distance fallback
+                    except Exception as e:
+                        logger.warning("Zone flags computation failed: %s", e)  # Fall through to distance fallback
 
             # Fallback: distance radius from city center
             dist = _haversine_vec(centers[:, 0], centers[:, 1], center_lat, center_lng)
@@ -239,13 +281,19 @@ def public_zone_mask(state: GridState, zone_geojson: dict[str, Any] | None) -> n
             # Cache the public zone distance computation by hash of coords
             zone_key = hash(str(zone_geojson["coordinates"]))
             if zone_key not in state.public_dist_cache:
+                # Evict oldest entries if cache grows too large
+                if len(state.public_dist_cache) > 100:
+                    keys = list(state.public_dist_cache.keys())
+                    for old_key in keys[:len(keys) // 2]:
+                        del state.public_dist_cache[old_key]
                 shape = h3.geo_to_h3shape(zone_geojson)
                 zone_cells = set(h3.h3shape_to_cells(shape, 8))
                 state.public_dist_cache[zone_key] = np.isin(
                     np.array(state.h3_indices), list(zone_cells)
                 )
             return state.public_dist_cache[zone_key]
-    except Exception:
+    except Exception as e:
+        logger.warning("Public zone mask failed: %s", e)
         return mask
     return mask
 
@@ -272,11 +320,7 @@ def _flood_proxy(city_config: Any, centers: np.ndarray, d_norm: np.ndarray) -> n
     return np.clip(base, 0.0, 1.0)
 
 
-def _haversine(a: tuple[float, float], b: tuple[float, float]) -> float:
-    return float(_haversine_vec(np.array([a[0]]), np.array([a[1]]), b[0], b[1])[0])
-
-
-def _haversine_vec(lat: np.ndarray, lng: np.ndarray, center_lat: float, center_lng: float) -> np.ndarray:
+def _haversine_vec(lat: np.ndarray, lng: np.ndarray, center_lat: np.ndarray | float, center_lng: np.ndarray | float) -> np.ndarray:
     lat1 = np.radians(lat)
     lon1 = np.radians(lng)
     lat2 = np.radians(center_lat)

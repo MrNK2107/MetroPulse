@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 from engine.models import AggregateMetrics, CaseStudy, Prediction, SECTOR_LABELS, SimulationParams
 from engine.translator import translate_to_plain_language, TranslationResult
 from engine.simulation_explainability import explain_metric_deltas, format_explanation_narrative
-from app.simulation.explainability import build_explanation
 
 
 def synthesize_evidence(
@@ -21,14 +20,80 @@ def synthesize_evidence(
     case_retrieval: dict[str, Any] | None = None,
     evidence_pack: dict[str, Any] | None = None,
     grid_state: Any | None = None,
+    explainability_fn=None,
 ) -> dict[str, Any]:
     metrics = final_frame["metrics"]
     proof = final_frame.get("proof", {})
     gdp = metrics["gdpDelta"]
     unemployment = metrics["unemploymentRate"]
-    verdict = "Confirmed" if (prediction and abs(gdp) > 0.005) else "Partially Confirmed"
-    if gdp < -0.02 and any(v > 0 for v in params.sector_deltas.values()):
-        verdict = "Surprise"
+
+    # ── Nuanced verdict with sector and policy context ──────────────────────
+    positive_shocks = {s: v for s, v in params.sector_deltas.items() if v > 0}
+    negative_shocks = {s: v for s, v in params.sector_deltas.items() if v < 0}
+    has_prediction = prediction is not None
+    gdp_positive = gdp > 0.005
+    gdp_negative = gdp < -0.005
+    gdp_neutral = abs(gdp) <= 0.005
+
+    # Identify which sectors drove the result
+    weights = params.city_config.sector_weights or {}
+    driving_sectors = sorted(
+        params.sector_deltas.items(),
+        key=lambda item: abs(item[1]) * weights.get(item[0], 0.1),
+        reverse=True,
+    )[:3]
+    driving_labels = [f"{SECTOR_LABELS[s]} ({v:+.0f}%)" for s, v in driving_sectors if abs(v) > 0]
+    driver_text = ", ".join(driving_labels) if driving_labels else "policy and baseline effects"
+
+    # Identify policy impacts
+    active_policies = params.policies_active or []
+    policy_text = ", ".join(active_policies) if active_policies else "no explicit policies"
+
+    # Determine verdict
+    if has_prediction and positive_shocks and gdp_positive:
+        verdict = "Confirmed"
+        verdict_detail = (
+            f"Positive sector shocks in {driver_text} produced the expected GDP uplift. "
+            f"Active policies ({policy_text}) reinforced the growth trajectory."
+        )
+    elif has_prediction and negative_shocks and gdp_negative:
+        verdict = "Confirmed"
+        verdict_detail = (
+            f"Negative shocks in {driver_text} produced the expected contraction. "
+            f"Active policies ({policy_text}) partially mitigated the decline."
+        )
+    elif has_prediction and gdp_neutral:
+        verdict = "Partially Confirmed"
+        verdict_detail = (
+            f"Sector changes in {driver_text} had limited aggregate GDP impact, "
+            f"suggesting policy offsets ({policy_text}) absorbed much of the shock. "
+            f"Check sector-level and cell-level views for localized effects."
+        )
+    elif gdp_negative and positive_shocks:
+        verdict = "Surprise — Counter-Intuitive"
+        verdict_detail = (
+            f"Despite positive shocks in {driver_text}, GDP declined, "
+            f"indicating second-order effects (congestion, affordability, informal displacement) "
+            f"may be dominating. Active policies ({policy_text}) were insufficient to offset."
+        )
+    elif gdp_positive and negative_shocks:
+        verdict = "Surprise — Resilience"
+        verdict_detail = (
+            f"Despite negative shocks in {driver_text}, GDP held up or improved, "
+            f"suggesting policy buffers ({policy_text}) or informal sector absorption compensated."
+        )
+    elif has_prediction:
+        verdict = "Partially Confirmed"
+        verdict_detail = (
+            f"Scenario effects from {driver_text} were partially reflected in model outputs. "
+            f"Policy context ({policy_text}) shaped the magnitude."
+        )
+    else:
+        verdict = "Baseline Estimate"
+        verdict_detail = (
+            f"No LLM prediction was available; model output reflects deterministic simulation "
+            f"with {driver_text} and policy context ({policy_text})."
+        )
 
     changed = [
         f"{SECTOR_LABELS.get(sector, sector)} {value:+.0f}%"
@@ -41,17 +106,37 @@ def synthesize_evidence(
         for case in close_cases[:4]
     ) or "- No close historical precedent found for this scenario; evidence relies on simulation outputs."
 
-    markdown = f"""## Simulation Results
+    # Sector breakdown for markdown
+    sector_breakdown = "\n".join(
+        f"- **{SECTOR_LABELS[s]}**: {v:+.0f}% shock × {weights.get(s, 0.1):.0%} city weight"
+        for s, v in driving_sectors if abs(v) > 0
+    ) or "- No explicit sector shocks; policy-only scenario."
 
-MetroPulse produced a **scenario estimate** for **{params.city_config.name}** over **{params.horizon_months} months** in **{proof.get("dataMode", "estimated").replace("_", " ").title()}** mode using city baselines, retrieved evidence, real-time context when available, and deterministic H3 cell updates. The main modeled changes were: {", ".join(changed) if changed else "policy/baseline effects"}.
+    markdown = f"""## Simulation Results — {params.city_config.name}
+
+**Verdict: {verdict}**
+
+{verdict_detail}
+
+MetroPulse produced a **scenario estimate** for **{params.city_config.name}** over **{params.horizon_months} months** in **{proof.get("dataMode", "estimated").replace("_", " ").title()}** mode using city baselines, retrieved evidence, real-time context when available, and deterministic H3 cell updates.
+
+### Sector Drivers
+
+{sector_breakdown}
+
+### Key Metrics
+
+- **GDP delta**: {gdp * 100:+.2f}%
+- **Unemployment**: {unemployment * 100:.2f}%
+- **Transit congestion**: {metrics["transitCongestion"] * 100:.1f}%
+- **Housing affordability index**: {metrics["housingAffordability"]:.2f}
+- **Informal employment share**: {metrics["informalEmployment"] * 100:.1f}%
 
 ### Expectation vs Model Output
 
-| Scenario Expectation | Model Output | Read |
-|---|---|---|
-| Sector shocks would propagate into employment and land values | GDP delta ended at **{gdp * 100:+.2f}%** and unemployment at **{unemployment * 100:.2f}%** | {verdict} |
-| Transit pressure would follow job movement | Average congestion ended at **{metrics["transitCongestion"] * 100:.1f}%** | Confirmed |
-| Housing affordability would react to real-estate pressure | Affordability index ended at **{metrics["housingAffordability"]:.2f}** | Partially Confirmed |
+- **Sector shocks → employment & land values**: GDP delta {gdp * 100:+.2f}%, unemployment {unemployment * 100:.2f}% — **{verdict}**
+- **Transit pressure → commuter load**: Congestion at {metrics["transitCongestion"] * 100:.1f}% — {"increased" if metrics["transitCongestion"] > 0.5 else "managed"}
+- **Housing affordability → real-estate pressure**: Index at {metrics["housingAffordability"]:.2f} — {"strained" if metrics["housingAffordability"] < 1.0 else "stable"}
 
 ### Key Findings
 
@@ -118,7 +203,8 @@ Pair the scenario shock with targeted transit and housing support in the most af
     try:
         driver_explanations = explain_metric_deltas(params, metrics, proof)
         explanation_narrative = format_explanation_narrative(driver_explanations)
-        explainability = build_explanation(params, metrics, proof, evidence_pack)
+        if explainability_fn is not None:
+            explainability = explainability_fn(params, metrics, proof, evidence_pack)
     except Exception as e:
         logger.warning("Explainability generation failed: %s", e)
 

@@ -124,6 +124,52 @@ const MetricChart = React.memo(function MetricChart({ title, unit, dataKey, colo
   );
 });
 
+interface AQIPillProps {
+  value: number;
+  isBottomDrawerOpen: boolean;
+  setBottomDrawerOpen: (open: boolean) => void;
+}
+
+function AQIPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: AQIPillProps) {
+  const aqiColor = value <= 100 ? "text-emerald-400 font-bold" : value <= 200 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
+  return (
+    <button
+      onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
+      aria-label={`Air Quality Index: ${value.toFixed(0)}`}
+      className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
+    >
+      <div className="flex flex-col justify-center min-w-0">
+        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">AQI</span>
+        <span className="text-[8px] text-gray-600 font-mono truncate">Air Quality Index</span>
+      </div>
+      <span className={`text-[11px] font-mono ${aqiColor} ml-2 shrink-0`}>{value.toFixed(0)}</span>
+    </button>
+  );
+}
+
+interface WaterStressPillProps {
+  value: number;
+  isBottomDrawerOpen: boolean;
+  setBottomDrawerOpen: (open: boolean) => void;
+}
+
+function WaterStressPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: WaterStressPillProps) {
+  const wsColor = value < 0.4 ? "text-blue-400 font-bold" : value < 0.7 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
+  return (
+    <button
+      onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
+      aria-label={`Water Stress: ${(value * 100).toFixed(0)}%`}
+      className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
+    >
+      <div className="flex flex-col justify-center min-w-0">
+        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Water Stress</span>
+        <span className="text-[8px] text-gray-600 font-mono truncate">Stress Index</span>
+      </div>
+      <span className={`text-[11px] font-mono ${wsColor} ml-2 shrink-0`}>{(value * 100).toFixed(0)}%</span>
+    </button>
+  );
+}
+
 export function MetricPanel() {
   const stage = useSimulationStore((s) => s.pipelineStage);
   const isRunning = stage === "simulating";
@@ -216,9 +262,23 @@ export function MetricPanel() {
 
       {/* Summary Pills Grid (Shows current scenario-estimate metrics) */}
       {!isDataAvailable ? (
-        <div className="h-10 flex items-center justify-center border border-dashed border-dark-100/50 rounded-xl bg-dark-300/10 py-6">
-          <Text className="text-gray-500 text-xs font-medium">Run a simulation prompt to inspect timeline metrics.</Text>
-        </div>
+        isRunning ? (
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 animate-pulse">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-dark-100/20 bg-dark-300/30 px-3.5 h-12 flex items-center justify-between">
+                <div className="space-y-1.5">
+                  <div className="h-2 w-10 bg-dark-100/50 rounded" />
+                  <div className="h-1.5 w-14 bg-dark-100/30 rounded" />
+                </div>
+                <div className="h-3 w-8 bg-dark-100/50 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="h-10 flex items-center justify-center border border-dashed border-dark-100/50 rounded-xl bg-dark-300/10 py-6">
+            <Text className="text-gray-500 text-xs font-medium">Run a simulation prompt to inspect timeline metrics.</Text>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
           {CHART_CONFIGS.map((config) => {
@@ -232,7 +292,7 @@ export function MetricPanel() {
               if (config.dataKey === "gdpDelta") {
                 valColor = rawVal >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold";
               } else if (config.dataKey === "unemploymentRate") {
-                valColor = rawVal > 0.05 ? "text-red-400 font-bold" : rawVal < 0.045 ? "text-emerald-400 font-bold" : "text-gray-300 font-bold";
+                valColor = rawVal >= 0.08 ? "text-red-400 font-bold" : rawVal < 0.06 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
               } else if (config.dataKey === "realEstateIndex") {
                 valColor = rawVal > 1.05 ? "text-emerald-400 font-bold" : rawVal < 0.95 ? "text-red-400 font-bold" : "text-gray-300 font-bold";
               } else if (config.dataKey === "transitCongestion") {
@@ -245,10 +305,11 @@ export function MetricPanel() {
             }
 
             return (
-              <div
+              <button
                 key={config.dataKey}
                 onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none"
+                aria-label={`${config.title}: ${valStr}`}
+                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
               >
                 <div className="flex flex-col justify-center min-w-0">
                   <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">
@@ -270,9 +331,23 @@ export function MetricPanel() {
                     </span>
                   </span>
                 )}
-              </div>
+              </button>
             );
           })}
+          {currentMetrics?.airQualityIndex !== undefined && (
+            <AQIPill
+              value={currentMetrics.airQualityIndex}
+              isBottomDrawerOpen={isBottomDrawerOpen}
+              setBottomDrawerOpen={setBottomDrawerOpen}
+            />
+          )}
+          {currentMetrics?.waterStressIndex !== undefined && (
+            <WaterStressPill
+              value={currentMetrics.waterStressIndex}
+              isBottomDrawerOpen={isBottomDrawerOpen}
+              setBottomDrawerOpen={setBottomDrawerOpen}
+            />
+          )}
         </div>
       )}
 

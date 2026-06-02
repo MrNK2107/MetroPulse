@@ -10,6 +10,7 @@ export const FrameScrubber = React.memo(function FrameScrubber() {
   const pipelineStage = useSimulationStore((s) => s.pipelineStage);
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   const total = frames.length;
   const current = activeFrameIndex >= 0 ? activeFrameIndex : total - 1;
@@ -33,12 +34,12 @@ export const FrameScrubber = React.memo(function FrameScrubber() {
       } else {
         setActiveFrameIndex(state.activeFrameIndex + 1);
       }
-    }, 450); // Advance frame every 450ms
+    }, 450 / playbackSpeed); // Advance frame adjusted by playback speed
 
     return () => clearInterval(interval);
-  }, [isPlaying, total, setActiveFrameIndex]);
+  }, [isPlaying, total, setActiveFrameIndex, playbackSpeed]);
 
-  if (pipelineStage !== "done" || total === 0) return null;
+  if (!(pipelineStage === "done" || (pipelineStage === "simulating" && total > 0)) || total === 0) return null;
 
   const togglePlay = () => {
     if (current >= total - 1) {
@@ -72,9 +73,28 @@ export const FrameScrubber = React.memo(function FrameScrubber() {
         min={0}
         max={total - 1}
         value={current}
+        aria-label="Simulation month"
         onChange={handleScrubberChange}
         className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-dark-300 accent-blue-500 outline-none"
       />
+
+      {/* Playback Speed Selector */}
+      <div className="flex items-center gap-1">
+        {[0.5, 1, 2, 4].map((speed) => (
+          <button
+            key={speed}
+            onClick={() => setPlaybackSpeed(speed)}
+            className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded transition-all ${
+              playbackSpeed === speed
+                ? "bg-blue-600 text-white"
+                : "bg-dark-300/50 text-gray-500 hover:text-gray-300"
+            }`}
+            title={`${speed}x playback speed`}
+          >
+            {speed}x
+          </button>
+        ))}
+      </div>
     </div>
   );
 });

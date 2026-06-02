@@ -1,0 +1,78 @@
+# Coimbatore, Tamil Nadu — Manchester of South India
+name: Coimbatore
+state: Tamil Nadu
+country: India
+center: [11.0168, 76.9558]
+zoom: 11
+population: 2000000
+city_type: manufacturing
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.038
+  gdp_per_capita: 250000
+  informal_share: 0.45
+  slum_pct: 0.14
+  avg_rent_2bhk: 10000
+
+sector_weights:
+  it_ites: 0.15
+  manufacturing: 0.28
+  real_estate: 0.12
+  trade_hospitality: 0.15
+  transport_logistics: 0.10
+  informal: 0.14
+  public_admin: 0.06
+
+constants:
+  alpha: 0.54
+  beta_informal: 0.38
+  gamma_realestate: 0.10
+  delta_congestion: 0.08
+
+special_zones:
+  - name: SIDCO Industrial Estate
+    type: industrial
+    lat: 11.0050
+    lng: 76.9700
+  - name: TIDEL Park Coimbatore
+    type: tech_park
+    lat: 11.0300
+    lng: 77.0000
+
+policies:
+  - name: Coimbatore Smart City
+    type: infrastructure
+    effect: modernization
+  - name: Coimbatore Metro Neo
+    type: transport
+    effect: congestion_reduction
+
+urban_anchors:
+  - name: RS Puram
+    type: cbd
+    lat: 11.0050
+    lng: 76.9450
+    weight: 0.25
+  - name: TIDEL Park
+    type: commercial
+    lat: 11.0300
+    lng: 77.0000
+    weight: 0.25
+  - name: SIDCO Industrial Estate
+    type: industrial
+    lat: 11.0050
+    lng: 76.9700
+    weight: 0.20
+  - name: Coimbatore Junction
+    type: transport
+    lat: 11.0050
+    lng: 76.9680
+    weight: 0.15
+  - name: Peelamedu
+    type: residential
+    lat: 11.0300
+    lng: 76.9950
+    weight: 0.15

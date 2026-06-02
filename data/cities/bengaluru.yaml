@@ -1,111 +1,79 @@
+# Bengaluru, Karnataka — Silicon Valley of India
 name: Bengaluru
 state: Karnataka
 country: India
-center:
-- 12.9716
-- 77.5946
+center: [12.9716, 77.5946]
 zoom: 11
-boundary_source: bengaluru.geojson
+boundary_source: bengaluru_bbmp.geojson
 population: 13000000
-city_type: tech_hub
+city_type: it
 port_city: false
-monsoon_season:
-- 6
-- 7
-- 8
-- 9
+monsoon_season: [6, 7, 8, 9]
 metro_system: true
+
 baselines:
-  employment_formal: 3500000
-  employment_informal: 5000000
-  gdp_estimate_crores: 550000
-  slum_population_pct: 0.15
-  unemployment_rate: 0.035
-  literacy_rate: 0.88
+  unemployment_rate: 0.032
+  gdp_per_capita: 400000
+  informal_share: 0.40
+  slum_pct: 0.25
+  avg_rent_2bhk: 22000
+
 sector_weights:
   it_ites: 0.35
-  manufacturing: 0.12
-  real_estate: 0.18
-  trade_hospitality: 0.14
-  transport_logistics: 0.07
+  manufacturing: 0.10
+  real_estate: 0.15
+  trade_hospitality: 0.15
+  transport_logistics: 0.10
   informal: 0.08
-  public_admin: 0.06
+  public_admin: 0.07
+
 constants:
-  alpha_default: 0.55
-  beta_informal: 0.4
-  gamma_realestate: 0.12
-  delta_congestion: 0.1
-  lambda_cbd_employment: 4.5
-  lambda_road_boost: 1.5
-  lambda_realestate_cascade: 3.0
-  flood_impact: 0.15
-  flood_congestion_bonus: 0.2
-  slum_upgrade_rate: 0.01
-  migration_eta: 0.05
-  housing_xi: 0.08
-  employment_pressure_weights:
-  - 0.7
-  - 0.65
-  - 0.5
-  - 0.8
-  - 0.6
-  - 0.45
-  - 0.4
-  public_works_boost: 0.018
-  public_works_decay: 0.04
-  policy_digital_india_it_boost: 0.015
-  policy_make_in_india_mfg_boost: 0.012
-  policy_sez_multiplier: 0.01
-  policy_rera_dampening: 0.88
-  policy_pmay_multiplier: 2.0
-  policy_amrut_housing: 0.004
-  policy_amrut_congestion: -0.002
-  policy_smart_city_congestion: -0.003
-  flood_k_impact: 0.18
-  flood_t_impact: 0.025
+  alpha: 0.55
+  beta_informal: 0.35
+  gamma_realestate: 0.18
+  delta_congestion: 0.14
+
 special_zones:
-- type: sez
-  name: Electronic City
-  file: data/sez/electronic_city.geojson
-  sectors:
-  - it_ites
-  - manufacturing
-  boost: 0.25
-- type: sez
-  name: Whitefield IT Corridor
-  file: data/sez/whitefield.geojson
-  sectors:
-  - it_ites
-  boost: 0.2
-- type: sez
-  name: Manyata Tech Park
-  file: data/sez/manyata.geojson
-  sectors:
-  - it_ites
-  boost: 0.18
+  - name: Electronic City SEZ
+    type: sez
+    lat: 12.8450
+    lng: 77.6600
+  - name: Whitefield Tech Park
+    type: tech_park
+    lat: 12.9698
+    lng: 77.7500
+
 policies:
-  smart_city: true
-  mission_name: Bengaluru Smart City
-  amrut: true
-  metro_phase: 3
+  - name: BMRCL Metro Phase 2
+    type: transport
+    effect: congestion_reduction
+  - name: RERA Karnataka
+    type: regulation
+    effect: transparency
+
 urban_anchors:
-  - name: MG Road CBD
+  - name: MG Road
     type: cbd
     lat: 12.9758
     lng: 77.6068
-    weight: 1.0
-  - name: Whitefield IT
+    weight: 0.25
+  - name: Whitefield
     type: commercial
     lat: 12.9698
     lng: 77.7500
-    weight: 0.8
+    weight: 0.25
   - name: Electronic City
     type: industrial
-    lat: 12.8458
-    lng: 77.6553
-    weight: 0.7
-  - name: Hebbal Residential
+    lat: 12.8450
+    lng: 77.6600
+    weight: 0.20
+  - name: Majestic
+    type: transport
+    lat: 12.9766
+    lng: 77.5713
+    weight: 0.15
+  - name: JP Nagar
     type: residential
-    lat: 13.0358
-    lng: 77.5970
-    weight: 0.5
+    lat: 12.9063
+    lng: 77.5857
+    weight: 0.15

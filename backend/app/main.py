@@ -42,6 +42,9 @@ async def _ingestion_loop(db: object) -> None:
     while True:
         await asyncio.sleep(settings.news_refresh_seconds)
         try:
+            if not cities:
+                await asyncio.sleep(900)
+                continue
             city = cities[city_idx % len(cities)]
             await run_ingestion_cycle(db, city)
             city_idx += 1
@@ -58,8 +61,8 @@ async def lifespan(app: FastAPI):
     if settings.seed_case_studies_on_startup:
         try:
             await db.seed_case_studies()
-        except Exception:
-            pass  # non-fatal: keyword fallback still works
+        except Exception as e:
+            logger.warning("Case study seeding failed: %s", e)
 
     ingestion_task = asyncio.create_task(_ingestion_loop(db))
 
@@ -82,8 +85,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(health_router, tags=["health"])

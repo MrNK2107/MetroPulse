@@ -1,29 +1,11 @@
-from __future__ import annotations
+"""Confidence helpers — re-exported from engine.confidence.
 
-from app.core.provenance import DataOrigin, ORIGIN_CONFIDENCE, clamp_confidence, confidence_label
+The canonical definitions live in ``engine/confidence.py`` so the simulation
+engine can use them without importing from the app package.  This module
+re-exports everything so that existing ``from app.simulation.confidence import ...``
+call-sites continue to work.
+"""
 
+from engine.confidence import base_confidence, derived_confidence, label_for_confidence
 
-def base_confidence(origin: DataOrigin | str) -> float:
-    data_origin = DataOrigin(origin)
-    return ORIGIN_CONFIDENCE[data_origin]
-
-
-def derived_confidence(
-    *,
-    baseline_confidence: float,
-    coefficient_confidence: float,
-    realtime_overlay_confidence: float,
-    rag_evidence_confidence: float,
-    model_confidence: float = 0.85,
-) -> float:
-    weighted = (
-        0.4 * baseline_confidence
-        + 0.3 * coefficient_confidence
-        + 0.2 * realtime_overlay_confidence
-        + 0.1 * rag_evidence_confidence
-    )
-    return clamp_confidence(weighted * model_confidence)
-
-
-def label_for_confidence(value: float) -> str:
-    return confidence_label(value)
+__all__ = ["base_confidence", "derived_confidence", "label_for_confidence"]

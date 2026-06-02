@@ -1,0 +1,78 @@
+# Indore, Madhya Pradesh — Mini Mumbai
+name: Indore
+state: Madhya Pradesh
+country: India
+center: [22.7196, 75.8577]
+zoom: 11
+population: 3500000
+city_type: manufacturing
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.042
+  gdp_per_capita: 220000
+  informal_share: 0.50
+  slum_pct: 0.18
+  avg_rent_2bhk: 10000
+
+sector_weights:
+  it_ites: 0.15
+  manufacturing: 0.25
+  real_estate: 0.12
+  trade_hospitality: 0.20
+  transport_logistics: 0.10
+  informal: 0.12
+  public_admin: 0.06
+
+constants:
+  alpha: 0.52
+  beta_informal: 0.40
+  gamma_realestate: 0.10
+  delta_congestion: 0.08
+
+special_zones:
+  - name: Pithampur Industrial Area
+    type: industrial
+    lat: 22.6050
+    lng: 75.6950
+  - name: Super Corridor IT Zone
+    type: tech_park
+    lat: 22.7500
+    lng: 75.8900
+
+policies:
+  - name: Indore Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: Pithampur Pharma Cluster
+    type: industrial
+    effect: employment_boost
+
+urban_anchors:
+  - name: Palasia Square
+    type: cbd
+    lat: 22.7200
+    lng: 75.8660
+    weight: 0.25
+  - name: Vijay Nagar
+    type: commercial
+    lat: 22.7530
+    lng: 75.8930
+    weight: 0.25
+  - name: Pithampur Industrial Area
+    type: industrial
+    lat: 22.6050
+    lng: 75.6950
+    weight: 0.20
+  - name: Indore Railway Station
+    type: transport
+    lat: 22.7160
+    lng: 75.8740
+    weight: 0.15
+  - name: Sapna Sangeeta
+    type: residential
+    lat: 22.7080
+    lng: 75.8590
+    weight: 0.15

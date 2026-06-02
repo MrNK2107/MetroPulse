@@ -4,6 +4,7 @@ import functools
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -57,6 +58,8 @@ class CityConfig:
     @classmethod
     @functools.lru_cache(maxsize=32)
     def load(cls, city_name: str) -> CityConfig:
+        if not re.fullmatch(r'[a-zA-Z0-9_]+', city_name):
+            raise ValueError(f"Invalid city name (potential path traversal): {city_name}")
         yaml_path = os.path.join(DATA_DIR, "cities", f"{city_name}.yaml")
         if not os.path.exists(yaml_path):
             raise FileNotFoundError(f"City config not found: {yaml_path}")
@@ -96,13 +99,24 @@ class CityConfig:
     @classmethod
     @functools.lru_cache(maxsize=32)
     def load_geojson(cls, city_name: str) -> dict[str, Any]:
+        if not re.fullmatch(r'[a-zA-Z0-9_]+', city_name):
+            raise ValueError(f"Invalid city name (potential path traversal): {city_name}")
         geojson_path = os.path.join(DATA_DIR, "cities", f"{city_name}.geojson")
         if not os.path.exists(geojson_path):
             raise FileNotFoundError(f"City boundary not found: {geojson_path}")
         with open(geojson_path, "r") as f:
             return json.load(f)
 
-    def get_boundary_polygon(self) -> dict[str, Any]:
+    def get_boundary_polygon(self, city_name: str = "") -> dict[str, Any]:
+        # Try loading GeoJSON boundary first, fall back to circle
+        if city_name:
+            try:
+                geojson = CityConfig.load_geojson(city_name)
+                geom = geojson.get("geometry", geojson)
+                if geom.get("type") == "Polygon" and geom.get("coordinates"):
+                    return {"type": "Polygon", "coordinates": geom["coordinates"]}
+            except (FileNotFoundError, Exception):
+                pass
         import math
         lat, lng = self.center
         # Set radius based on population size (mega-cities: 18km, others: 14km)
@@ -144,6 +158,6 @@ def list_available_cities() -> list[dict[str, Any]]:
                     "center": cfg.center,
                     "zoom": cfg.zoom,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to load city config %s: %s", f, e)
     return result

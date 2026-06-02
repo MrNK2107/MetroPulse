@@ -4,47 +4,7 @@ import re
 
 from engine.config import CityConfig, list_available_cities
 from engine.models import ParsedScenario, SECTOR_NAMES, SECTOR_LABELS
-
-
-CITY_ALIASES: dict[str, str] = {
-    "bangalore": "bengaluru",
-    "bengaluru": "bengaluru",
-    "bombay": "mumbai",
-    "mumbai": "mumbai",
-    "delhi": "delhi_ncr",
-    "ncr": "delhi_ncr",
-    "delhi ncr": "delhi_ncr",
-    "hyderabad": "hyderabad",
-    "chennai": "chennai",
-    "pune": "pune",
-    "kolkata": "kolkata",
-    "calcutta": "kolkata",
-    "ahmedabad": "ahmedabad",
-    "jaipur": "jaipur",
-    "lucknow": "lucknow",
-    "chandigarh": "chandigarh",
-    "bhubaneswar": "bhubaneswar",
-}
-
-SECTOR_KEYWORDS: dict[str, list[str]] = {
-    "it_ites": ["it", "tech", "software", "startup", "digital", "ites"],
-    "manufacturing": ["manufacturing", "factory", "auto", "pharma", "textile", "industrial"],
-    "real_estate": ["real estate", "housing", "construction", "property", "rent"],
-    "trade_hospitality": ["trade", "retail", "hospitality", "tourism", "hotel"],
-    "transport_logistics": ["transport", "logistics", "metro", "port", "rail", "freight"],
-    "informal": ["informal", "street vendor", "slum", "casual labor"],
-    "public_admin": ["public administration", "government", "municipal", "civic"],
-}
-
-POLICY_KEYWORDS: dict[str, list[str]] = {
-    "SEZ Notification": ["sez", "special economic zone"],
-    "Smart City Mission": ["smart city"],
-    "AMRUT": ["amrut", "water", "sanitation"],
-    "RERA Compliance": ["rera"],
-    "PM Awas Yojana": ["pmay", "awas", "affordable housing", "housing scheme"],
-    "Make in India": ["make in india"],
-    "Digital India": ["digital india"],
-}
+from engine.nl_engine.domain_maps import CITY_ALIASES, SECTOR_KEYWORDS, POLICY_KEYWORDS
 
 
 class ScenarioParseError(ValueError):
@@ -73,10 +33,19 @@ def build_params(parsed: ParsedScenario):
     from engine.models import SimulationParams
 
     cfg = CityConfig.load(parsed.city)
+    # Merge city-specific policies from YAML config with user-specified ones
+    city_policy_names = [p.get("name", "") for p in cfg.policies if isinstance(p, dict)]
+    # Add city-specific policies that are not already in the user's list
+    all_policies = list(parsed.policies_active)
+    for city_policy in city_policy_names:
+        if city_policy and city_policy not in all_policies:
+            # Only add city policies if user mentioned related keywords or enabled all
+            if any(kw in city_policy.lower() for kw in [w.lower() for w in parsed.keywords]):
+                all_policies.append(city_policy)
     return SimulationParams(
         city=parsed.city,
         sector_deltas={sector: float(parsed.sector_deltas.get(sector, 0.0)) for sector in SECTOR_NAMES},
-        policies_active=parsed.policies_active,
+        policies_active=all_policies,
         public_works_zone=parsed.public_works_zone,
         horizon_months=parsed.horizon_months,
         city_config=cfg,
