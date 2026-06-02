@@ -115,7 +115,7 @@ class CityConfig:
                 geom = geojson.get("geometry", geojson)
                 if geom.get("type") == "Polygon" and geom.get("coordinates"):
                     return {"type": "Polygon", "coordinates": geom["coordinates"]}
-            except (FileNotFoundError, Exception):
+            except (FileNotFoundError, yaml.YAMLError, KeyError, ValueError):
                 pass
         import math
         lat, lng = self.center

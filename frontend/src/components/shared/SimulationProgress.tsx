@@ -18,7 +18,7 @@ export function SimulationProgress() {
   const total = useSimulationStore((s) => s.parsedScenario?.horizon_months ?? 0);
 
   if (stage === "error" && error) {
-    const hint = error || ERROR_HINTS[errorStage ?? ""];
+    const hint = ERROR_HINTS[errorStage ?? ""] || error;
     return (
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 max-w-lg">
         <div className="rounded-xl border border-red-500/30 bg-dark-200/95 px-4 py-3 text-sm text-red-300 shadow-lg backdrop-blur-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 import { useSimulationStore, type ConversationMessage } from "@/store/simulationStore";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { SECTOR_LABELS } from "@/types/simulation";
@@ -13,7 +13,7 @@ const QUICK_EXAMPLES = [
   "What if interest rates rise sharply across India?",
 ];
 
-export function ConversationPanel() {
+export const ConversationPanel = React.memo(function ConversationPanel() {
   const scenarioText = useSimulationStore((s) => s.scenarioText);
   const setScenarioText = useSimulationStore((s) => s.setScenarioText);
   const parsed = useSimulationStore((s) => s.parsedScenario);
@@ -196,6 +196,7 @@ export function ConversationPanel() {
                     </button>
                   ) : (
                     <button
+                      data-run-btn
                       disabled={!canRun}
                       onClick={handleRun}
                       className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all active:scale-95 ${
@@ -379,6 +380,7 @@ export function ConversationPanel() {
                 </button>
               ) : (
                 <button
+                  data-run-btn
                   disabled={!parsed}
                   onClick={() => {
                     if (parsed) {
@@ -413,7 +415,7 @@ export function ConversationPanel() {
       )}
     </aside>
   );
-}
+});
 
 function ChatBubble({ message }: { message: ConversationMessage }) {
   const isUser = message.role === "user";

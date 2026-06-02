@@ -63,6 +63,12 @@ export const CITY_COORDS: Record<string, { center: [number, number]; zoom: numbe
   dehradun: { center: [78.0322, 30.3165], zoom: 11, name: "Dehradun" },
 };
 
+/** Shared selector: derives the currently-active simulation frame. */
+export const selectCurrentFrame = (state: SimulationStore) =>
+  state.frames.length > 0 && state.activeFrameIndex >= 0
+    ? state.frames[Math.min(state.activeFrameIndex, state.frames.length - 1)]
+    : null;
+
 interface SimulationStore {
   scenarioText: string;
   parsedScenario: ParsedScenario | null;

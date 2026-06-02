@@ -56,7 +56,7 @@ class ParsedScenario(BaseModel):
     sector_deltas: dict[str, float] = Field(default_factory=dict)
     policies_active: list[str] = Field(default_factory=list)
     public_works_zone: dict[str, Any] | None = None
-    horizon_months: int = Field(default=24)
+    horizon_months: int = Field(default=24, ge=1, le=120)
     causal_chain: str = ""
     keywords: list[str] = Field(default_factory=list)
     confidence: str = "medium"

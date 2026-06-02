@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { useSimulationStore, CITY_COORDS } from "@/store/simulationStore";
+import { useSimulationStore } from "@/store/simulationStore";
 import { METRIC_SCALES, type MapMetricKey } from "@/lib/colorScale";
 
 export const MapControlsHUD = React.memo(function MapControlsHUD() {
@@ -10,6 +10,7 @@ export const MapControlsHUD = React.memo(function MapControlsHUD() {
   const setActiveVisualizationMode = useSimulationStore((s) => s.setActiveVisualizationMode);
   const setActiveMetric = useSimulationStore((s) => s.setActiveMetric);
   const flyToCity = useSimulationStore((s) => s.flyToCity);
+  const cityCoords = useSimulationStore((s) => s.cityCoords);
   const parsedScenario = useSimulationStore((s) => s.parsedScenario);
 
   const handleCityChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -35,7 +36,7 @@ export const MapControlsHUD = React.memo(function MapControlsHUD() {
           className="bg-transparent text-gray-100 outline-none font-semibold cursor-pointer py-0.5"
         >
           <option value="" disabled className="bg-dark-300 text-gray-400">Select city...</option>
-          {Object.entries(CITY_COORDS).map(([id, cfg]) => (
+          {Object.entries(cityCoords).map(([id, cfg]) => (
             <option key={id} value={id} className="bg-dark-300 text-gray-200">
               {cfg.name}
             </option>

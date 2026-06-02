@@ -7,7 +7,7 @@ import {
   Title,
   Text,
 } from "@tremor/react";
-import { useSimulationStore } from "@/store/simulationStore";
+import { useSimulationStore, selectCurrentFrame } from "@/store/simulationStore";
 import type { AggregateMetrics } from "@/types/simulation";
 
 /** Keys of AggregateMetrics that are always present (non-optional numbers). */
@@ -214,10 +214,7 @@ export function MetricPanel() {
     URL.revokeObjectURL(url);
   };
 
-  const currentFrame =
-    frames.length > 0 && activeFrameIndex >= 0
-      ? frames[Math.min(activeFrameIndex, frames.length - 1)]
-      : null;
+  const currentFrame = useSimulationStore(selectCurrentFrame);
 
   const currentMetrics = currentFrame?.metrics || null;
   const isDataAvailable = frames.length > 0;

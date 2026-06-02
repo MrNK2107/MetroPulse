@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useSimulationStore } from "@/store/simulationStore";
+import { useSimulationStore, selectCurrentFrame } from "@/store/simulationStore";
 import type { DataDomain, SourceStatus } from "@/types/simulation";
 
 const DOMAIN_LABELS: Record<DataDomain, string> = {
@@ -35,11 +35,7 @@ function compactDate(value: string | null | undefined) {
 
 export function DataFreshnessPanel() {
   const snapshot = useSimulationStore((s) => s.snapshot);
-  const currentFrame = useSimulationStore((s) => {
-    if (s.frames.length === 0) return null;
-    const idx = s.activeFrameIndex >= 0 ? s.activeFrameIndex : s.frames.length - 1;
-    return s.frames[Math.min(idx, s.frames.length - 1)];
-  });
+  const currentFrame = useSimulationStore(selectCurrentFrame);
 
   const manifest = useMemo(
     () => snapshot?.sourceManifest ?? currentFrame?.proof?.dataSources ?? {},

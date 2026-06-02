@@ -234,7 +234,7 @@ def _decompose_congestion_drivers(
 
 
 def _generate_summary(
-    params: SimulationParams, metrics: dict[str, float], confidence: float
+    params: SimulationParams, metrics: dict[str, float], confidence: float = 0.0
 ) -> str:
     """Generate a cohesive narrative summary of the simulation outcome."""
     city = params.city_config.name

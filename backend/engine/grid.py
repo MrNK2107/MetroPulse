@@ -27,7 +27,7 @@ class GridFactory:
                 features = geojson.get("features", [])
                 if features:
                     actual_boundary = features[0].get("geometry", region_boundary)
-            except (FileNotFoundError, Exception):
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError):
                 pass  # Fall back to provided boundary
         shape = h3.geo_to_h3shape(actual_boundary)
         h3_indices = list(h3.h3shape_to_cells(shape, resolution))

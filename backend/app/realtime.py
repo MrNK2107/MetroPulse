@@ -47,6 +47,7 @@ async def close_http_client() -> None:
 
 # ── In-memory TTL cache for connector responses ────────────────────────────
 _response_cache: dict[str, tuple[float, Any]] = {}
+MAX_CACHE_SIZE = 512
 DEFAULT_CACHE_TTL = 300  # 5 minutes
 
 
@@ -64,6 +65,17 @@ def _cache_get(url: str, params: dict[str, Any] | None) -> Any | None:
 
 
 def _cache_set(url: str, params: dict[str, Any] | None, value: Any, ttl: int = DEFAULT_CACHE_TTL) -> None:
+    # Evict expired entries to prevent unbounded growth
+    if len(_response_cache) >= MAX_CACHE_SIZE:
+        now = time.time()
+        expired = [k for k, (exp, _) in _response_cache.items() if now >= exp]
+        for k in expired:
+            del _response_cache[k]
+        # If still at capacity after evicting expired, drop oldest entries
+        if len(_response_cache) >= MAX_CACHE_SIZE:
+            oldest_keys = sorted(_response_cache, key=lambda k: _response_cache[k][0])[:len(_response_cache) // 4]
+            for k in oldest_keys:
+                del _response_cache[k]
     key = _cache_key(url, params)
     _response_cache[key] = (time.time() + ttl, value)
 

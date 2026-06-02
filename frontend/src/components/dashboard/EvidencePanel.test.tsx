@@ -154,6 +154,6 @@ describe("EvidencePanel", () => {
     render(<EvidencePanel />);
 
     expect(screen.getByText("Evidence & Audit")).toBeInTheDocument();
-    expect(screen.getByText("Detailed")).toBeInTheDocument();
+    expect(screen.getByText("Report")).toBeInTheDocument();
   });
 });

@@ -75,7 +75,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     expect(progressBar).toBeInTheDocument()
   })
 
-  it('shows error state with error message', () => {
+  it('shows error state with friendly hint', () => {
     useSimulationStore.setState({
       pipelineStage: 'error',
       error: 'Something went wrong',
@@ -86,7 +86,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
 
     expect(screen.getByText(/Error:/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Something went wrong/)
+      screen.getByText(/Simulation failed/)
     ).toBeInTheDocument()
   })
 
@@ -100,7 +100,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Parse error/)
+      screen.getByText(/Could not understand the scenario/)
     ).toBeInTheDocument()
   })
 
@@ -114,7 +114,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Predict error/)
+      screen.getByText(/Scenario expectation generation failed/)
     ).toBeInTheDocument()
   })
 
@@ -128,7 +128,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Retrieve error/)
+      screen.getByText(/Could not retrieve case studies/)
     ).toBeInTheDocument()
   })
 
@@ -142,7 +142,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Synth error/)
+      screen.getByText(/Evidence synthesis failed/)
     ).toBeInTheDocument()
   })
 

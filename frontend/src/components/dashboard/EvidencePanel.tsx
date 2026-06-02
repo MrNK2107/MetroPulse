@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useSimulationStore } from "@/store/simulationStore";
+import { useSimulationStore, selectCurrentFrame } from "@/store/simulationStore";
 import { SECTOR_LABELS } from "@/types/simulation";
 import type { SectorImpact, TranslationResult } from "@/types/simulation";
 
@@ -57,25 +57,21 @@ function AssumptionsList({ assumptions }: { assumptions: string[] }) {
   );
 }
 
-export function EvidencePanel() {
+export const EvidencePanel = React.memo(function EvidencePanel() {
   const evidence = useSimulationStore((s) => s.evidence);
   const caseStudies = useSimulationStore((s) => s.caseStudies);
   const prediction = useSimulationStore((s) => s.prediction);
   const pipelineStage = useSimulationStore((s) => s.pipelineStage);
-  const currentFrame = useSimulationStore((s) => {
-    if (s.frames.length === 0) return null;
-    const idx = s.activeFrameIndex >= 0 ? s.activeFrameIndex : s.frames.length - 1;
-    return s.frames[Math.min(idx, s.frames.length - 1)];
-  });
+  const currentFrame = useSimulationStore(selectCurrentFrame);
 
-  const translation: TranslationResult = {
+  const translation: TranslationResult = useMemo(() => ({
     headline: evidence?.translation?.headline ?? "",
     sector_impacts: evidence?.translation?.sector_impacts ?? [],
     takeaways: evidence?.translation?.takeaways ?? [],
     gdp_summary: evidence?.translation?.gdp_summary ?? "",
     unemployment_summary: evidence?.translation?.unemployment_summary ?? "",
     overall_verdict: evidence?.translation?.overall_verdict ?? "",
-  };
+  }), [evidence?.translation]);
   const explainabilityTopDrivers = evidence?.explainability?.top_drivers ?? [];
   const hasSimpleView = Boolean(translation.sector_impacts.length);
   const [activeTab, setActiveTab] = useState<ActiveTab>("simple");
@@ -697,4 +693,4 @@ export function EvidencePanel() {
       )}
     </aside>
   );
-}
+});

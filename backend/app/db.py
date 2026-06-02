@@ -580,7 +580,7 @@ class DatabaseClient:
                     .execute()
                 )
                 return result.data
-            except Exception:
+            except (OSError, KeyError, ValueError):
                 logger.debug("Supabase list_simulations failed, using in-memory fallback")
         return self._saved[start : start + per_page]
 

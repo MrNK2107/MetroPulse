@@ -48,6 +48,53 @@ async def simulation_websocket(websocket: WebSocket):
             try:
                 parsed_data = json.loads(scenario_text)
                 from engine.models import ParsedScenario, SECTOR_NAMES
+                import re as _re
+                # Validate JSON scenario input
+                hm = parsed_data.get("horizon_months", 24)
+                if not isinstance(hm, int) or not (1 <= hm <= 120):
+                    await websocket.send_json({
+                        "type": "ERROR",
+                        "stage": "parsing",
+                        "code": "INVALID_INPUT",
+                        "message": "horizon_months must be an integer between 1 and 120.",
+                    })
+                    return
+                city_val = parsed_data.get("city", "mumbai")
+                if not isinstance(city_val, str) or not _re.fullmatch(r'[a-z0-9_]+', city_val):
+                    await websocket.send_json({
+                        "type": "ERROR",
+                        "stage": "parsing",
+                        "code": "INVALID_INPUT",
+                        "message": "city must be a lowercase string matching [a-z0-9_]+.",
+                    })
+                    return
+                sd = parsed_data.get("sector_deltas", {})
+                if not isinstance(sd, dict):
+                    await websocket.send_json({
+                        "type": "ERROR",
+                        "stage": "parsing",
+                        "code": "INVALID_INPUT",
+                        "message": "sector_deltas must be an object mapping sector names to numeric values.",
+                    })
+                    return
+                for _k, _v in sd.items():
+                    if not isinstance(_v, (int, float)) or not (-100 <= _v <= 100):
+                        await websocket.send_json({
+                            "type": "ERROR",
+                            "stage": "parsing",
+                            "code": "INVALID_INPUT",
+                            "message": f"sector_deltas['{_k}'] must be numeric between -100 and +100.",
+                        })
+                        return
+                pa = parsed_data.get("policies_active", [])
+                if not isinstance(pa, list) or not all(isinstance(x, str) for x in pa):
+                    await websocket.send_json({
+                        "type": "ERROR",
+                        "stage": "parsing",
+                        "code": "INVALID_INPUT",
+                        "message": "policies_active must be a list of strings.",
+                    })
+                    return
                 # Reconstruct parsed scenario directly
                 sector_deltas = {
                     s: float(parsed_data.get("sector_deltas", {}).get(s, 0.0))
@@ -206,7 +253,7 @@ async def simulation_websocket(websocket: WebSocket):
                     "type": "ERROR",
                     "stage": "simulating",
                     "code": "SIMULATION_FAILED",
-                    "message": f"Simulation failed: {e}",
+                    "message": "Simulation failed due to an internal error.",
                 })
                 return
 
@@ -323,7 +370,7 @@ async def simulation_websocket(websocket: WebSocket):
                 "type": "ERROR",
                 "stage": "simulating",
                 "code": "SIMULATION_FAILED",
-                "message": str(e),
+                "message": "An unexpected error occurred during simulation.",
             })
         except Exception:
             pass

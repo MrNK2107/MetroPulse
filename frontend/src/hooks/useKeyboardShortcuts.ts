@@ -15,7 +15,7 @@ export function useKeyboardShortcuts() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        const runBtn = document.querySelector("[data-run-btn]") as HTMLButtonElement;
+        const runBtn = document.querySelector("[data-run-btn]") as HTMLButtonElement | null;
         runBtn?.click();
         return;
       }
