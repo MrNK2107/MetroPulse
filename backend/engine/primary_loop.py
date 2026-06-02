@@ -34,7 +34,11 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     epw_raw = state.constants.get("employment_pressure_weights", _default_epw)
     employment_pressure_weights = np.array(epw_raw, dtype=np.float64)
 
-    delta_k = state.K * monthly_rates[None, :] * state.sector_weights[None, :]
+    # NOTE: sector_weights are already baked into K during GridFactory.initialize()
+    # (K = K_total * weights), so they must NOT be applied again here — doing so
+    # double-dampens the shock (a 25% IT shock would only produce 25%*0.15 = 3.75%
+    # growth in IT K instead of the intended 25%).
+    delta_k = state.K * monthly_rates[None, :]
     effects: list[str] = []
 
     if np.any(rates != 0):
@@ -74,12 +78,26 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         delta_k[:, SECTOR_INDEX["public_admin"]] += state.K[:, SECTOR_INDEX["public_admin"]] * boost
         effects.append("public works distance boost")
 
+    # Capture K totals BEFORE updating, for proportional employment conversion
+    K_total_before = np.sum(state.K, axis=1)
+
     state.K = np.maximum(state.K + delta_k, 0.0)
     total_delta_k = np.sum(delta_k, axis=1)
-    sector_employment_pressure = np.dot(delta_k, employment_pressure_weights)
-    delta_formal = alpha * sector_employment_pressure
+
+    # Employment grows proportionally to per-cell GDP growth, not as a fixed
+    # additive delta.  This ensures that (a) employment elasticity is realistic
+    # (~0.6 for India) and (b) cells with more jobs create proportionally more
+    # new jobs (diminishing-returns / scale effect).
+    gdp_growth = np.divide(
+        total_delta_k, K_total_before,
+        out=np.zeros_like(total_delta_k), where=K_total_before > 0,
+    )
+    delta_formal = state.E_formal * alpha * gdp_growth
     lag = 0.6 if month > 1 else 0.25
-    delta_informal = beta_informal * lag * delta_formal + state.M * 0.002 * np.maximum(state.E_formal, 1.0)
+    delta_informal = (
+        state.E_informal * beta_informal * lag * gdp_growth
+        + state.M * 0.002 * np.maximum(state.E_formal, 1.0)
+    )
 
     state.E_formal = np.maximum(state.E_formal + delta_formal, 0.0)
     state.E_informal = np.maximum(state.E_informal + delta_informal, 0.0)
