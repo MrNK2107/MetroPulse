@@ -137,4 +137,23 @@ describe("EvidencePanel", () => {
     expect(screen.getByText(/scenario-estimated decrease/)).toBeInTheDocument();
     expect(screen.getByText(/Confidence: Medium/)).toBeInTheDocument();
   });
+
+  it("renders safely when nested translation arrays are missing", () => {
+    useSimulationStore.getState().setEvidence({
+      ...baseEvidence,
+      translation: {
+        headline: "Partial evidence payload",
+      },
+      explainability: {
+        summary: "Partial explainability payload.",
+        confidence: 0.4,
+        confidence_label: "Low",
+      },
+    } as any);
+
+    render(<EvidencePanel />);
+
+    expect(screen.getByText("Evidence & Audit")).toBeInTheDocument();
+    expect(screen.getByText("Detailed")).toBeInTheDocument();
+  });
 });

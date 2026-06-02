@@ -7,13 +7,11 @@ import { MapView, type PickingInfo, type Layer } from "@deck.gl/core";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import { H3HexagonLayer } from "@deck.gl/geo-layers";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-import { MaskExtension } from "@deck.gl/extensions";
 import { cellToLatLng } from "h3-js";
 import { MAP_STYLE } from "@/lib/mapConfig";
 
 // Hoist static instances to module scope to avoid per-render allocation
 const MAP_VIEW = new MapView({ id: "map", controller: true });
-const MASK_EXTENSION = new MaskExtension();
 import { useSimulationStore } from "@/store/simulationStore";
 import { formatDelta, metricToRGBA, heatmapWeight, heatmapColorRange, type MapMetricKey } from "@/lib/colorScale";
 import { MapLegend } from "./MapLegend";
@@ -127,17 +125,13 @@ export function MapViewport() {
               id: `heatmap-layer-delta-positive`,
               data: positiveCells,
               getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
-              getWeight: (d: HexCellState) => d.delta,
               radiusPixels: 22,
               radiusMinPixels: 6,
               radiusMaxPixels: 60,
               intensity: 1.6,
               threshold: 0.08,
               colorRange: posColorRange,
-              extensions: maskData ? [MASK_EXTENSION] : [],
-              maskId: maskData ? "city-boundary-mask" : undefined,
-              maskByInstance: false,
-              maskInverted: false,
+              getWeight: (d: HexCellState) => heatmapWeight(Math.abs(d.delta), "delta"),
               updateTriggers: {
                 getWeight: [],
               },
@@ -149,17 +143,13 @@ export function MapViewport() {
               id: `heatmap-layer-delta-negative`,
               data: negativeCells,
               getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
-              getWeight: (d: HexCellState) => -d.delta,
               radiusPixels: 22,
               radiusMinPixels: 6,
               radiusMaxPixels: 60,
               intensity: 1.6,
               threshold: 0.08,
               colorRange: negColorRange,
-              extensions: maskData ? [MASK_EXTENSION] : [],
-              maskId: maskData ? "city-boundary-mask" : undefined,
-              maskByInstance: false,
-              maskInverted: false,
+              getWeight: (d: HexCellState) => heatmapWeight(Math.abs(d.delta), "delta"),
               updateTriggers: {
                 getWeight: [],
               },
@@ -172,17 +162,13 @@ export function MapViewport() {
               id: `heatmap-layer-${activeMetric}`,
               data: currentFrame.cells,
               getPosition: (d: HexCellState) => positionCache.get(d.h3Index) ?? [0, 0],
-              getWeight: (d: HexCellState) => getMetricVal(d, activeMetric),
               radiusPixels: 22,
               radiusMinPixels: 6,
               radiusMaxPixels: 60,
               intensity: 1.6,
               threshold: 0.08,
               colorRange: heatmapColorRange(activeMetric),
-              extensions: maskData ? [MASK_EXTENSION] : [],
-              maskId: maskData ? "city-boundary-mask" : undefined,
-              maskByInstance: false,
-              maskInverted: false,
+              getWeight: (d: HexCellState) => heatmapWeight(getMetricVal(d, activeMetric), activeMetric),
               updateTriggers: {
                 getWeight: [activeMetric],
                 colorRange: [activeMetric],

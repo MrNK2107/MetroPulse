@@ -68,7 +68,16 @@ export function EvidencePanel() {
     return s.frames[Math.min(idx, s.frames.length - 1)];
   });
 
-  const hasSimpleView = Boolean(evidence?.translation?.sector_impacts?.length);
+  const translation: TranslationResult = {
+    headline: evidence?.translation?.headline ?? "",
+    sector_impacts: evidence?.translation?.sector_impacts ?? [],
+    takeaways: evidence?.translation?.takeaways ?? [],
+    gdp_summary: evidence?.translation?.gdp_summary ?? "",
+    unemployment_summary: evidence?.translation?.unemployment_summary ?? "",
+    overall_verdict: evidence?.translation?.overall_verdict ?? "",
+  };
+  const explainabilityTopDrivers = evidence?.explainability?.top_drivers ?? [];
+  const hasSimpleView = Boolean(translation.sector_impacts.length);
   const [activeTab, setActiveTab] = useState<ActiveTab>("detailed");
 
   // Switch to simple tab when evidence with simpleView arrives after mount
@@ -249,22 +258,22 @@ export function EvidencePanel() {
                   <div className="space-y-4">
                     {/* Hero headline */}
                     <div className={`rounded-xl border p-4 ${
-                      evidence.translation.overall_verdict.includes("positive")
+                      translation.overall_verdict.includes("positive")
                         ? "border-emerald-500/30 bg-emerald-950/15"
-                        : evidence.translation.overall_verdict.includes("negative")
+                        : translation.overall_verdict.includes("negative")
                         ? "border-red-500/30 bg-red-950/15"
                         : "border-amber-500/30 bg-amber-950/15"
                     }`}>
                       <p className="text-sm font-bold text-gray-100 leading-[1.5]">
-                        {evidence.translation.headline}
+                        {translation.headline}
                       </p>
                       <p className="mt-1 text-[10px] text-gray-400 italic">
-                        {evidence.translation.overall_verdict}
+                        {translation.overall_verdict}
                       </p>
                     </div>
 
                     {/* Sector impact cards */}
-                    {evidence.translation.sector_impacts.slice(0, 3).map((impact) => (
+                    {translation.sector_impacts.slice(0, 3).map((impact) => (
                       <div key={impact.sector} className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
@@ -286,13 +295,13 @@ export function EvidencePanel() {
                     ))}
 
                     {/* Takeaways */}
-                    {evidence.translation.takeaways.length > 0 && (
+                    {translation.takeaways.length > 0 && (
                       <div className="rounded-xl border border-blue-500/20 bg-blue-950/10 p-4">
                         <h4 className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-2.5">
                           What this means for you
                         </h4>
                         <ol className="space-y-2">
-                          {evidence.translation.takeaways.map((t, i) => (
+                          {translation.takeaways.map((t, i) => (
                             <li key={i} className="text-xs text-gray-300 leading-[1.5] flex gap-2">
                               <span className="text-blue-400 font-bold shrink-0">{i + 1}.</span>
                               <span>{t}</span>
@@ -311,7 +320,7 @@ export function EvidencePanel() {
                           {evidence.explainability.summary}
                         </p>
                         <div className="space-y-2">
-                          {evidence.explainability.top_drivers.slice(0, 3).map((driver) => (
+                          {explainabilityTopDrivers.slice(0, 3).map((driver) => (
                             <div key={driver.factor} className="flex justify-between gap-3 text-[11px] border-b border-dark-100/20 pb-1.5">
                               <span className="text-gray-400">{driver.factor}</span>
                               <span className="text-gray-300 font-mono">{driver.contribution}%</span>
@@ -328,11 +337,11 @@ export function EvidencePanel() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-3 text-center">
                         <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Economy</p>
-                        <p className="text-xs font-bold text-gray-200">{evidence.translation.gdp_summary}</p>
+                        <p className="text-xs font-bold text-gray-200">{translation.gdp_summary}</p>
                       </div>
                       <div className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-3 text-center">
                         <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Jobs</p>
-                        <p className="text-xs font-bold text-gray-200">{evidence.translation.unemployment_summary}</p>
+                        <p className="text-xs font-bold text-gray-200">{translation.unemployment_summary}</p>
                       </div>
                     </div>
 
