@@ -1,12 +1,20 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { WebSocketClient } from "@/lib/ws";
 import { useSimulationStore } from "@/store/simulationStore";
 import type { PipelineStage } from "@/types/simulation";
 
 export function useWebSocket() {
   const clientRef = useRef<WebSocketClient | null>(null);
+
+  // Cleanup WebSocket connection on unmount to prevent connection leaks
+  useEffect(() => {
+    return () => {
+      clientRef.current?.disconnect();
+      clientRef.current = null;
+    };
+  }, []);
 
   const startSimulation = useCallback(
     (scenario: string, wsUrl: string) => {

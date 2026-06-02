@@ -197,8 +197,8 @@ async def _call_openai(prompt: str, timeout_ms: int) -> str:
 
 async def _call_mimo(prompt: str, timeout_ms: int) -> str:
     """Call MiMo via raw httpx (OpenAI SDK triggers a gzip decompression bug on this provider)."""
-    import httpx as _httpx
     from app.config import settings
+    from app.realtime import get_http_client
 
     headers = {
         "Authorization": f"Bearer {settings.mimo_api_key}",
@@ -212,15 +212,16 @@ async def _call_mimo(prompt: str, timeout_ms: int) -> str:
             {"role": "user", "content": prompt},
         ],
     }
-    async with _httpx.AsyncClient(timeout=timeout_ms / 1000.0) as client:
-        resp = await client.post(
-            f"{settings.mimo_base_url}/chat/completions",
-            headers=headers,
-            json=body,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
+    client = await get_http_client()
+    resp = await client.post(
+        f"{settings.mimo_base_url}/chat/completions",
+        headers=headers,
+        json=body,
+        timeout=timeout_ms / 1000.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
 
 
 _CITY_TYPE_CONTEXT: dict[str, str] = {

@@ -183,6 +183,7 @@ describe('ConversationPanel', () => {
   })
 
   it('clicking stop calls stopSimulation', () => {
+    jest.spyOn(window, 'confirm').mockReturnValue(true)
     useSimulationStore.setState({
       scenarioText: 'What happens to Mumbai if real estate prices drop significantly?',
       pipelineStage: 'simulating',
@@ -192,6 +193,7 @@ describe('ConversationPanel', () => {
 
     fireEvent.click(screen.getByText('Stop'))
     expect(mockStopSimulation).toHaveBeenCalled()
+    window.confirm.mockRestore()
   })
 
   it('shows MetroPulse header branding', () => {

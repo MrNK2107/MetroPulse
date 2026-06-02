@@ -572,21 +572,26 @@ class DatabaseClient:
                     "Supabase save_city_snapshot failed (table may not exist), using in-memory only: %s", e
                 )
 
-    async def list_simulations(self, page: int = 1, per_page: int = 20) -> list[dict[str, Any]]:
+    async def list_simulations(self, page: int = 1, per_page: int = 20, city: str | None = None) -> list[dict[str, Any]]:
         start = (page - 1) * per_page
         if self._client:
             try:
-                result = await self._retry(
-                    lambda: self._client.table("simulations")
+                query = (
+                    self._client.table("simulations")
                     .select("id,region_id,params,horizon_months,result_summary,created_at")
                     .order("created_at", desc=True)
                     .range(start, start + per_page - 1)
-                    .execute()
                 )
+                if city:
+                    query = query.eq("region_id", city)
+                result = await self._retry(lambda: query.execute())
                 return result.data
             except (OSError, KeyError, ValueError):
                 logger.debug("Supabase list_simulations failed, using in-memory fallback")
-        return self._saved[start : start + per_page]
+        items = self._saved
+        if city:
+            items = [s for s in items if s.get("region_id") == city or s.get("params", {}).get("city") == city]
+        return items[start : start + per_page]
 
     async def get_simulation(self, simulation_id: UUID) -> dict[str, Any] | None:
         if self._client:
@@ -602,6 +607,23 @@ class DatabaseClient:
             except Exception:
                 logger.debug("Supabase get_simulation failed, using in-memory fallback")
         return next((item for item in self._saved if item["id"] == str(simulation_id)), None)
+
+    async def delete_simulation(self, simulation_id: UUID) -> bool:
+        """Delete a simulation by ID. Returns True if deleted."""
+        if self._client:
+            try:
+                await self._retry(
+                    lambda: self._client.table("simulations")
+                    .delete()
+                    .eq("id", str(simulation_id))
+                    .execute()
+                )
+                return True
+            except Exception:
+                logger.debug("Supabase delete_simulation failed, using in-memory fallback")
+        before = len(self._saved)
+        self._saved = [s for s in self._saved if s["id"] != str(simulation_id)]
+        return len(self._saved) < before
 
     async def save_simulation(
         self,

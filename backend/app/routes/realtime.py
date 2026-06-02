@@ -15,6 +15,8 @@ router = APIRouter()
 _ingest_rate_limit: dict[str, list[float]] = defaultdict(list)
 _INGEST_MAX_REQUESTS = 3
 _INGEST_WINDOW_SECONDS = 60.0
+_INGEST_ENTRY_TTL = 120.0  # purge IP entries older than this
+_INGEST_LAST_SEEN: dict[str, float] = {}
 
 
 @router.get("/data-sources")
@@ -66,6 +68,12 @@ async def trigger_ingestion(
     # ── Rate limit check ─────────────────────────────────────────
     client_ip = request.client.host if request.client else "unknown"
     now = time.time()
+    # Purge stale IP entries to prevent unbounded memory growth
+    stale_ips = [ip for ip, last in _INGEST_LAST_SEEN.items() if now - last > _INGEST_ENTRY_TTL]
+    for ip in stale_ips:
+        del _ingest_rate_limit[ip]
+        del _INGEST_LAST_SEEN[ip]
+    _INGEST_LAST_SEEN[client_ip] = now
     timestamps = _ingest_rate_limit[client_ip]
     # Evict expired entries
     _ingest_rate_limit[client_ip] = [t for t in timestamps if now - t < _INGEST_WINDOW_SECONDS]

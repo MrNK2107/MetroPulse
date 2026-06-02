@@ -1,6 +1,7 @@
 "use client";
 
 import { useSimulationStore } from "@/store/simulationStore";
+import { useCallback } from "react";
 
 const ERROR_HINTS: Record<string, string> = {
   parsing: "Could not understand the scenario. Try including a city name and a sector change.",
@@ -17,12 +18,23 @@ export function SimulationProgress() {
   const frames = useSimulationStore((s) => s.frames);
   const total = useSimulationStore((s) => s.parsedScenario?.horizon_months ?? 0);
 
+  const dismissError = useCallback(() => {
+    useSimulationStore.setState({ error: null, errorStage: null, pipelineStage: "idle" });
+  }, []);
+
   if (stage === "error" && error) {
     const hint = ERROR_HINTS[errorStage ?? ""] || error;
     return (
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 max-w-lg">
-        <div className="rounded-xl border border-red-500/30 bg-dark-200/95 px-4 py-3 text-sm text-red-300 shadow-lg backdrop-blur-sm">
+        <div className="rounded-xl border border-red-500/30 bg-dark-200/95 px-4 py-3 text-sm text-red-300 shadow-lg backdrop-blur-sm" role="alert" aria-live="assertive">
           <span className="font-semibold text-red-400">Error: </span>{hint}
+          <button
+            onClick={dismissError}
+            className="ml-3 inline-flex items-center justify-center w-5 h-5 rounded-full text-red-400 hover:text-white hover:bg-red-500/50 transition-colors text-xs font-bold"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
         </div>
       </div>
     );
@@ -35,7 +47,7 @@ export function SimulationProgress() {
 
   return (
     <div className="absolute top-0 left-0 right-0 z-40">
-      <div className="h-1 bg-dark-100/50">
+      <div className="h-1 bg-dark-100/50" role="progressbar" aria-live="polite" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Simulation progress">
         <div
           className="h-full bg-blue-500 transition-all duration-300 ease-out"
           style={{ width: `${pct}%` }}

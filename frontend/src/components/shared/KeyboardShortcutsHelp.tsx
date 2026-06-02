@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 
 interface ShortcutGroup {
   title: string;
@@ -41,6 +41,37 @@ interface KeyboardShortcutsHelpProps {
 }
 
 export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelpProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Focus close button on mount for accessibility
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => closeBtnRef.current?.focus(), 0);
+    }
+  }, [isOpen]);
+
+  // Focus trap: wrap Tab/Shift+Tab within the dialog
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    },
+    []
+  );
+
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
@@ -63,6 +94,8 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
       role="dialog"
       aria-modal="true"
       aria-label="Keyboard Shortcuts"
+      onKeyDown={handleKeyDown}
+      ref={dialogRef}
     >
       <div
         className="bg-dark-200/98 border border-dark-100/60 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
@@ -80,6 +113,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
           </div>
           <button
             onClick={onClose}
+            ref={closeBtnRef}
             className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-dark-300/60 transition-all"
             aria-label="Close"
           >

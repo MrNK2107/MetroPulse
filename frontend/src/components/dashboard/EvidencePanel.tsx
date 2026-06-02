@@ -386,16 +386,19 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                             </div>
                           ))}
                         </div>
-                        {evidence.explanation?.gdp_delta?.confidence != null && (
+                        {evidence.explanation?.gdp_delta?.confidence != null && (() => {
+                          const conf = evidence.explanation.gdp_delta.confidence;
+                          return (
                           <p className="mt-2 text-[10px] text-gray-400">
-                            Confidence: {(evidence.explanation!.gdp_delta!.confidence! * 100).toFixed(0)}%
-                            {evidence.explanation!.gdp_delta!.confidence! < 0.5
+                            Confidence: {(conf * 100).toFixed(0)}%
+                            {conf < 0.5
                               ? " — model-generated estimate, interpret as directional"
-                              : evidence.explanation!.gdp_delta!.confidence! < 0.7
+                              : conf < 0.7
                               ? " — based on estimated baselines"
                               : " — based on measured data"}
                           </p>
-                        )}
+                          );
+                        })()}
                         <p className="mt-1.5 text-[9px] text-gray-500 italic">
                           This result is a model estimate for scenario exploration, not a prediction.
                         </p>

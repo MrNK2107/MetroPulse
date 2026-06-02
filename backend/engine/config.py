@@ -140,6 +140,7 @@ class CityConfig:
         }
 
 
+@functools.lru_cache(maxsize=1)
 def list_available_cities() -> list[dict[str, Any]]:
     cities_dir = os.path.join(DATA_DIR, "cities")
     result = []

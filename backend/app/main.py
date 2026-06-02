@@ -1,3 +1,4 @@
+import collections
 import asyncio
 import logging
 import json
@@ -127,15 +128,67 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Global rate limiter: 60 requests per minute per IP. Skips health checks."""
+
+    _RATE_LIMIT = 60
+    _WINDOW_SECONDS = 60.0
+
+    def __init__(self, app):
+        super().__init__(app)
+        self._requests: dict[str, collections.deque] = {}
+        self._last_cleanup = time.time()
+
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in ("/api/v1/health", "/api/v1/health/data", "/health"):
+            return await call_next(request)
+
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+
+        # Periodic cleanup of stale IP entries (every 60s)
+        if now - self._last_cleanup > 60.0:
+            stale = [ip for ip, q in self._requests.items() if not q or now - q[-1] > self._WINDOW_SECONDS]
+            for ip in stale:
+                del self._requests[ip]
+            self._last_cleanup = now
+
+        if client_ip not in self._requests:
+            self._requests[client_ip] = collections.deque()
+        timestamps = self._requests[client_ip]
+
+        # Evict expired entries
+        while timestamps and now - timestamps[0] > self._WINDOW_SECONDS:
+            timestamps.popleft()
+
+        if len(timestamps) >= self._RATE_LIMIT:
+            retry_after = self._WINDOW_SECONDS - (now - timestamps[0])
+            from starlette.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "success": False,
+                    "data": None,
+                    "error": f"Rate limit exceeded. Max {self._RATE_LIMIT} requests per {self._WINDOW_SECONDS:.0f}s.",
+                    "meta": {"retry_after_seconds": round(retry_after, 1)},
+                },
+                headers={"Retry-After": str(int(retry_after) + 1)},
+            )
+
+        timestamps.append(now)
+        return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 app.include_router(health_router, prefix="/api/v1", tags=["Health"])
 app.include_router(regions_router, prefix="/api/v1", tags=["Regions"])
