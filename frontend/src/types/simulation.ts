@@ -333,5 +333,8 @@ export type MetricKey =
   | "transitCongestion"
   | "informalEmployment"
   | "housingAffordability"
-  | "airQuality"
-  | "waterStress";
+  | "floodDisruption"
+  | "migrationBalance"
+  | "airQualityIndex"
+  | "waterStressIndex"
+  | "slumDensity";

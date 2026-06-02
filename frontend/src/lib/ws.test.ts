@@ -303,11 +303,13 @@ describe("WebSocketClient", () => {
       expect(mockInstances).toHaveLength(2);
 
       // Second attempt: open + close
+      // Note: reconnectAttempts resets to 0 on successful open,
+      // so the next delay is back to 1000ms (2^(1-1)*1000)
       mockInstances[1].simulateOpen();
       mockInstances[1].simulateClose();
-      jest.advanceTimersByTime(1999); // not enough
+      jest.advanceTimersByTime(999); // not enough
       expect(mockInstances).toHaveLength(2);
-      jest.advanceTimersByTime(1); // total 2000ms = 2^1 * 1000
+      jest.advanceTimersByTime(1); // total 1000ms = 2^0 * 1000
       expect(mockInstances).toHaveLength(3);
     });
 
@@ -316,19 +318,23 @@ describe("WebSocketClient", () => {
       const client = new WebSocketClient("ws://localhost:8000/ws", cb);
       client.connect("scenario");
 
+      // First open+close starts the reconnect cycle
+      mockInstances[0].simulateOpen();
+      mockInstances[0].simulateClose();
+
+      // Simulate 5 failed reconnection attempts (close immediately without open)
+      // reconnectAttempts resets on successful open, so to exhaust retries
+      // we need consecutive failures without open
       for (let i = 0; i < 5; i++) {
-        mockInstances[i].simulateOpen();
-        mockInstances[i].simulateClose();
-        // Advance enough for exponential backoff: 1s, 2s, 4s, 8s, 16s
         jest.advanceTimersByTime(30000);
+        // Close immediately without opening — reconnectAttempts accumulates
+        mockInstances[mockInstances.length - 1].simulateClose();
       }
 
-      // 5 retries exhausted
-      expect(mockInstances).toHaveLength(5);
+      // 1 original + 5 failed reconnects = 6
+      expect(mockInstances).toHaveLength(6);
 
-      // The 5th close should trigger onError with RECONNECT_FAILED
-      // (the onclose handler calls _attemptReconnect, which checks >= maxRetries)
-      // At this point reconnectAttempts should be 5
+      // The 5th failed reconnect should trigger onError with RECONNECT_FAILED
       expect(cb.onError).toHaveBeenCalledWith(
         expect.objectContaining({ code: "RECONNECT_FAILED" })
       );

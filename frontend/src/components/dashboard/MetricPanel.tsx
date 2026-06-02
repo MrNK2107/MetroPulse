@@ -8,12 +8,17 @@ import {
   Text,
 } from "@tremor/react";
 import { useSimulationStore } from "@/store/simulationStore";
-import type { MetricKey, AggregateMetrics } from "@/types/simulation";
+import type { AggregateMetrics } from "@/types/simulation";
+
+/** Keys of AggregateMetrics that are always present (non-optional numbers). */
+type RequiredMetricKey = {
+  [K in keyof AggregateMetrics]-?: AggregateMetrics[K] extends number ? K : never
+}[keyof AggregateMetrics];
 
 interface MetricChartProps {
   title: string;
   unit: string;
-  dataKey: MetricKey;
+  dataKey: RequiredMetricKey;
   color: string;
   formatter: (value: number) => string;
   currentValue: number | null;

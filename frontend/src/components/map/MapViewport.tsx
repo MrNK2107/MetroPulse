@@ -364,7 +364,7 @@ export function MapViewport() {
 
   const handleViewStateChange = useCallback(
     (e: { viewState: Record<string, unknown> }) => {
-      setMapViewState(e.viewState);
+      setMapViewState(e.viewState as Parameters<typeof setMapViewState>[0]);
     },
     [setMapViewState]
   );

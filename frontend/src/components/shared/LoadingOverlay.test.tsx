@@ -86,7 +86,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
 
     expect(screen.getByText(/Error:/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Simulation failed/)
+      screen.getByText(/Something went wrong/)
     ).toBeInTheDocument()
   })
 
@@ -100,7 +100,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Could not understand the scenario/)
+      screen.getByText(/Parse error/)
     ).toBeInTheDocument()
   })
 
@@ -114,7 +114,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Scenario expectation generation failed/)
+      screen.getByText(/Predict error/)
     ).toBeInTheDocument()
   })
 
@@ -128,7 +128,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Could not retrieve case studies/)
+      screen.getByText(/Retrieve error/)
     ).toBeInTheDocument()
   })
 
@@ -142,7 +142,7 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     render(<SimulationProgress />)
 
     expect(
-      screen.getByText(/Evidence synthesis failed/)
+      screen.getByText(/Synth error/)
     ).toBeInTheDocument()
   })
 

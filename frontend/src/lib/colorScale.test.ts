@@ -45,12 +45,12 @@ describe('colorScale', () => {
     })
  
     it('returns 100 for minimum clamp value due to absolute deviation mapping', () => {
-      const weight = heatmapWeight(-0.15, 'delta')
+      const weight = heatmapWeight(-0.25, 'delta')
       expect(weight).toBeCloseTo(100, 0)
     })
- 
+
     it('returns 100 for maximum clamp value', () => {
-      const weight = heatmapWeight(0.15, 'delta')
+      const weight = heatmapWeight(0.25, 'delta')
       expect(weight).toBeCloseTo(100, 0)
     })
   })

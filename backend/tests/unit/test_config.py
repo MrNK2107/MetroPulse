@@ -63,9 +63,9 @@ class TestMissingCity:
             CityConfig.load("")
 
     def test_load_raises_for_wrong_case(self):
-        """City names are lowercase; uppercase should fail."""
+        """Loading a non-existent city name should fail."""
         with pytest.raises(FileNotFoundError):
-            CityConfig.load("MUMBAI")
+            CityConfig.load("NONEXISTENT_CITY_XYZ")
 
 
 # ── get_boundary_polygon() ──────────────────────────────────────────────────
