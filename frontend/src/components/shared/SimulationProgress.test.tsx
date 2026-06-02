@@ -168,9 +168,58 @@ describe('SimulationProgress (LoadingOverlay)', () => {
 
   it('shows synthesizing stage text', () => {
     useSimulationStore.getState().setStage('synthesizing', 'Building report...')
+    render(<SimulationProgress />)
+    expect(screen.getByText('synthesizing...')).toBeInTheDocument()
+  })
+
+  it('shows progress bar with correct width percentage during simulation', () => {
+    useSimulationStore.setState({
+      pipelineStage: 'simulating',
+      parsedScenario: { horizon_months: 10 } as any,
+      frames: [
+        { month: 1 } as any,
+        { month: 2 } as any,
+        { month: 3 } as any,
+        { month: 4 } as any,
+        { month: 5 } as any,
+      ],
+    })
+
+    const { container } = render(<SimulationProgress />)
+
+    // 5 out of 10 = 50%
+    const progressFill = container.querySelector('.bg-blue-500')
+    expect(progressFill).toBeInTheDocument()
+    expect(progressFill).toHaveStyle({ width: '50%' })
+  })
+
+  it('shows frame count for simulating stage with partial progress', () => {
+    useSimulationStore.setState({
+      pipelineStage: 'simulating',
+      parsedScenario: { horizon_months: 60 } as any,
+      frames: Array.from({ length: 15 }, (_, i) => ({ month: i + 1 }) as any),
+    })
 
     render(<SimulationProgress />)
 
-    expect(screen.getByText('synthesizing...')).toBeInTheDocument()
+    expect(screen.getByText('Simulating 15 / 60')).toBeInTheDocument()
+  })
+
+  it('handles missing parsedScenario gracefully (total defaults to 0)', () => {
+    useSimulationStore.setState({
+      pipelineStage: 'simulating',
+      parsedScenario: null,
+      frames: [{ month: 1 } as any],
+    })
+
+    render(<SimulationProgress />)
+
+    // With parsedScenario null, total is 0, so pct falls back to 12%
+    expect(screen.getByText('Simulating 1 / 0')).toBeInTheDocument()
+
+    const { container } = render(<SimulationProgress />)
+    const progressFill = container.querySelector('.bg-blue-500')
+    expect(progressFill).toBeInTheDocument()
+    expect(progressFill).toHaveStyle({ width: '12%' })
   })
 })

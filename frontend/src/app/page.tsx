@@ -2,9 +2,7 @@
 
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
-import { ConversationPanel } from "@/components/controls/ConversationPanel";
 import { FrameScrubber } from "@/components/controls/FrameScrubber";
-import { EvidencePanel } from "@/components/dashboard/EvidencePanel";
 import { DataFreshnessPanel } from "@/components/dashboard/DataFreshnessPanel";
 import { GroupImpactPanel } from "@/components/dashboard/GroupImpactPanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
@@ -22,6 +20,30 @@ const MapViewport = dynamic(
 const DrawingToolbar = dynamic(
   () => import("@/components/map/DrawingToolbar").then((m) => ({ default: m.DrawingToolbar })),
   { ssr: false }
+);
+
+const ConversationPanel = dynamic(
+  () => import("@/components/controls/ConversationPanel").then((m) => ({ default: m.ConversationPanel })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full md:w-[360px] h-full bg-dark-200/95 flex items-center justify-center">
+        <div className="text-gray-500 text-xs animate-pulse">Loading panel...</div>
+      </div>
+    ),
+  }
+);
+
+const EvidencePanel = dynamic(
+  () => import("@/components/dashboard/EvidencePanel").then((m) => ({ default: m.EvidencePanel })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-gray-500 text-xs animate-pulse">Loading evidence...</div>
+      </div>
+    ),
+  }
 );
 
 export default function Home() {

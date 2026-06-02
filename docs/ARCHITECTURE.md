@@ -21,7 +21,7 @@ backend/
 ├── app/
 │   ├── config.py              # Env-based settings (Supabase, LLM, realtime cadences)
 │   ├── db.py                  # DatabaseClient: Supabase + in-memory fallback
-│   ├── main.py                # FastAPI app, startup ingestion loop
+│   ├── main.py                # FastAPI app, CORS, request logging middleware, API v1 routing
 │   ├── rag/                   # RAG engine (retriever, evidence pack, coefficient extractor)
 │   ├── realtime.py            # 6 connectors: News RSS, GDELT, mobility/jobs/land proxies, census
 │   ├── realtime_models.py     # DataDomain, SourceStatus, SnapshotData
@@ -169,3 +169,52 @@ Seven data origin levels with associated confidence:
 Confidence propagates through all three loops with per-step decay and is exposed at cell, metric, and aggregate levels.
 
 MetroPulse does not claim prediction certainty. Outputs are scenario estimates for exploration.
+
+## Security Measures
+
+### Rate Limiting
+- **POST `/api/v1/ingest`**: In-memory per-IP rate limiter — max 3 requests per 60 seconds (configurable). Returns HTTP 429 with `retry_after_seconds` in the response body.
+- Rate limit state is evicted on expiry; no persistent storage needed.
+
+### WebSocket Connection Limits
+- Max concurrent WebSocket connections controlled via `WS_MAX_CONNECTIONS` env var (default: 10).
+- Exceeding the limit returns WebSocket close code 1013 (Try Again Later).
+- Each WS message capped at 64 KB (`MAX_WS_MESSAGE_BYTES`).
+
+### CORS Policy
+- Origins configured via `CORS_ORIGINS` env var (comma-separated URLs).
+- In production, wildcard `*` origins trigger a startup warning.
+- Allowed methods: `GET`, `POST`, `OPTIONS`. Allowed headers: `Content-Type`, `Authorization`.
+
+### Path Traversal Prevention
+- `CityConfig.load()` and `CityConfig.load_geojson()` validate `city_name` with `re.fullmatch(r'[a-zA-Z0-9_]+', city_name)`.
+- Zone file paths reject `..` patterns.
+
+### Request Logging
+- All non-health-check requests are logged in structured JSON format with: method, path, status code, and response time (ms).
+- Health endpoints are excluded from logging to reduce noise.
+
+## Testing Strategy
+
+### Unit Tests (378+)
+- Located in `backend/tests/unit/`.
+- Cover: grid initialization, primary/secondary/tertiary loops, intent parsing, RAG retrieval, coefficient clamping, confidence scoring, serialization, translation.
+- Run with: `cd backend && pytest tests/unit/ -v`
+
+### Integration Tests
+- Located in `backend/tests/integration/`.
+- Test full pipeline: scenario parse → RAG → simulation → evidence synthesis.
+- Run with: `cd backend && pytest tests/integration/ -v`
+
+### Load Tests
+- Locust-based load tests in `backend/tests/load/locustfile.py`.
+- Run with: `locust -f tests/load/locustfile.py --host http://localhost:8000`
+
+### Frontend Tests (52)
+- Jest + React Testing Library component tests.
+- Run with: `cd frontend && npm run test`
+
+### Coverage Targets
+- Unit tests: ~90% coverage
+- Integration: ~75% coverage
+- Load tests: basic concurrency validation

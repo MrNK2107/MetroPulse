@@ -1,9 +1,14 @@
 import asyncio
 import logging
+import json
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from app.config import settings
 from app.db import get_db
@@ -86,7 +91,41 @@ app = FastAPI(
     title="MetroPulse API",
     version="1.0.0",
     lifespan=lifespan,
+    openapi_tags=[
+        {"name": "Health", "description": "Service health and readiness checks"},
+        {"name": "Regions", "description": "City region data and baselines"},
+        {"name": "Simulation", "description": "Simulation run management and results"},
+        {"name": "Case Studies", "description": "RAG case study search and retrieval"},
+        {"name": "Realtime", "description": "Live data sources, snapshots, and ingestion"},
+        {"name": "WebSocket", "description": "Real-time simulation streaming"},
+    ],
 )
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Structured JSON logging for all requests except health checks."""
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip logging for health check endpoints
+        if request.url.path in ("/api/v1/health", "/api/v1/health/data", "/health"):
+            return await call_next(request)
+
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+
+        log_entry = {
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "response_time_ms": elapsed_ms,
+        }
+        logger.info(json.dumps(log_entry))
+
+        # Add version header to response
+        response.headers["X-API-Version"] = "1"
+        return response
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -96,9 +135,11 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-app.include_router(health_router, tags=["health"])
-app.include_router(regions_router, prefix="/api", tags=["regions"])
-app.include_router(simulations_router, prefix="/api", tags=["simulations"])
-app.include_router(case_studies_router, prefix="/api", tags=["case-studies"])
-app.include_router(realtime_router, prefix="/api", tags=["realtime-data"])
-app.include_router(ws_router, tags=["websocket"])
+app.add_middleware(RequestLoggingMiddleware)
+
+app.include_router(health_router, prefix="/api/v1", tags=["Health"])
+app.include_router(regions_router, prefix="/api/v1", tags=["Regions"])
+app.include_router(simulations_router, prefix="/api/v1", tags=["Simulation"])
+app.include_router(case_studies_router, prefix="/api/v1", tags=["Case Studies"])
+app.include_router(realtime_router, prefix="/api/v1", tags=["Realtime"])
+app.include_router(ws_router, tags=["WebSocket"])

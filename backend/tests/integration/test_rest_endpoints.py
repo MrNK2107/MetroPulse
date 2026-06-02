@@ -8,7 +8,7 @@ from app.main import app
 async def test_health_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/health")
+        response = await client.get("/api/v1/health")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -19,7 +19,7 @@ async def test_health_endpoint():
 async def test_list_regions():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/regions")
+        response = await client.get("/api/v1/regions")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -31,7 +31,7 @@ async def test_list_regions():
 async def test_region_profile():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/regions/hyderabad/profile")
+        response = await client.get("/api/v1/regions/hyderabad/profile")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -42,7 +42,7 @@ async def test_region_profile():
 async def test_case_studies_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/case-studies?city=hyderabad&sector=manufacturing")
+        response = await client.get("/api/v1/case-studies?city=hyderabad&sector=manufacturing")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -53,7 +53,7 @@ async def test_case_studies_endpoint():
 async def test_list_simulations():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/simulations")
+        response = await client.get("/api/v1/simulations")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -63,7 +63,7 @@ async def test_list_simulations():
 async def test_realtime_data_sources_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/data-sources?city=bengaluru")
+        response = await client.get("/api/v1/data-sources?city=bengaluru")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -80,7 +80,7 @@ async def test_realtime_data_sources_endpoint():
 async def test_latest_snapshot_endpoint_returns_quality_meta():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/snapshots/latest?city=bengaluru")
+        response = await client.get("/api/v1/snapshots/latest?city=bengaluru")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True

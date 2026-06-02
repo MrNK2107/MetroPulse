@@ -5,7 +5,7 @@ from app.db import get_db, DatabaseClient
 router = APIRouter()
 
 
-@router.get("/api/health")
+@router.get("/health")
 async def health_check(db: DatabaseClient = Depends(get_db)):
     db_status = "connected" if db.is_connected() else "in_memory_fallback"
     return {
@@ -20,7 +20,7 @@ async def health_check(db: DatabaseClient = Depends(get_db)):
     }
 
 
-@router.get("/api/health/data")
+@router.get("/health/data")
 async def data_health(city: str = "bengaluru", db: DatabaseClient = Depends(get_db)):
     sources = await db.list_data_sources(city=city)
     status = "healthy"

@@ -575,31 +575,123 @@ For local-only development, LLM and Supabase integrations can be disabled or moc
 
 ## API Reference
 
+### Base URL
+
+All REST endpoints are versioned under `/api/v1`:
+
+```text
+http://localhost:8000/api/v1
+```
+
 ### REST Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/health` | Health check |
-| GET | `/api/regions` | List available city regions |
-| GET | `/api/regions/{id}` | Get region baseline data |
-| POST | `/api/simulations` | Create simulation run |
-| GET | `/api/simulations/{id}` | Get simulation results |
-| GET | `/api/case-studies` | List RAG case studies |
+| GET | `/api/v1/health` | Health check |
+| GET | `/api/v1/regions` | List available city regions |
+| GET | `/api/v1/regions/{id}/baseline` | Get region baseline data |
+| GET | `/api/v1/simulations` | List simulation runs |
+| GET | `/api/v1/simulations/{id}` | Get simulation results |
+| GET | `/api/v1/case-studies` | List RAG case studies |
+| GET | `/api/v1/data-sources` | List data sources for a city |
+| GET | `/api/v1/snapshots/latest` | Get latest data snapshot |
+| POST | `/api/v1/ingest` | Trigger manual data ingestion |
 | WS | `/ws/simulate` | Real-time simulation stream |
 
 ---
 
-## Response Envelope
+## API Usage Examples
+
+### Health Check
+
+```bash
+curl -s http://localhost:8000/api/v1/health | jq
+```
+
+### List Regions
+
+```bash
+curl -s http://localhost:8000/api/v1/regions | jq
+```
+
+### Get Region Baseline
+
+```bash
+curl -s http://localhost:8000/api/v1/regions/bengaluru/baseline | jq
+```
+
+### List Simulations
+
+```bash
+curl -s "http://localhost:8000/api/v1/simulations?page=1&per_page=10" | jq
+```
+
+### List Case Studies
+
+```bash
+curl -s "http://localhost:8000/api/v1/case-studies?city=bengaluru&sector=it_ites" | jq
+```
+
+### Get Latest Data Snapshot
+
+```bash
+curl -s "http://localhost:8000/api/v1/snapshots/latest?city=bengaluru" | jq
+```
+
+### Trigger Data Ingestion
+
+```bash
+curl -s -X POST "http://localhost:8000/api/v1/ingest?city=bengaluru" | jq
+```
+
+### WebSocket Simulation
+
+```bash
+# Using websocat (install: cargo install websocat)
+websocat ws://localhost:8000/ws/simulate
+```
+
+Send a start message (natural language scenario):
+
+```json
+{"type": "START", "scenario": "What if Bengaluru gets a 40% increase in IT FDI over 24 months?"}
+```
+
+Or a structured scenario:
+
+```json
+{
+  "type": "START",
+  "city": "bengaluru",
+  "scenarios": [
+    {"sector": "it_ites", "delta_pct": 0.4, "label": "IT FDI Surge"}
+  ],
+  "horizon_months": 24,
+  "policy_flags": ["digital_india"]
+}
+```
+
+### Example Response Envelope
+
+All REST responses follow this envelope:
 
 ```json
 {
   "success": true,
-  "data": {},
+  "data": { ... },
   "error": null,
   "meta": {
-    "timestamp": "2026-05-27T00:00:00Z"
+    "timestamp": "2026-06-02T14:00:00Z"
   }
 }
+```
+
+### API Version Header
+
+All responses include an `X-API-Version` header:
+
+```text
+X-API-Version: 1
 ```
 
 ---

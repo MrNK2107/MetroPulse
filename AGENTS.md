@@ -47,6 +47,16 @@ This ensures identical results across runs for the same city config.
 ### WebSocket Connection Limit
 Configurable via `WS_MAX_CONNECTIONS` env var (default: 10). Exceeding the limit returns WebSocket close code 1013 (Try Again Later). See `app/config.py` → `ws_max_connections`.
 
+## API Versioning
+- All REST routes are prefixed with `/api/v1`
+- Responses include `X-API-Version: 1` header (added by `RequestLoggingMiddleware` in `main.py`)
+- Health: `GET /api/v1/health`, Regions: `/api/v1/regions`, Simulations: `/api/v1/simulations`, etc.
+
+## Request Logging
+- `RequestLoggingMiddleware` in `main.py` logs all non-health requests as structured JSON
+- Fields: `method`, `path`, `status`, `response_time_ms`
+- Health endpoints (`/api/v1/health`, `/api/v1/health/data`) are excluded
+
 ## Conventions
 - Python: Use NumPy vectorized ops, no Python loops over cells in sim engine
 - TypeScript: strict mode, camelCase props, PascalCase components
