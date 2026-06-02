@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import h3
 import numpy as np
 
 from engine.models import GridState, N_SECTORS, SECTOR_INDEX, SECTOR_NAMES, SimulationParams
+
+logger = logging.getLogger(__name__)
 
 
 class GridFactory:
@@ -61,7 +64,7 @@ class GridFactory:
         H = np.clip(1.25 - (R - np.mean(R)) * 0.35 - slum_pct * 0.15, 0.35, 1.6)
         F = _flood_proxy(params.city_config, centers, d_norm)
         M = np.clip(0.15 + d_norm * 0.65 + weights[SECTOR_INDEX["informal"]] * 0.4, 0.0, 1.0)
-        slum_flag = (np.random.random(n) < slum_pct)
+        slum_flag = (np.array([hash(h) % 1000 for h in h3_indices]) / 1000.0 < slum_pct)
 
         # Initialize confidence arrays (all synthetic initially)
         from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
@@ -121,7 +124,7 @@ class GridFactory:
             pairs_arr = np.array(neighbor_pairs, dtype=np.float64)
             neighbor_i_idx = pairs_arr[:, 0].astype(int)
             neighbor_j_idx = pairs_arr[:, 1].astype(int)
-            lambda_r = float(params.city_config.constants.get("lambda_realestate_cascade", 3.2))
+            lambda_r = float(params.city_config.constants.get("lambda_realestate_cascade", 2.8))
             neighbor_weights = np.exp(-pairs_arr[:, 2] / lambda_r)
 
         return GridState(
@@ -229,8 +232,8 @@ class GridFactory:
                                 if np.any(mask):
                                     flags[name] = mask
                                     continue
-                    except Exception:
-                        pass  # Fall through to distance fallback
+                    except Exception as e:
+                        logger.warning("Zone flags computation failed: %s", e)  # Fall through to distance fallback
 
             # Fallback: distance radius from city center
             dist = _haversine_vec(centers[:, 0], centers[:, 1], center_lat, center_lng)
@@ -260,7 +263,8 @@ def public_zone_mask(state: GridState, zone_geojson: dict[str, Any] | None) -> n
                     np.array(state.h3_indices), list(zone_cells)
                 )
             return state.public_dist_cache[zone_key]
-    except Exception:
+    except Exception as e:
+        logger.warning("Public zone mask failed: %s", e)
         return mask
     return mask
 

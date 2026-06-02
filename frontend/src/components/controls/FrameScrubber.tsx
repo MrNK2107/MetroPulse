@@ -72,6 +72,7 @@ export const FrameScrubber = React.memo(function FrameScrubber() {
         min={0}
         max={total - 1}
         value={current}
+        aria-label="Simulation month"
         onChange={handleScrubberChange}
         className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-dark-300 accent-blue-500 outline-none"
       />

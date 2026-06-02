@@ -194,10 +194,6 @@ class GridState:
     source_manifest: dict[str, Any] = field(default_factory=dict)
     snapshot_quality_score: float = 0.0
 
-    # Overlay modifiers from real-time data (set by overlay.py)
-    economic_modifier: np.ndarray | None = None
-    migration_modifier: np.ndarray | None = None
-    investment_confidence: np.ndarray | None = None
     overlay_summary: dict[str, Any] = field(default_factory=dict)
     metric_metadata: dict[str, Any] = field(default_factory=dict)
     migration_balance: float = 0.0

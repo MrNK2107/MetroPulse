@@ -125,10 +125,6 @@ export function metricToRGBA(value: number, metric: MapMetricKey = "delta"): RGB
   return [r, g, b, Math.min(255, Math.max(0, alpha))];
 }
 
-// Legacy compatibility wrapper
-export function deltaToRGBA(delta: number, _height: number): RGBA {
-  return metricToRGBA(delta, "delta");
-}
 
 export function getLegendStops(metric: MapMetricKey = "delta"): { value: number; color: string }[] {
   return METRIC_SCALES[metric].stops.map((stop) => ({

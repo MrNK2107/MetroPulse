@@ -54,6 +54,8 @@ export default function Home() {
       <button
         onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
         className="md:hidden absolute top-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all"
+        aria-label="Toggle scenario panel"
+        aria-expanded={isLeftSidebarOpen}
         title="Toggle scenario panel"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,7 +66,7 @@ export default function Home() {
       {/* Mobile Backdrop */}
       {(isLeftSidebarOpen || isRightSidebarOpen) && (
         <div
-          className="md:hidden fixed inset-0 z-15 bg-black/50 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-[15] bg-black/50 backdrop-blur-sm"
           onClick={() => {
             setLeftSidebarOpen(false);
             setRightSidebarOpen(false);

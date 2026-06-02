@@ -335,9 +335,9 @@ async def simulation_websocket(websocket: WebSocket):
 
 
 async def _receive_start(websocket: WebSocket) -> StartScenarioMessage:
-    deadline = asyncio.get_event_loop().time() + 30.0
+    deadline = asyncio.get_running_loop().time() + 30.0
     while True:
-        remaining = deadline - asyncio.get_event_loop().time()
+        remaining = deadline - asyncio.get_running_loop().time()
         if remaining <= 0:
             raise asyncio.TimeoutError()
         message = await asyncio.wait_for(websocket.receive_text(), timeout=remaining)

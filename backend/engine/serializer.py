@@ -76,7 +76,7 @@ def to_frame(state: GridState, month: int) -> dict:
         for i in range(state.n_cells)
     ]
 
-    year = 2026 + (month - 1) // 12
+    year = datetime.now().year + (month - 1) // 12
     m = ((month - 1) % 12) + 1
     metrics = compute_aggregate_metrics(state)
     overall_confidence = float(np.round(np.mean(cell_confidence), 2))

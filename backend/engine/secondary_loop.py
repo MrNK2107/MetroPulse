@@ -37,6 +37,7 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
 
     if "PM Awas Yojana" in params.policies_active:
         state.H[state.slum_flag] += float(state.constants.get("slum_upgrade_rate", 0.008)) * pmay_multiplier
+        state.H = np.clip(state.H, 0.2, 1.8)
         state.active_effects.append("PMAY housing upgrade")
 
     if "AMRUT" in params.policies_active:

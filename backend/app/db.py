@@ -540,9 +540,12 @@ class DatabaseClient:
             "cell_states": cell_states,
         }
         if self._client:
-            await asyncio.to_thread(
-                lambda: self._client.table("simulations").insert(record).execute()
-            )
+            try:
+                await asyncio.to_thread(
+                    lambda: self._client.table("simulations").insert(record).execute()
+                )
+            except Exception as e:
+                logger.warning("Supabase save_simulation failed: %s", e)
         else:
             self._saved.append(record)
         return sim_id

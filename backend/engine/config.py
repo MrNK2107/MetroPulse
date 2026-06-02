@@ -144,6 +144,6 @@ def list_available_cities() -> list[dict[str, Any]]:
                     "center": cfg.center,
                     "zoom": cfg.zoom,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to load city config %s: %s", f, e)
     return result

@@ -120,7 +120,7 @@ interface SimulationStore {
   setLeftSidebarOpen: (open: boolean) => void;
   setRightSidebarOpen: (open: boolean) => void;
   setBottomDrawerOpen: (open: boolean) => void;
-  setMapViewState: (viewState: any) => void;
+  setMapViewState: (viewState: SimulationStore["mapViewState"]) => void;
   flyToCity: (cityId: string) => void;
   loadCityCoords: () => Promise<void>;
 
@@ -206,7 +206,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   setParsedScenario: (params, snapshot) => {
     set({ parsedScenario: params, publicWorksZone: params.public_works_zone, snapshot: snapshot ?? null });
     // Automatically center map viewport on resolved city
-    const resolvedCity = params.city.toLowerCase().replace(" ", "_");
+    const resolvedCity = params.city.toLowerCase().replaceAll(" ", "_");
     const cityConfig = get().cityCoords[resolvedCity];
     if (cityConfig) {
       set({

@@ -35,10 +35,9 @@ async def run_simulation(
     # Expose final state for explainability
     if state_ref is not None:
         state_ref.append(state)
-
     if db is not None and last_frame is not None:
         await db.save_simulation(
-            region_id=None,
+            region_id=params.city,
             params=params.to_dict(),
             horizon_months=params.horizon_months,
             result_summary=last_frame["metrics"],

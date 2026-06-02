@@ -24,6 +24,7 @@ function LaTeX({ math, block = false }: { math: string; block?: boolean }) {
       displayMode: block,
       throwOnError: false,
     });
+    // Safe: html is produced by KaTeX renderToString, which escapes all user input and produces trusted markup
     return <span dangerouslySetInnerHTML={{ __html: html }} className={block ? "block my-2" : "inline-block"} />;
   } catch {
     return <span className="font-mono">{math}</span>;

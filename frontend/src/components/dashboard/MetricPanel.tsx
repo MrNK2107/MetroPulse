@@ -245,10 +245,11 @@ export function MetricPanel() {
             }
 
             return (
-              <div
+              <button
                 key={config.dataKey}
                 onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none"
+                aria-label={`${config.title}: ${valStr}`}
+                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
               >
                 <div className="flex flex-col justify-center min-w-0">
                   <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">
@@ -265,39 +266,41 @@ export function MetricPanel() {
                     {metadata.confidence_label}
                   </span>
                 )}
-              </div>
+              </button>
             );
           })}
           {currentMetrics?.airQualityIndex !== undefined && (() => {
             const aqi = currentMetrics.airQualityIndex!;
             const aqiColor = aqi <= 100 ? "text-emerald-400 font-bold" : aqi <= 200 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
             return (
-              <div
+              <button
                 onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none"
+                aria-label={`Air Quality Index: ${aqi.toFixed(0)}`}
+                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
               >
                 <div className="flex flex-col justify-center min-w-0">
                   <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">AQI</span>
                   <span className="text-[8px] text-gray-600 font-mono truncate">Air Quality Index</span>
                 </div>
                 <span className={`text-[11px] font-mono ${aqiColor} ml-2 shrink-0`}>{aqi.toFixed(0)}</span>
-              </div>
+              </button>
             );
           })()}
           {currentMetrics?.waterStressIndex !== undefined && (() => {
             const ws = currentMetrics.waterStressIndex!;
             const wsColor = ws < 0.4 ? "text-blue-400 font-bold" : ws < 0.7 ? "text-amber-400 font-bold" : "text-red-400 font-bold";
             return (
-              <div
+              <button
                 onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
-                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none"
+                aria-label={`Water Stress: ${(ws * 100).toFixed(0)}%`}
+                className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
               >
                 <div className="flex flex-col justify-center min-w-0">
                   <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Water Stress</span>
                   <span className="text-[8px] text-gray-600 font-mono truncate">Stress Index</span>
                 </div>
                 <span className={`text-[11px] font-mono ${wsColor} ml-2 shrink-0`}>{(ws * 100).toFixed(0)}%</span>
-              </div>
+              </button>
             );
           })()}
         </div>

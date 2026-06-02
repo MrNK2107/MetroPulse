@@ -24,11 +24,12 @@ export function ConversationPanel() {
   const conversationMode = useSimulationStore((s) => s.conversationMode);
   const setConversationMode = useSimulationStore((s) => s.setConversationMode);
   const resetAll = useSimulationStore((s) => s.resetAll);
+  const cityCoords = useSimulationStore((s) => s.cityCoords);
   const { startSimulation, stopSimulation, sendResponse } = useWebSocket();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isRunning = !["idle", "done", "error", "needs_input"].includes(pipelineStage);
-  const canRun = scenarioText.trim().length >= 4 && !isRunning;
+  const canRun = scenarioText.trim().length >= 10 && !isRunning;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -247,7 +248,7 @@ export function ConversationPanel() {
                 }}
                 className="w-full rounded-xl border border-dark-100/70 bg-dark-300/60 px-3 py-2.5 text-xs text-gray-200 outline-none focus:border-blue-500/70 transition-all cursor-pointer font-bold uppercase tracking-wider"
               >
-                {Object.entries(useSimulationStore.getState().cityCoords).map(([id, config]) => (
+                {Object.entries(cityCoords).map(([id, config]) => (
                   <option key={id} value={id} className="bg-dark-200 text-gray-300">
                     {config.name}
                   </option>
