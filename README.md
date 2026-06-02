@@ -52,7 +52,7 @@
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  2. RETRIEVE — RAG engine scans 15 Indian urban case studies,       │
+│  2. RETRIEVE — RAG engine scans 20 Indian urban case studies,       │
 │     computes relevance, adjusts sector coefficients within clamps   │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
@@ -80,7 +80,7 @@
 **Key design decisions:**
 
 - **No database writes mid-loop** — simulation runs in-memory, batch-saves only after completion
-- **Confidence decays per month** — primary ×0.90, secondary ×0.80, monsoon ×0.75
+- **Confidence decays per month** — primary ×0.97, secondary ×0.95, monsoon ×0.75
 - **Coefficients are clamped** — RAG adjustments bounded to [0.65, 1.10], cannot invent unsupported effects
 - **All parameters are per-city configurable** — no hardcoded values in simulation logic
 - **Real-time data is a proxy** — news sentiment adjusts starting state, not a direct measurement
@@ -351,7 +351,7 @@ AI Narrative Generation
 | Simulation | Python, NumPy, SciPy |
 | Database | Supabase PostgreSQL |
 | Vector Search | pgvector |
-| AI Layer | OpenAI, Gemini, Ollama |
+| AI Layer | OpenAI, Gemini, Ollama, MiMo |
 | State Management | Zustand |
 | Streaming | WebSockets |
 | Testing | Pytest, Jest, Locust |
@@ -406,6 +406,7 @@ MetroPulse/
 │   │   │   └── simulation.py
 │   │   ├── config.py
 │   │   ├── db.py
+│   │   ├── realtime.py
 │   │   └── main.py
 │   │
 │   ├── engine/
@@ -415,6 +416,9 @@ MetroPulse/
 │   │   ├── tertiary_loop.py
 │   │   ├── runner.py
 │   │   ├── serializer.py
+│   │   ├── simulation_explainability.py
+│   │   ├── translator.py
+│   │   ├── provenance.py
 │   │   └── models.py
 │   │
 │   ├── tests/
@@ -459,6 +463,10 @@ MetroPulse/
 │   └── migrations/
 │
 ├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── DATA_CREDIBILITY.md
+│   ├── LIMITATIONS.md
+│   ├── RAG_ENGINE.md
 │   └── INDIA_OVERHAUL_PLAN.md
 │
 ├── .github/

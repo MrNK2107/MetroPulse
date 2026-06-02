@@ -137,7 +137,7 @@ Three loops run per simulation month:
    - `ΔK = K × monthly_rate × sector_weight`
    - Policy boosts (Digital India, Make in India, SEZ, public works)
    - Employment derived from capital changes
-   - Confidence decays ×0.90/month
+   - Confidence decays ×0.97/month
 
 2. **Secondary Loop** — Cascading effects
    - Real estate: neighbor spillover with distance decay
@@ -145,7 +145,7 @@ Three loops run per simulation month:
    - Housing affordability from real estate + employment
    - Migration pressure from housing + employment
    - Monsoon effects on flood risk
-   - Confidence decays ×0.80/month
+   - Confidence decays ×0.95/month
 
 3. **Tertiary Loop** — Evidence synthesis (post-simulation)
    - Plain-language translation with ₹ amounts

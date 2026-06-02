@@ -38,7 +38,7 @@ MetroPulse has not been validated against historical outcomes. There is no evide
 
 ### 7. Case Studies are Generalized
 
-The 15 case studies describe real historical events but with generalized outcomes. They do not cite specific quantitative data, peer-reviewed studies, or verified statistics.
+The 20 case studies describe real historical events but with generalized outcomes. They do not cite specific quantitative data, peer-reviewed studies, or verified statistics.
 
 ### 8. Employment Data is Estimated
 

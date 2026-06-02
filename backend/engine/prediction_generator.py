@@ -9,61 +9,6 @@ from engine.models import Prediction, SectorPrediction, SECTOR_LABELS, SECTOR_NA
 
 logger = logging.getLogger(__name__)
 
-_PREDICTION_PROMPT = """You are an urban economics analyst specializing in Indian cities.
-Given this scenario for {city_name} over {horizon_months} months:
-
-Sector changes:
-{sector_changes}
-
-Active policies: {policies}
-
-Predict the impact on employment per sector, real estate, transit, most affected areas, and counter-intuitive effects.
-
-Respond ONLY with valid JSON matching this exact schema:
-{{
-  "employment_impact": {{
-    "<sector_name>": {{
-      "direction": "up"|"down"|"stable",
-      "magnitude": "low"|"moderate"|"high",
-      "confidence": "low"|"medium"|"high",
-      "rationale": "<one sentence>"
-    }}
-  }},
-  "real_estate_impact": {{
-    "direction": "<up|down|stable|mixed>",
-    "confidence": "<low|medium|high>",
-    "rationale": "<one sentence>"
-  }},
-  "transit_impact": {{
-    "direction": "<higher load|lower demand|stable>",
-    "confidence": "<low|medium|high>",
-    "rationale": "<one sentence>"
-  }},
-  "most_affected_areas": ["<area 1>", "<area 2>", "<area 3>"],
-  "counter_intuitive": ["<insight 1>", "<insight 2>"],
-  "overall_confidence": "<low|medium|high>",
-  "reasoning": "<2-3 sentence summary>"
-}}
-
-Sector names must be exactly: {sector_list}"""
-
-
-def _build_prompt(params: SimulationParams) -> str:
-    changes = []
-    for sector, delta in params.sector_deltas.items():
-        if abs(delta) > 0:
-            changes.append(f"  - {SECTOR_LABELS[sector]}: {delta:+.0f}%")
-    if not changes:
-        changes = ["  - No explicit sector changes; policy effects only"]
-
-    return _PREDICTION_PROMPT.format(
-        city_name=params.city_config.name,
-        horizon_months=params.horizon_months,
-        sector_changes="\n".join(changes),
-        policies=", ".join(params.policies_active) if params.policies_active else "none",
-        sector_list=", ".join(SECTOR_NAMES),
-    )
-
 
 def _build_enriched_prompt(params: SimulationParams) -> str:
     """Build a context-rich prompt with city data, zones, baselines, and case studies."""
@@ -276,11 +221,6 @@ async def _call_mimo(prompt: str, timeout_ms: int) -> str:
         resp.raise_for_status()
         data = resp.json()
         return data["choices"][0]["message"]["content"]
-
-
-def _deterministic_prediction(params: SimulationParams) -> Prediction:
-    """Legacy deterministic fallback — kept for backward compat."""
-    return _enhanced_deterministic_prediction(params)
 
 
 _CITY_TYPE_CONTEXT: dict[str, str] = {

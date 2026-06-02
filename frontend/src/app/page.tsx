@@ -9,7 +9,7 @@ import { DataFreshnessPanel } from "@/components/dashboard/DataFreshnessPanel";
 import { GroupImpactPanel } from "@/components/dashboard/GroupImpactPanel";
 import { MetricPanel } from "@/components/dashboard/MetricPanel";
 import { PipelineFlow } from "@/components/dashboard/PipelineFlow";
-import { SimulationProgress } from "@/components/shared/LoadingOverlay";
+import { SimulationProgress } from "@/components/shared/SimulationProgress";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSimulationStore } from "@/store/simulationStore";

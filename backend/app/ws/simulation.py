@@ -180,8 +180,8 @@ async def simulation_websocket(websocket: WebSocket):
             prediction = await generate_prediction(params, mode=conv.mode.value)
         except Exception as e:
             logger.warning("Prediction generation failed, using deterministic fallback: %s", e)
-            from engine.prediction_generator import _deterministic_prediction
-            prediction = _deterministic_prediction(params)
+            from engine.prediction_generator import _enhanced_deterministic_prediction
+            prediction = _enhanced_deterministic_prediction(params)
             prediction_source = "deterministic_fallback"
 
         prediction_data = prediction.model_dump()

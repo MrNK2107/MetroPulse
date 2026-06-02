@@ -7,7 +7,7 @@ The RAG engine supports coefficient reasoning, explanations, and confidence scor
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
 │  ParsedScenario  │────▶│  Retriever        │────▶│  EvidencePack        │
-│  + scenario_text │     │  (15 case studies) │     │  items + coverage    │
+│  + scenario_text │     │  (20 case studies) │     │  items + coverage    │
 └─────────────────┘     └──────────────────┘     └──────────┬──────────┘
                                                             │
                                                             ▼
@@ -36,7 +36,7 @@ The RAG engine supports coefficient reasoning, explanations, and confidence scor
 
 ## Evidence Retrieval Flow
 
-1. `retrieve_evidence(parsed, scenario_text, top_k=5)` scans the 15 LOCAL_CASE_STUDIES
+1. `retrieve_evidence(parsed, scenario_text, top_k=5)` scans the 20 LOCAL_CASE_STUDIES
 2. Computes relevance score per case: city match (0.25) + sector overlap (0.45) + policy overlap (0.20) + keyword match (0.10)
 3. Filters out cases with relevance < 0.25
 4. Returns sorted list of EvidenceItem objects
@@ -78,6 +78,6 @@ If no evidence matches, the engine dampens unsupported coefficients rather than 
 The primary retrieval uses keyword/overlap scoring against hardcoded case studies. A secondary path exists for semantic search via Supabase pgvector:
 
 - `db.search_case_studies()` calls the `match_case_studies` RPC function
-- `db.seed_case_studies()` upserts the 15 case studies with embeddings
+- `db.seed_case_studies()` upserts the 20 case studies with embeddings
 - `db.generate_embedding()` supports OpenAI, Gemini, and Ollama providers
 - Fixed 1536 dimensions (CASE_STUDY_EMBEDDING_DIMENSIONS)

@@ -19,7 +19,7 @@ It is **not** a prediction engine, forecasting platform, or decision-making syst
 | News Mobility Proxy | Transport/traffic news filtered for mobility sentiment | 0.70 |
 | News Jobs Proxy | Employment/hiring/layoff news filtered for jobs sentiment | 0.70 |
 | News Land Value Proxy | Real estate/rent/property news filtered for land value sentiment | 0.70 |
-| Static Census | Population/demographics from city YAML config | 0.55 |
+| Static Census | Population/demographics from city YAML config | 0.90 |
 
 News sentiment is **real-time** but is a **proxy** — it tells you what people are talking about, not what is actually measured. A negative sentiment score means more negative news articles, not that GDP actually fell.
 
@@ -60,11 +60,11 @@ Every simulation output carries a confidence score (0-1):
 | 0.00 - 0.39 | Low | Model-generated / synthetic |
 
 Confidence **decays** each simulation month:
-- Primary loop: ×0.90 per month (scenario shocks are well-understood)
-- Secondary cascade: ×0.80 per month (spatial spillovers are less certain)
+- Primary loop: ×0.97 per month (scenario shocks are well-understood)
+- Secondary cascade: ×0.95 per month (spatial spillovers are less certain)
 - Monsoon effects: ×0.75 (weather is hard to predict)
 
-A cell that starts at 0.55 confidence will drop to ~0.35 after 6 months of simulation.
+A cell that starts at 0.55 confidence will drop to ~0.46 after 6 months of simulation.
 
 ---
 
@@ -104,7 +104,7 @@ The frontend displays this in:
 The RAG engine retrieves relevant Indian urban case studies to support coefficient selection and provide evidence-backed explanations.
 
 **What it does:**
-- Scans 15 hardcoded Indian urban case studies (Bengaluru IT, Hyderabad pharma, Delhi metro, Mumbai mill land, etc.)
+- Scans 20 hardcoded Indian urban case studies (Bengaluru IT, Hyderabad pharma, Delhi metro, Mumbai mill land, etc.)
 - Computes relevance scores: city match (0.25) + sector overlap (0.45) + policy overlap (0.20) + keyword match (0.10)
 - Adjusts sector coefficients within clamps [0.65, 1.10] based on evidence strength
 - Provides confidence-weighted explanations

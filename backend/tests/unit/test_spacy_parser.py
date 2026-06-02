@@ -1,6 +1,17 @@
 import pytest
 from engine.nl_engine.spacy_parser import SpacyParser
 
+# SpacyParser always imports — the error happens at .nlp access time.
+# Probe whether spacy actually loads on this machine.
+try:
+    _probe = SpacyParser()
+    _ = _probe.nlp
+    HAS_SPACY = True
+except Exception:
+    HAS_SPACY = False
+
+pytestmark = pytest.mark.skipif(not HAS_SPACY, reason='spacy/en_core_web_sm not installed')
+
 
 @pytest.fixture
 def parser():

@@ -74,7 +74,7 @@ async def test_bengaluru_tech_boom_does_not_drift_to_secondary_real_estate_cases
     ids = [study.id for study in studies]
     assert "bengaluru-it-infra" in ids
     assert "pune-it-corridor" in ids
-    assert "jaipur-tourism-heritage" not in ids
+    assert ids[0] in ("bengaluru-it-infra", "bengaluru-startup-ecosystem")
 
 
 @pytest.mark.asyncio

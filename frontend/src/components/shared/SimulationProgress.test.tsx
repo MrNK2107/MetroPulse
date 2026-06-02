@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
-import { SimulationProgress } from './LoadingOverlay'
+import { SimulationProgress } from './SimulationProgress'
 import { useSimulationStore } from '@/store/simulationStore'
 import type { StageEntry } from '@/store/simulationStore'
 

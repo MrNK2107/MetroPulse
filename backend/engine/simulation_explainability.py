@@ -24,8 +24,8 @@ def explain_metric_deltas(
                 "value": -0.042,
                 "confidence": 0.63,
                 "drivers": [
-                    {"factor": "transport disruption", "contribution": 48},
-                    {"factor": "employment decline", "contribution": 31},
+                    {"factor": "transport disruption", "contribution_pct": 48},
+                    {"factor": "employment decline", "contribution_pct": 31},
                 ]
             },
             ...
@@ -106,30 +106,30 @@ def _decompose_gdp_drivers(
         direction = "boost" if delta > 0 else "disruption"
         drivers.append({
             "factor": f"{label} {direction}",
-            "contribution": min(round(contribution), 100),
+            "contribution_pct": min(round(contribution), 100),
         })
 
     # Policy effects
     if params.policies_active:
         drivers.append({
             "factor": f"Policy effects ({', '.join(params.policies_active[:2])})",
-            "contribution": min(len(params.policies_active) * 8, 25),
+            "contribution_pct": min(len(params.policies_active) * 8, 25),
         })
 
     # Active effects from simulation
     for effect in active_effects[:2]:
         if "monsoon" in effect.lower() or "flood" in effect.lower():
-            drivers.append({"factor": "Monsoon/flood effects", "contribution": 15})
+            drivers.append({"factor": "Monsoon/flood effects", "contribution_pct": 15})
         elif "cascade" in effect.lower() or "spillover" in effect.lower():
-            drivers.append({"factor": "Spatial spillover", "contribution": 12})
+            drivers.append({"factor": "Spatial spillover", "contribution_pct": 12})
 
     if not drivers:
-        drivers.append({"factor": "Baseline effects", "contribution": 100})
+        drivers.append({"factor": "Baseline effects", "contribution_pct": 100})
 
     # Normalize to 100%
-    total = sum(d["contribution"] for d in drivers) or 1
+    total = sum(d["contribution_pct"] for d in drivers) or 1
     for d in drivers:
-        d["contribution"] = round(d["contribution"] / total * 100)
+        d["contribution_pct"] = round(d["contribution_pct"] / total * 100)
 
     return drivers[:5]
 
@@ -141,22 +141,22 @@ def _decompose_unemployment_drivers(
     drivers = []
 
     if unemp > baseline + 0.005:
-        drivers.append({"factor": "Job losses from sector shocks", "contribution": 55})
-        drivers.append({"factor": "Informal economy contraction", "contribution": 25})
+        drivers.append({"factor": "Job losses from sector shocks", "contribution_pct": 55})
+        drivers.append({"factor": "Informal economy contraction", "contribution_pct": 25})
         if any("monsoon" in e.lower() for e in active_effects):
-            drivers.append({"factor": "Seasonal disruption", "contribution": 20})
+            drivers.append({"factor": "Seasonal disruption", "contribution_pct": 20})
     elif unemp < baseline - 0.005:
         has_positive_shocks = any(v > 0.0 for v in params.sector_deltas.values())
         if has_positive_shocks:
-            drivers.append({"factor": "Job creation from growth sectors", "contribution": 60})
-            drivers.append({"factor": "Policy-driven employment", "contribution": 25})
-            drivers.append({"factor": "Informal economy expansion", "contribution": 15})
+            drivers.append({"factor": "Job creation from growth sectors", "contribution_pct": 60})
+            drivers.append({"factor": "Policy-driven employment", "contribution_pct": 25})
+            drivers.append({"factor": "Informal economy expansion", "contribution_pct": 15})
         else:
-            drivers.append({"factor": "Baseline informal sector growth", "contribution": 60})
-            drivers.append({"factor": "Baseline migration patterns", "contribution": 25})
-            drivers.append({"factor": "Informal economy expansion", "contribution": 15})
+            drivers.append({"factor": "Baseline informal sector growth", "contribution_pct": 60})
+            drivers.append({"factor": "Baseline migration patterns", "contribution_pct": 25})
+            drivers.append({"factor": "Informal economy expansion", "contribution_pct": 15})
     else:
-        drivers.append({"factor": "Minimal change from baseline", "contribution": 100})
+        drivers.append({"factor": "Minimal change from baseline", "contribution_pct": 100})
 
     return drivers[:4]
 
@@ -166,7 +166,7 @@ def _decompose_realestate_drivers(
 ) -> list[dict[str, Any]]:
     re_delta = re_index - 1.0
     if abs(re_delta) < 0.01:
-        return [{"factor": "Stable — near baseline", "contribution": 100}]
+        return [{"factor": "Stable — near baseline", "contribution_pct": 100}]
 
     # Compute raw signal weights from actual scenario data
     # Activity spillover: proportional to weighted sector shocks (capital flow)
@@ -197,18 +197,18 @@ def _decompose_realestate_drivers(
         total_raw = 1.0
 
     drivers = [
-        {"factor": "Economic activity spillover", "contribution": round(activity_raw / total_raw * 100)},
-        {"factor": "Employment-driven demand", "contribution": round(employment_raw / total_raw * 100)},
+        {"factor": "Economic activity spillover", "contribution_pct": round(activity_raw / total_raw * 100)},
+        {"factor": "Employment-driven demand", "contribution_pct": round(employment_raw / total_raw * 100)},
     ]
     if has_rera:
-        drivers.append({"factor": "RERA volatility dampening", "contribution": round(0.15 / total_raw * 100)})
+        drivers.append({"factor": "RERA volatility dampening", "contribution_pct": round(0.15 / total_raw * 100)})
     if has_pmay:
-        drivers.append({"factor": "PMAY housing program", "contribution": round(0.10 / total_raw * 100)})
+        drivers.append({"factor": "PMAY housing program", "contribution_pct": round(0.10 / total_raw * 100)})
 
     # Baseline gets the remainder to ensure we sum to 100 %
-    used = sum(d["contribution"] for d in drivers)
+    used = sum(d["contribution_pct"] for d in drivers)
     if used < 100:
-        drivers.append({"factor": "Other market forces", "contribution": 100 - used})
+        drivers.append({"factor": "Other market forces", "contribution_pct": 100 - used})
 
     return drivers[:4]
 
@@ -218,19 +218,19 @@ def _decompose_congestion_drivers(
 ) -> list[dict[str, Any]]:
     if congestion > 0.7:
         drivers = [
-            {"factor": "High employment density", "contribution": 50},
-            {"factor": "Economic activity concentration", "contribution": 30},
+            {"factor": "High employment density", "contribution_pct": 50},
+            {"factor": "Economic activity concentration", "contribution_pct": 30},
         ]
         if params.city_config.metro_system:
-            drivers.append({"factor": "Metro capacity limits", "contribution": 20})
+            drivers.append({"factor": "Metro capacity limits", "contribution_pct": 20})
         return drivers[:4]
     elif congestion > 0.4:
         return [
-            {"factor": "Moderate urban density", "contribution": 60},
-            {"factor": "Employment distribution", "contribution": 40},
+            {"factor": "Moderate urban density", "contribution_pct": 60},
+            {"factor": "Employment distribution", "contribution_pct": 40},
         ]
     else:
-        return [{"factor": "Low density / distributed activity", "contribution": 100}]
+        return [{"factor": "Low density / distributed activity", "contribution_pct": 100}]
 
 
 def _generate_summary(
@@ -325,7 +325,7 @@ def format_explanation_narrative(explanations: dict[str, dict[str, Any]]) -> str
         lines.append("")
         lines.append("Main drivers:")
         for d in drivers[:3]:
-            lines.append(f"- {d['factor']} ({d['contribution']}%)")
+            lines.append(f"- {d['factor']} ({d['contribution_pct']}%)")
         lines.append("")
 
     # Add summary if available
