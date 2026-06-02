@@ -4,47 +4,7 @@ import re
 
 from engine.config import CityConfig, list_available_cities
 from engine.models import ParsedScenario, SECTOR_NAMES, SECTOR_LABELS
-
-
-CITY_ALIASES: dict[str, str] = {
-    "bangalore": "bengaluru",
-    "bengaluru": "bengaluru",
-    "bombay": "mumbai",
-    "mumbai": "mumbai",
-    "delhi": "delhi_ncr",
-    "ncr": "delhi_ncr",
-    "delhi ncr": "delhi_ncr",
-    "hyderabad": "hyderabad",
-    "chennai": "chennai",
-    "pune": "pune",
-    "kolkata": "kolkata",
-    "calcutta": "kolkata",
-    "ahmedabad": "ahmedabad",
-    "jaipur": "jaipur",
-    "lucknow": "lucknow",
-    "chandigarh": "chandigarh",
-    "bhubaneswar": "bhubaneswar",
-}
-
-SECTOR_KEYWORDS: dict[str, list[str]] = {
-    "it_ites": ["it", "tech", "software", "startup", "digital", "ites"],
-    "manufacturing": ["manufacturing", "factory", "auto", "pharma", "textile", "industrial"],
-    "real_estate": ["real estate", "housing", "construction", "property", "rent"],
-    "trade_hospitality": ["trade", "retail", "hospitality", "tourism", "hotel"],
-    "transport_logistics": ["transport", "logistics", "metro", "port", "rail", "freight"],
-    "informal": ["informal", "street vendor", "slum", "casual labor"],
-    "public_admin": ["public administration", "government", "municipal", "civic"],
-}
-
-POLICY_KEYWORDS: dict[str, list[str]] = {
-    "SEZ Notification": ["sez", "special economic zone"],
-    "Smart City Mission": ["smart city"],
-    "AMRUT": ["amrut", "water", "sanitation"],
-    "RERA Compliance": ["rera"],
-    "PM Awas Yojana": ["pmay", "awas", "affordable housing", "housing scheme"],
-    "Make in India": ["make in india"],
-    "Digital India": ["digital india"],
-}
+from engine.nl_engine.domain_maps import CITY_ALIASES, SECTOR_KEYWORDS, POLICY_KEYWORDS
 
 
 class ScenarioParseError(ValueError):

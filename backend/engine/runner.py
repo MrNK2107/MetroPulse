@@ -7,8 +7,6 @@ from engine import primary_loop, secondary_loop, serializer
 from engine.grid import GridFactory
 from engine.models import SimulationParams
 
-SIMULATION_TIMEOUT_MS = 3000
-
 
 class SimulationTimeoutError(Exception):
     pass

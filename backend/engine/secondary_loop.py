@@ -9,13 +9,13 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     delta_k = state.last_delta_k if state.last_delta_k is not None else np.zeros(state.n_cells)
     delta_e = state.last_delta_e if state.last_delta_e is not None else np.zeros(state.n_cells)
 
-    gamma = float(state.constants.get("gamma_realestate", 0.12))
-    lambda_r = float(state.constants.get("lambda_realestate_cascade", 3.2))
-    delta_congestion = float(state.constants.get("delta_congestion", 0.10))
+    gamma = float(state.constants.get("gamma_realestate", 0.10))
+    lambda_r = float(state.constants.get("lambda_realestate_cascade", 2.8))
+    delta_congestion = float(state.constants.get("delta_congestion", 0.12))
 
     # Read policy effect factors from city constants
-    rera_dampening = float(state.constants.get("policy_rera_dampening", 0.88))
-    pmay_multiplier = float(state.constants.get("policy_pmay_multiplier", 2.0))
+    rera_dampening = float(state.constants.get("policy_rera_dampening", 0.85))
+    pmay_multiplier = float(state.constants.get("policy_pmay_multiplier", 2.5))
     amrut_housing = float(state.constants.get("policy_amrut_housing", 0.004))
     amrut_congestion = float(state.constants.get("policy_amrut_congestion", -0.002))
     smart_city_congestion = float(state.constants.get("policy_smart_city_congestion", -0.003))
@@ -36,7 +36,7 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         state.active_effects.append("RERA volatility dampening")
 
     if "PM Awas Yojana" in params.policies_active:
-        state.H[state.slum_flag] += float(state.constants.get("slum_upgrade_rate", 0.012)) * pmay_multiplier
+        state.H[state.slum_flag] += float(state.constants.get("slum_upgrade_rate", 0.008)) * pmay_multiplier
         state.active_effects.append("PMAY housing upgrade")
 
     if "AMRUT" in params.policies_active:
@@ -55,7 +55,7 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     flood_t_impact = float(state.constants.get("flood_t_impact", 0.025))
 
     if month in params.city_config.monsoon_season:
-        flood_impact = float(state.constants.get("flood_impact", 0.15)) / max(len(params.city_config.monsoon_season), 1)
+        flood_impact = float(state.constants.get("flood_impact", 0.20)) / max(len(params.city_config.monsoon_season), 1)
         state.K *= (1.0 - flood_impact * state.F[:, None] * flood_k_impact)
         state.T += float(state.constants.get("flood_congestion_bonus", 0.2)) * state.F * flood_t_impact
         state.active_effects.append("monsoon flood pressure")
@@ -64,8 +64,12 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     capacity = np.maximum(state.E_formal + state.E_informal, 1.0)
     state.T = np.clip(state.T + delta_congestion * delta_e / capacity, 0.0, 1.0)
     state.H = np.clip(state.H - np.maximum(delta_r, 0.0) * housing_xi, 0.2, 1.8)
+    baselines_K = np.sum(state.baselines.get("K", state.K))
+    current_K = np.sum(state.K)
+    migration_pull = np.clip(current_K / max(baselines_K, 1.0) - 0.5, 0, 1)
+    affordability_push = np.clip(1.0 - state.H, 0, 1)
     state.M = np.clip(
-        state.M + (1.0 - state.H) * migration_eta - np.maximum(delta_e, 0.0) / capacity * 0.01,
+        state.M + migration_eta * (migration_pull + affordability_push) * 0.5 - np.maximum(delta_e, 0.0) / capacity * 0.01,
         0.0,
         1.0,
     )

@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/data-sources")
 async def list_data_sources(
-    city: str = Query(default="bengaluru"),
+    city: str = Query(..., description="City ID (e.g. bengaluru, mumbai, delhi_ncr)"),
     db: DatabaseClient = Depends(get_db),
 ):
     sources = await db.list_data_sources(city=city)
@@ -24,7 +24,7 @@ async def list_data_sources(
 
 @router.get("/snapshots/latest")
 async def latest_snapshot(
-    city: str = Query(default="bengaluru"),
+    city: str = Query(..., description="City ID (e.g. bengaluru, mumbai, delhi_ncr)"),
     db: DatabaseClient = Depends(get_db),
 ):
     snapshot = await db.get_latest_snapshot(city=city)
@@ -50,7 +50,7 @@ async def latest_snapshot(
 
 @router.post("/ingest")
 async def trigger_ingestion(
-    city: str = Query(default="bengaluru"),
+    city: str = Query(..., description="City ID (e.g. bengaluru, mumbai, delhi_ncr)"),
     db: DatabaseClient = Depends(get_db),
 ):
     snapshot = await run_ingestion_cycle(db, city)
@@ -69,7 +69,7 @@ async def trigger_ingestion(
 @router.get("/snapshots/{snapshot_id}/quality")
 async def snapshot_quality_endpoint(
     snapshot_id: str,
-    city: str = Query(default="bengaluru"),
+    city: str = Query(..., description="City ID (e.g. bengaluru, mumbai, delhi_ncr)"),
     db: DatabaseClient = Depends(get_db),
 ):
     quality = await db.get_snapshot_quality(snapshot_id, city=city)

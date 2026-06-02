@@ -124,7 +124,7 @@ async def simulation_websocket(websocket: WebSocket):
                     "stage": "parsing",
                     "code": "REALTIME_SNAPSHOT_UNAVAILABLE",
                     "message": (
-                        "Real-Time Mode has no usable Bengaluru snapshot yet. "
+                        f"Real-Time Mode has no usable **{params.city}** snapshot yet. "
                         "Run ingestion or disable REALTIME_MODE_REQUIRED to use explicit Demo Mode."
                     ),
                 })

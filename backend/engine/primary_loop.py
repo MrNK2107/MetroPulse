@@ -18,18 +18,18 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         )
         rates = rates * factors
     monthly_rates = rates / max(params.horizon_months, 1)
-    alpha = float(state.constants.get("alpha_default", 0.55))
-    beta_informal = float(state.constants.get("beta_informal", 0.35))
+    alpha = float(state.constants.get("alpha_default", 0.45))
+    beta_informal = float(state.constants.get("beta_informal", 0.55))
 
     # Read policy boost factors from city constants (with sensible defaults)
-    di_it_boost = float(state.constants.get("policy_digital_india_it_boost", 0.015))
-    mii_mfg_boost = float(state.constants.get("policy_make_in_india_mfg_boost", 0.012))
-    sez_multiplier = float(state.constants.get("policy_sez_multiplier", 0.01))
-    pw_boost = float(state.constants.get("public_works_boost", 0.018))
-    pw_decay = float(state.constants.get("public_works_decay", 0.04))
+    di_it_boost = float(state.constants.get("policy_digital_india_it_boost", 0.0))
+    mii_mfg_boost = float(state.constants.get("policy_make_in_india_mfg_boost", 0.0))
+    sez_multiplier = float(state.constants.get("policy_sez_multiplier", 0.0))
+    pw_boost = float(state.constants.get("public_works_boost", 0.015))
+    pw_decay = float(state.constants.get("public_works_decay", 0.035))
 
     # Employment pressure weights per sector (read from city config)
-    _default_epw = [0.7, 0.65, 0.5, 0.8, 0.6, 0.45, 0.4]
+    _default_epw = [0.65, 0.70, 0.45, 0.60, 0.55, 0.80, 0.40]
     epw_raw = state.constants.get("employment_pressure_weights", _default_epw)
     employment_pressure_weights = np.array(epw_raw, dtype=np.float64)
 

@@ -43,6 +43,14 @@ export const CITY_COORDS: Record<string, { center: [number, number]; zoom: numbe
   lucknow: { center: [80.9462, 26.8467], zoom: 11, name: "Lucknow" },
   chandigarh: { center: [76.7794, 30.7333], zoom: 12, name: "Chandigarh" },
   bhubaneswar: { center: [85.8245, 20.2961], zoom: 12, name: "Bhubaneswar" },
+  indore: { center: [75.8577, 22.7196], zoom: 11, name: "Indore" },
+  surat: { center: [72.8311, 21.1702], zoom: 11, name: "Surat" },
+  nagpur: { center: [79.0882, 21.1458], zoom: 11, name: "Nagpur" },
+  visakhapatnam: { center: [83.3013, 17.6868], zoom: 11, name: "Visakhapatnam" },
+  kochi: { center: [76.2674, 9.9312], zoom: 11, name: "Kochi" },
+  coimbatore: { center: [76.9558, 11.0168], zoom: 11, name: "Coimbatore" },
+  patna: { center: [85.1376, 25.6093], zoom: 11, name: "Patna" },
+  bhopal: { center: [77.4126, 23.2599], zoom: 11, name: "Bhopal" },
 };
 
 interface SimulationStore {

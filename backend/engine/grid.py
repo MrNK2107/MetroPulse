@@ -45,10 +45,10 @@ class GridFactory:
         weights = weights / max(float(weights.sum()), 1.0)
 
         baselines = params.city_config.baselines
-        total_formal = float(baselines.get("employment_formal", params.city_config.population * 0.25))
-        total_informal = float(baselines.get("employment_informal", params.city_config.population * 0.35))
-        gdp_proxy = float(baselines.get("gdp_estimate_crores", params.city_config.population / 100.0))
-        slum_pct = float(baselines.get("slum_population_pct", 0.15))
+        total_formal = float(baselines.get("employment_formal", params.city_config.population * 0.10))
+        total_informal = float(baselines.get("employment_informal", params.city_config.population * 0.55))
+        gdp_proxy = float(baselines.get("gdp_estimate_crores", params.city_config.population * 0.0003))
+        slum_pct = float(baselines.get("slum_population_pct", 0.25))
         outer_density = (0.25 + d_norm) / max(float(np.sum(0.25 + d_norm)), 1.0)
 
         E_formal = total_formal * density
@@ -56,12 +56,12 @@ class GridFactory:
         K_total = gdp_proxy * (0.75 * density + 0.25 / n)
         K = K_total[:, None] * weights[None, :]
 
-        R = np.clip(1.25 * np.exp(-d_norm * 1.8) + 0.35, 0.25, 1.8)
-        T = np.clip(0.25 + 0.55 * np.exp(-d_norm * 1.4), 0.05, 0.95)
+        R = np.clip(1.15 * np.exp(-d_norm * 2.0) + 0.40, 0.25, 1.8)
+        T = np.clip(0.30 + 0.50 * np.exp(-d_norm * 1.6), 0.05, 0.95)
         H = np.clip(1.25 - (R - np.mean(R)) * 0.35 - slum_pct * 0.15, 0.35, 1.6)
         F = _flood_proxy(params.city_config, centers, d_norm)
         M = np.clip(0.15 + d_norm * 0.65 + weights[SECTOR_INDEX["informal"]] * 0.4, 0.0, 1.0)
-        slum_flag = d_norm > np.quantile(d_norm, max(0.55, 1.0 - slum_pct))
+        slum_flag = (np.random.random(n) < slum_pct)
 
         # Initialize confidence arrays (all synthetic initially)
         from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
@@ -174,7 +174,12 @@ class GridFactory:
     @staticmethod
     def _neighbor_pairs(h3_indices: list[str]) -> list[tuple[int, int, float]]:
         idx_to_pos = {idx: i for i, idx in enumerate(h3_indices)}
-        pairs: list[tuple[int, int, float]] = []
+        pair_i: list[int] = []
+        pair_j: list[int] = []
+        lat_i: list[float] = []
+        lng_i: list[float] = []
+        lat_j: list[float] = []
+        lng_j: list[float] = []
         for i, idx in enumerate(h3_indices):
             center_i = h3.cell_to_latlng(idx)
             for neighbor in h3.grid_disk(idx, 1):
@@ -182,8 +187,18 @@ class GridFactory:
                 if j is None or j == i:
                     continue
                 center_j = h3.cell_to_latlng(neighbor)
-                pairs.append((i, j, _haversine(center_i, center_j)))
-        return pairs
+                pair_i.append(i)
+                pair_j.append(j)
+                lat_i.append(center_i[0])
+                lng_i.append(center_i[1])
+                lat_j.append(center_j[0])
+                lng_j.append(center_j[1])
+        if not pair_i:
+            return []
+        dists = _haversine_vec(
+            np.array(lat_i), np.array(lng_i), np.array(lat_j), np.array(lng_j)
+        )
+        return [(pi, pj, float(d)) for pi, pj, d in zip(pair_i, pair_j, dists)]
 
     @staticmethod
     def _zone_flags(h3_indices: list[str], city_config: Any) -> dict[str, np.ndarray]:
@@ -272,11 +287,7 @@ def _flood_proxy(city_config: Any, centers: np.ndarray, d_norm: np.ndarray) -> n
     return np.clip(base, 0.0, 1.0)
 
 
-def _haversine(a: tuple[float, float], b: tuple[float, float]) -> float:
-    return float(_haversine_vec(np.array([a[0]]), np.array([a[1]]), b[0], b[1])[0])
-
-
-def _haversine_vec(lat: np.ndarray, lng: np.ndarray, center_lat: float, center_lng: float) -> np.ndarray:
+def _haversine_vec(lat: np.ndarray, lng: np.ndarray, center_lat: np.ndarray | float, center_lng: np.ndarray | float) -> np.ndarray:
     lat1 = np.radians(lat)
     lon1 = np.radians(lng)
     lat2 = np.radians(center_lat)

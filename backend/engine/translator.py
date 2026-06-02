@@ -545,11 +545,14 @@ def _generate_takeaways(
     return takeaways[:5]
 
 
-def _overall_verdict(metrics: AggregateMetrics) -> str:
+def _overall_verdict(metrics: AggregateMetrics, city_config: Any = None) -> str:
     """Classify overall impact as a plain verdict."""
     gdp = metrics.gdpDelta * 100
     unemp = metrics.unemploymentRate * 100
-    baseline_unemp = 4.0  # rough national average
+    if city_config is not None:
+        baseline_unemp = city_config.baselines.get("unemployment_rate", 0.04) * 100
+    else:
+        baseline_unemp = 4.0  # rough national average fallback
 
     if gdp > 2 and unemp < baseline_unemp:
         return "Strong positive impact"
@@ -622,7 +625,7 @@ def translate_to_plain_language(
         takeaways=takeaways,
         gdp_summary=_gdp_summary(metrics, city_config),
         unemployment_summary=_unemployment_summary(metrics, city_config),
-        overall_verdict=_overall_verdict(metrics),
+        overall_verdict=_overall_verdict(metrics, city_config),
         confidence=confidence,
         confidence_label=confidence_label,
         origin=origin,

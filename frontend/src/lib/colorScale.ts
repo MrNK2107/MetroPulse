@@ -1,6 +1,6 @@
 export type RGBA = [number, number, number, number];
 
-export type MapMetricKey = "delta" | "jobDensity" | "congestion" | "realEstateIndex" | "floodRisk";
+export type MapMetricKey = "delta" | "jobDensity" | "congestion" | "realEstateIndex" | "floodRisk" | "airQuality" | "waterStress";
 
 export interface ColorStop {
   value: number;
@@ -11,23 +11,23 @@ export interface ColorStop {
 export const METRIC_SCALES: Record<MapMetricKey, { stops: ColorStop[]; clamp: [number, number]; label: string }> = {
   delta: {
     label: "Economic Impact (Δ GDP)",
-    clamp: [-0.15, 0.15],
+    clamp: [-0.25, 0.25],
     stops: [
-      { value: -0.15, color: [239, 68, 68] },  // Red-500 (Stress)
-      { value: -0.05, color: [249, 115, 22] }, // Orange-500 (Muted Stress)
+      { value: -0.25, color: [239, 68, 68] },  // Red-500 (Stress)
+      { value: -0.08, color: [249, 115, 22] }, // Orange-500 (Muted Stress)
       { value: 0.0, color: [71, 85, 105] },    // Slate-600 (Stable Neutral)
-      { value: 0.05, color: [56, 189, 248] },  // Sky-400 (Muted Growth)
-      { value: 0.15, color: [59, 130, 246] },  // Blue-500 (Growth)
+      { value: 0.08, color: [56, 189, 248] },  // Sky-400 (Muted Growth)
+      { value: 0.25, color: [59, 130, 246] },  // Blue-500 (Growth)
     ],
   },
   jobDensity: {
     label: "Total Job Density (Viridis)",
-    clamp: [0, 8000],
+    clamp: [0, 15000],
     stops: [
       { value: 0, color: [68, 1, 84] },        // Purple (Viridis)
-      { value: 2000, color: [59, 82, 139] },    // Blue (Viridis)
-      { value: 4000, color: [33, 145, 140] },   // Teal (Viridis)
-      { value: 8000, color: [94, 201, 98] },    // Green (Viridis)
+      { value: 3750, color: [59, 82, 139] },    // Blue (Viridis)
+      { value: 7500, color: [33, 145, 140] },   // Teal (Viridis)
+      { value: 15000, color: [94, 201, 98] },    // Green (Viridis)
     ],
   },
   congestion: {
@@ -42,12 +42,12 @@ export const METRIC_SCALES: Record<MapMetricKey, { stops: ColorStop[]; clamp: [n
   },
   realEstateIndex: {
     label: "Real Estate Index",
-    clamp: [0.3, 2.2],
+    clamp: [0.2, 2.5],
     stops: [
-      { value: 0.3, color: [68, 1, 84] },       // Purple (Viridis/Magma)
+      { value: 0.2, color: [68, 1, 84] },       // Purple (Viridis/Magma)
       { value: 1.0, color: [139, 92, 246] },   // Violet-500
       { value: 1.6, color: [192, 132, 252] },  // Purple-400
-      { value: 2.2, color: [253, 231, 37] },   // Yellow (Viridis)
+      { value: 2.5, color: [253, 231, 37] },   // Yellow (Viridis)
     ],
   },
   floodRisk: {
@@ -57,6 +57,27 @@ export const METRIC_SCALES: Record<MapMetricKey, { stops: ColorStop[]; clamp: [n
       { value: 0.0, color: [71, 85, 105] },    // Slate-600
       { value: 0.4, color: [56, 189, 248] },   // Sky-400
       { value: 1.0, color: [29, 78, 216] },    // Blue-700
+    ],
+  },
+  airQuality: {
+    label: "Air Quality Index",
+    clamp: [0, 500],
+    stops: [
+      { value: 0, color: [34, 197, 94] },       // Green-500 (Good)
+      { value: 100, color: [234, 179, 8] },      // Yellow-500 (Moderate)
+      { value: 200, color: [239, 68, 68] },      // Red-500 (Poor)
+      { value: 300, color: [127, 29, 29] },      // Dark Red (Severe)
+      { value: 500, color: [69, 10, 10] },       // Very Dark Red (Hazardous)
+    ],
+  },
+  waterStress: {
+    label: "Water Stress Index",
+    clamp: [0, 1],
+    stops: [
+      { value: 0.0, color: [59, 130, 246] },    // Blue-500 (Low)
+      { value: 0.4, color: [234, 179, 8] },      // Yellow-500 (Medium)
+      { value: 0.7, color: [239, 68, 68] },      // Red-500 (High)
+      { value: 1.0, color: [127, 29, 29] },      // Dark Red (Critical)
     ],
   },
 };
@@ -93,7 +114,7 @@ export function metricToRGBA(value: number, metric: MapMetricKey = "delta"): RGB
   if (metric === "delta") {
     // Stable slate is more transparent, while growth and stress glow brighter
     const dev = Math.abs(clamped);
-    alpha = Math.round(110 + (dev / 0.15) * 145);
+    alpha = Math.round(110 + (dev / 0.25) * 145);
   } else {
     // Normal normalized index opacity
     const rangeSpan = clamp[1] - clamp[0];
@@ -134,7 +155,7 @@ export function heatmapWeight(value: number, metric: MapMetricKey): number {
   if (metric === "delta") {
     // For delta, absolute deviation from 0.0 (maximum expected is 0.15)
     const absVal = Math.abs(value);
-    const normalized = absVal / 0.15;
+    const normalized = absVal / 0.25;
     return Math.max(0, Math.min(100, Math.pow(normalized, 1.8) * 100));
   }
 
@@ -186,6 +207,26 @@ export function heatmapColorRange(metric: MapMetricKey): [number, number, number
       [192, 132, 252],  // Purple-400
       [236, 72, 153],   // Pink-500
       [253, 231, 37],   // Yellow
+    ];
+  }
+  if (metric === "airQuality") {
+    return [
+      [30, 41, 59],
+      [34, 197, 94],      // Green-500 (Good)
+      [234, 179, 8],       // Yellow-500 (Moderate)
+      [239, 68, 68],       // Red-500 (Poor)
+      [185, 28, 28],       // Red-700 (Very Poor)
+      [69, 10, 10],        // Dark Red (Severe)
+    ];
+  }
+  if (metric === "waterStress") {
+    return [
+      [30, 41, 59],
+      [59, 130, 246],     // Blue-500 (Low)
+      [96, 165, 250],     // Blue-400
+      [234, 179, 8],      // Yellow-500 (Medium)
+      [239, 68, 68],      // Red-500 (High)
+      [127, 29, 29],      // Dark Red (Critical)
     ];
   }
   // floodRisk

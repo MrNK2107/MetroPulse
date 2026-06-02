@@ -194,15 +194,6 @@ class GridState:
     source_manifest: dict[str, Any] = field(default_factory=dict)
     snapshot_quality_score: float = 0.0
 
-    # Per-cell confidence arrays — same shape as the corresponding metric arrays
-    confidence_K: np.ndarray | None = None
-    confidence_R: np.ndarray | None = None
-    confidence_T: np.ndarray | None = None
-    confidence_H: np.ndarray | None = None
-    confidence_F: np.ndarray | None = None
-    confidence_M: np.ndarray | None = None
-    data_origins: dict[str, str] = field(default_factory=dict)
-
     # Overlay modifiers from real-time data (set by overlay.py)
     economic_modifier: np.ndarray | None = None
     migration_modifier: np.ndarray | None = None
