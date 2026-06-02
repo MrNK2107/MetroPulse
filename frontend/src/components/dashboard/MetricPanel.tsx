@@ -262,9 +262,23 @@ export function MetricPanel() {
 
       {/* Summary Pills Grid (Shows current scenario-estimate metrics) */}
       {!isDataAvailable ? (
-        <div className="h-10 flex items-center justify-center border border-dashed border-dark-100/50 rounded-xl bg-dark-300/10 py-6">
-          <Text className="text-gray-500 text-xs font-medium">Run a simulation prompt to inspect timeline metrics.</Text>
-        </div>
+        isRunning ? (
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 animate-pulse">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-dark-100/20 bg-dark-300/30 px-3.5 h-12 flex items-center justify-between">
+                <div className="space-y-1.5">
+                  <div className="h-2 w-10 bg-dark-100/50 rounded" />
+                  <div className="h-1.5 w-14 bg-dark-100/30 rounded" />
+                </div>
+                <div className="h-3 w-8 bg-dark-100/50 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="h-10 flex items-center justify-center border border-dashed border-dark-100/50 rounded-xl bg-dark-300/10 py-6">
+            <Text className="text-gray-500 text-xs font-medium">Run a simulation prompt to inspect timeline metrics.</Text>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
           {CHART_CONFIGS.map((config) => {

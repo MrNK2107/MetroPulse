@@ -1,0 +1,78 @@
+# Mysuru, Karnataka — City of Palaces
+name: Mysuru
+state: Karnataka
+country: India
+center: [12.2958, 76.6394]
+zoom: 11
+population: 1200000
+city_type: heritage
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.042
+  gdp_per_capita: 230000
+  informal_share: 0.44
+  slum_pct: 0.12
+  avg_rent_2bhk: 10000
+
+sector_weights:
+  it_ites: 0.15
+  manufacturing: 0.14
+  real_estate: 0.12
+  trade_hospitality: 0.22
+  transport_logistics: 0.10
+  informal: 0.15
+  public_admin: 0.12
+
+constants:
+  alpha: 0.50
+  beta_informal: 0.40
+  gamma_realestate: 0.12
+  delta_congestion: 0.06
+
+special_zones:
+  - name: Mysuru IT Park (Hebbal)
+    type: tech_park
+    lat: 12.3400
+    lng: 76.6200
+  - name: Mysuru Palace / Tourism Zone
+    type: tourism
+    lat: 12.3050
+    lng: 76.6550
+
+policies:
+  - name: Mysuru Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: Heritage City Development (HRIDAY)
+    type: tourism
+    effect: tourism_boost
+
+urban_anchors:
+  - name: Devaraja Market / Sayyaji Rao Road
+    type: cbd
+    lat: 12.3100
+    lng: 76.6500
+    weight: 0.25
+  - name: Nazarbad
+    type: commercial
+    lat: 12.3050
+    lng: 76.6600
+    weight: 0.25
+  - name: Hebbal IT Park
+    type: tech_park
+    lat: 12.3400
+    lng: 76.6200
+    weight: 0.20
+  - name: Mysuru Junction
+    type: transport
+    lat: 12.3100
+    lng: 76.6450
+    weight: 0.15
+  - name: Vontikoppal / Jayalakshmipuram
+    type: residential
+    lat: 12.3200
+    lng: 76.6400
+    weight: 0.15

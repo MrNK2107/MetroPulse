@@ -57,7 +57,7 @@ export default function Home() {
 
       {/* Mobile Hamburger Button */}
       <button
-        onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
+        onClick={() => { setLeftSidebarOpen(!isLeftSidebarOpen); if (!isLeftSidebarOpen) setRightSidebarOpen(false); }}
         className="md:hidden absolute top-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all"
         aria-label="Toggle scenario panel"
         aria-expanded={isLeftSidebarOpen}
@@ -92,7 +92,7 @@ export default function Home() {
 
       {/* Toggle Left Sidebar Button (desktop) */}
       <button
-        onClick={() => setLeftSidebarOpen(!isLeftSidebarOpen)}
+        onClick={() => { setLeftSidebarOpen(!isLeftSidebarOpen); if (!isLeftSidebarOpen) setRightSidebarOpen(false); }}
         className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-r-xl border border-l-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
           isLeftSidebarOpen ? "left-[360px]" : "left-0"
         }`}
@@ -119,7 +119,7 @@ export default function Home() {
 
       {/* Toggle Right Sidebar Button (desktop) */}
       <button
-        onClick={() => setRightSidebarOpen(!isRightSidebarOpen)}
+        onClick={() => { setRightSidebarOpen(!isRightSidebarOpen); if (!isRightSidebarOpen) setLeftSidebarOpen(false); }}
         className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-l-xl border border-r-0 border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all ${
           isRightSidebarOpen ? "right-[420px]" : "right-0"
         }`}

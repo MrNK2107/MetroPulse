@@ -63,7 +63,7 @@ export function ConversationPanel() {
   };
 
   return (
-    <aside className="w-[360px] bg-dark-200/95 border-r border-dark-100/50 h-full overflow-y-auto flex flex-col backdrop-blur-md shadow-2xl no-scrollbar">
+    <aside className="w-full md:w-[360px] bg-dark-200/95 border-r border-dark-100/50 h-full overflow-y-auto flex flex-col backdrop-blur-md shadow-2xl no-scrollbar">
       {/* Header */}
       <div className="p-5 border-b border-dark-100/40 bg-dark-300/40 select-none">
         <div className="flex items-center justify-between">

@@ -1,0 +1,78 @@
+# Guwahati, Assam — Gateway to Northeast India
+name: Guwahati
+state: Assam
+country: India
+center: [26.1445, 91.7362]
+zoom: 11
+population: 1200000
+city_type: gateway
+port_city: false
+monsoon_season: [5, 6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.060
+  gdp_per_capita: 180000
+  informal_share: 0.52
+  slum_pct: 0.20
+  avg_rent_2bhk: 8000
+
+sector_weights:
+  it_ites: 0.10
+  manufacturing: 0.12
+  real_estate: 0.10
+  trade_hospitality: 0.20
+  transport_logistics: 0.18
+  informal: 0.15
+  public_admin: 0.15
+
+constants:
+  alpha: 0.48
+  beta_informal: 0.44
+  gamma_realestate: 0.10
+  delta_congestion: 0.07
+
+special_zones:
+  - name: Guwahati Refinery (IOCL)
+    type: industrial
+    lat: 26.1800
+    lng: 91.7500
+  - name: Guwahati Tea Auction Centre
+    type: trade
+    lat: 26.1500
+    lng: 91.7300
+
+policies:
+  - name: Guwahati Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: Guwahati Metro / Rapid Transit
+    type: transport
+    effect: congestion_reduction
+
+urban_anchors:
+  - name: Fancy Bazaar / Pan Bazaar
+    type: cbd
+    lat: 26.1500
+    lng: 91.7400
+    weight: 0.25
+  - name: GS Road / Christian Basti
+    type: commercial
+    lat: 26.1400
+    lng: 91.7600
+    weight: 0.25
+  - name: IOCL Refinery Area
+    type: industrial
+    lat: 26.1800
+    lng: 91.7500
+    weight: 0.20
+  - name: Guwahati Station
+    type: transport
+    lat: 26.1400
+    lng: 91.7200
+    weight: 0.15
+  - name: Beltola / Dispur
+    type: residential
+    lat: 26.1300
+    lng: 91.7800
+    weight: 0.15

@@ -1,0 +1,78 @@
+# Ranchi, Jharkhand — City of Waterfalls
+name: Ranchi
+state: Jharkhand
+country: India
+center: [23.3441, 85.3096]
+zoom: 11
+population: 1500000
+city_type: capital
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.065
+  gdp_per_capita: 175000
+  informal_share: 0.55
+  slum_pct: 0.22
+  avg_rent_2bhk: 7500
+
+sector_weights:
+  it_ites: 0.06
+  manufacturing: 0.18
+  real_estate: 0.10
+  trade_hospitality: 0.15
+  transport_logistics: 0.10
+  informal: 0.15
+  public_admin: 0.26
+
+constants:
+  alpha: 0.46
+  beta_informal: 0.46
+  gamma_realestate: 0.08
+  delta_congestion: 0.06
+
+special_zones:
+  - name: HEC Heavy Engineering Complex
+    type: industrial
+    lat: 23.2900
+    lng: 85.2800
+  - name: Namkum Industrial Area
+    type: industrial
+    lat: 23.3000
+    lng: 85.3800
+
+policies:
+  - name: Ranchi Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: Jharkhand IT Policy
+    type: technology
+    effect: job_creation
+
+urban_anchors:
+  - name: Main Road / Kutchery Area
+    type: cbd
+    lat: 23.3500
+    lng: 85.3100
+    weight: 0.25
+  - name: HEC Township
+    type: industrial
+    lat: 23.2900
+    lng: 85.2800
+    weight: 0.25
+  - name: Circular Road / Upper Bazar
+    type: commercial
+    lat: 23.3400
+    lng: 85.3100
+    weight: 0.20
+  - name: Ranchi Junction
+    type: transport
+    lat: 23.3600
+    lng: 85.3200
+    weight: 0.15
+  - name: Kanke Road
+    type: residential
+    lat: 23.3600
+    lng: 85.3500
+    weight: 0.15

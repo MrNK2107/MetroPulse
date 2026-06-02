@@ -1,0 +1,78 @@
+# Dehradun, Uttarakhand — Gateway to Garhwal Himalayas
+name: Dehradun
+state: Uttarakhand
+country: India
+center: [30.3165, 78.0322]
+zoom: 11
+population: 1000000
+city_type: capital
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.055
+  gdp_per_capita: 200000
+  informal_share: 0.50
+  slum_pct: 0.14
+  avg_rent_2bhk: 9000
+
+sector_weights:
+  it_ites: 0.12
+  manufacturing: 0.10
+  real_estate: 0.12
+  trade_hospitality: 0.16
+  transport_logistics: 0.08
+  informal: 0.18
+  public_admin: 0.24
+
+constants:
+  alpha: 0.48
+  beta_informal: 0.44
+  gamma_realestate: 0.10
+  delta_congestion: 0.06
+
+special_zones:
+  - name: Rajpur Road / IT Park
+    type: tech_park
+    lat: 30.3400
+    lng: 78.0500
+  - name: ISBT Dehradun
+    type: transport
+    lat: 30.2900
+    lng: 78.0200
+
+policies:
+  - name: Dehradun Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: IT Investment Promotion Policy
+    type: technology
+    effect: job_creation
+
+urban_anchors:
+  - name: Rajpur Road
+    type: cbd
+    lat: 30.3300
+    lng: 78.0450
+    weight: 0.25
+  - name: Clock Tower / Paltan Bazaar
+    type: commercial
+    lat: 30.3200
+    lng: 78.0350
+    weight: 0.25
+  - name: IT Park Raipur Road
+    type: tech_park
+    lat: 30.3000
+    lng: 78.0500
+    weight: 0.20
+  - name: Dehradun Railway Station
+    type: transport
+    lat: 30.3100
+    lng: 78.0250
+    weight: 0.15
+  - name: Clement Town / Vasant Vihar
+    type: residential
+    lat: 30.2800
+    lng: 78.0200
+    weight: 0.15

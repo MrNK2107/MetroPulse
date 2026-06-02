@@ -1,0 +1,78 @@
+# Vadodara, Gujarat — Cultural Capital of Gujarat
+name: Vadodara
+state: Gujarat
+country: India
+center: [22.3072, 73.1812]
+zoom: 11
+population: 2200000
+city_type: manufacturing
+port_city: false
+monsoon_season: [6, 7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.048
+  gdp_per_capita: 220000
+  informal_share: 0.48
+  slum_pct: 0.16
+  avg_rent_2bhk: 9000
+
+sector_weights:
+  it_ites: 0.12
+  manufacturing: 0.25
+  real_estate: 0.12
+  trade_hospitality: 0.18
+  transport_logistics: 0.12
+  informal: 0.15
+  public_admin: 0.06
+
+constants:
+  alpha: 0.50
+  beta_informal: 0.42
+  gamma_realestate: 0.10
+  delta_congestion: 0.07
+
+special_zones:
+  - name: L&T Knowledge City
+    type: tech_park
+    lat: 22.3400
+    lng: 73.2000
+  - name: GIDC Industrial Estate
+    type: industrial
+    lat: 22.2900
+    lng: 73.1600
+
+policies:
+  - name: Vadodara Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: GIDC Petrochemical Expansion
+    type: industrial
+    effect: job_creation
+
+urban_anchors:
+  - name: Alkapuri
+    type: cbd
+    lat: 22.3100
+    lng: 73.1750
+    weight: 0.25
+  - name: L&T Knowledge City
+    type: commercial
+    lat: 22.3400
+    lng: 73.2000
+    weight: 0.25
+  - name: Makarpura GIDC
+    type: industrial
+    lat: 22.2800
+    lng: 73.1500
+    weight: 0.20
+  - name: Vadodara Junction
+    type: transport
+    lat: 22.3100
+    lng: 73.1850
+    weight: 0.15
+  - name: Gotri
+    type: residential
+    lat: 22.3300
+    lng: 73.1600
+    weight: 0.15

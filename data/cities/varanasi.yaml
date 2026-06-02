@@ -1,0 +1,78 @@
+# Varanasi, Uttar Pradesh — Spiritual Capital of India
+name: Varanasi
+state: Uttar Pradesh
+country: India
+center: [25.3176, 82.9739]
+zoom: 11
+population: 1700000
+city_type: heritage
+port_city: false
+monsoon_season: [7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.058
+  gdp_per_capita: 150000
+  informal_share: 0.58
+  slum_pct: 0.24
+  avg_rent_2bhk: 7000
+
+sector_weights:
+  it_ites: 0.05
+  manufacturing: 0.12
+  real_estate: 0.10
+  trade_hospitality: 0.22
+  transport_logistics: 0.10
+  informal: 0.20
+  public_admin: 0.21
+
+constants:
+  alpha: 0.42
+  beta_informal: 0.48
+  gamma_realestate: 0.08
+  delta_congestion: 0.05
+
+special_zones:
+  - name: BHU Campus
+    type: educational
+    lat: 25.2678
+    lng: 83.0105
+  - name: Dashashwamedh Ghat
+    type: tourism
+    lat: 25.2850
+    lng: 83.0100
+
+policies:
+  - name: Kashi Vishwanath Dham Corridor
+    type: tourism
+    effect: tourism_boost
+  - name: Varanasi Smart City Mission
+    type: infrastructure
+    effect: modernization
+
+urban_anchors:
+  - name: Godowlia / Dashashwamedh
+    type: cbd
+    lat: 25.2850
+    lng: 83.0100
+    weight: 0.25
+  - name: BHU Campus
+    type: educational
+    lat: 25.2678
+    lng: 83.0105
+    weight: 0.25
+  - name: Sigra / Mahmoorganj
+    type: commercial
+    lat: 25.3100
+    lng: 82.9800
+    weight: 0.20
+  - name: Varanasi Junction
+    type: transport
+    lat: 25.3200
+    lng: 83.0000
+    weight: 0.15
+  - name: Lanka / Assi Ghat Area
+    type: residential
+    lat: 25.2850
+    lng: 83.0050
+    weight: 0.15

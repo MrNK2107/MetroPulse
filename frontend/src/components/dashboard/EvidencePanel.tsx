@@ -148,7 +148,7 @@ export function EvidencePanel() {
   }, [evidence?.markdown, visibleWords]);
 
   return (
-    <aside className="w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
+    <aside className="w-full md:w-[420px] flex flex-col border-l border-dark-100/50 bg-dark-200/95 backdrop-blur-md h-full shadow-2xl">
       {/* Panel Header */}
       <div className="border-b border-dark-100/40 p-5 bg-dark-300/40 select-none">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-100">

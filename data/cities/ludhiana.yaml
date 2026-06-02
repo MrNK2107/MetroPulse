@@ -1,0 +1,78 @@
+# Ludhiana, Punjab — Manchester of India
+name: Ludhiana
+state: Punjab
+country: India
+center: [30.9010, 75.8573]
+zoom: 11
+population: 1900000
+city_type: manufacturing
+port_city: false
+monsoon_season: [7, 8, 9]
+metro_system: false
+
+baselines:
+  unemployment_rate: 0.052
+  gdp_per_capita: 210000
+  informal_share: 0.50
+  slum_pct: 0.18
+  avg_rent_2bhk: 8500
+
+sector_weights:
+  it_ites: 0.06
+  manufacturing: 0.30
+  real_estate: 0.12
+  trade_hospitality: 0.18
+  transport_logistics: 0.12
+  informal: 0.16
+  public_admin: 0.06
+
+constants:
+  alpha: 0.52
+  beta_informal: 0.40
+  gamma_realestate: 0.08
+  delta_congestion: 0.08
+
+special_zones:
+  - name: Focal Point Industrial Area
+    type: industrial
+    lat: 30.8700
+    lng: 75.8300
+  - name: PAU Campus
+    type: educational
+    lat: 30.8950
+    lng: 75.8200
+
+policies:
+  - name: Ludhiana Smart City Mission
+    type: infrastructure
+    effect: modernization
+  - name: Textile Cluster Upgradation
+    type: industrial
+    effect: job_creation
+
+urban_anchors:
+  - name: Clock Tower / Chaura Bazaar
+    type: cbd
+    lat: 30.9100
+    lng: 75.8550
+    weight: 0.25
+  - name: Focal Point Industrial Area
+    type: industrial
+    lat: 30.8700
+    lng: 75.8300
+    weight: 0.25
+  - name: Model Town
+    type: commercial
+    lat: 30.8950
+    lng: 75.8400
+    weight: 0.20
+  - name: Ludhiana Junction
+    type: transport
+    lat: 30.9100
+    lng: 75.8600
+    weight: 0.15
+  - name: Sarabha Nagar
+    type: residential
+    lat: 30.8850
+    lng: 75.8450
+    weight: 0.15

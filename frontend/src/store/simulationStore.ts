@@ -51,6 +51,16 @@ export const CITY_COORDS: Record<string, { center: [number, number]; zoom: numbe
   coimbatore: { center: [76.9558, 11.0168], zoom: 11, name: "Coimbatore" },
   patna: { center: [85.1376, 25.6093], zoom: 11, name: "Patna" },
   bhopal: { center: [77.4126, 23.2599], zoom: 11, name: "Bhopal" },
+  vadodara: { center: [73.1812, 22.3072], zoom: 11, name: "Vadodara" },
+  ludhiana: { center: [75.8573, 30.9010], zoom: 11, name: "Ludhiana" },
+  agra: { center: [78.0081, 27.1767], zoom: 11, name: "Agra" },
+  varanasi: { center: [82.9739, 25.3176], zoom: 11, name: "Varanasi" },
+  rajkot: { center: [70.8022, 22.3039], zoom: 11, name: "Rajkot" },
+  amritsar: { center: [74.8723, 31.6340], zoom: 11, name: "Amritsar" },
+  ranchi: { center: [85.3096, 23.3441], zoom: 11, name: "Ranchi" },
+  guwahati: { center: [91.7362, 26.1445], zoom: 11, name: "Guwahati" },
+  mysuru: { center: [76.6394, 12.2958], zoom: 11, name: "Mysuru" },
+  dehradun: { center: [78.0322, 30.3165], zoom: 11, name: "Dehradun" },
 };
 
 interface SimulationStore {
