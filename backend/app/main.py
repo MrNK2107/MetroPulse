@@ -62,6 +62,24 @@ async def _ingestion_loop(db: object) -> None:
             city_idx += 1
 
 
+async def _cleanup_loop() -> None:
+    """Background task that runs every 5 minutes to clean up stale data."""
+    while True:
+        await asyncio.sleep(300)  # 5 minutes
+        try:
+            # Cleanup stale rate limit entries (handled inside RateLimitMiddleware
+            # via _last_cleanup, but we can also prune old snapshots cache here)
+            from app.realtime import get_http_client
+            logger.debug("Cleanup task: running periodic maintenance")
+            # The rate limit middleware already has its own cleanup, but this
+            # background task could be extended for cache expiry, session
+            # cleanup, old simulation history pruning, etc.
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("Cleanup task failed: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.realtime import get_http_client
@@ -76,12 +94,18 @@ async def lifespan(app: FastAPI):
     await get_http_client()
 
     ingestion_task = asyncio.create_task(_ingestion_loop(db))
+    cleanup_task = asyncio.create_task(_cleanup_loop())
 
     yield
 
     ingestion_task.cancel()
+    cleanup_task.cancel()
     try:
         await ingestion_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await cleanup_task
     except asyncio.CancelledError:
         pass
 
@@ -125,6 +149,19 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         start = time.perf_counter()
+
+        # Read and log request body for POST/PUT requests
+        body_preview = None
+        if request.method in ("POST", "PUT", "PATCH"):
+            try:
+                raw_body = await request.body()
+                body_text = raw_body.decode("utf-8", errors="replace")
+                body_preview = body_text[:1000]
+                if len(body_text) > 1000:
+                    body_preview += "...[truncated]"
+            except Exception:
+                body_preview = "<unreadable>"
+
         response = await call_next(request)
         elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
 
@@ -134,9 +171,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             "status": response.status_code,
             "response_time_ms": elapsed_ms,
         }
+        user_agent = request.headers.get("user-agent")
+        if user_agent:
+            log_entry["user_agent"] = user_agent
         request_id = getattr(request.state, "request_id", None)
         if request_id:
             log_entry["request_id"] = request_id
+        if body_preview:
+            log_entry["request_body"] = body_preview
         logger.info(json.dumps(log_entry))
 
         # Add version header to response

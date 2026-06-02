@@ -625,6 +625,65 @@ class DatabaseClient:
         self._saved = [s for s in self._saved if s["id"] != str(simulation_id)]
         return len(self._saved) < before
 
+    async def add_note(self, simulation_id: UUID, note: str) -> bool:
+        """Add a note/annotation to a simulation. Returns True if the simulation exists."""
+        if self._client:
+            try:
+                result = await asyncio.to_thread(
+                    lambda: self._client.table("simulation_notes")
+                    .insert({
+                        "simulation_id": str(simulation_id),
+                        "note": note,
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    .execute()
+                )
+                return True
+            except Exception as e:
+                logger.warning("Supabase add_note failed, using in-memory fallback: %s", e)
+        # In-memory fallback: attach to the simulation record
+        sim = next((item for item in self._saved if item["id"] == str(simulation_id)), None)
+        if sim is None:
+            return False
+        sim.setdefault("notes", []).append({
+            "note": note,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        return True
+
+    async def get_notes(self, simulation_id: UUID) -> list[dict[str, Any]]:
+        """Retrieve all notes for a simulation."""
+        if self._client:
+            try:
+                result = await asyncio.to_thread(
+                    lambda: self._client.table("simulation_notes")
+                    .select("*")
+                    .eq("simulation_id", str(simulation_id))
+                    .order("created_at", desc=True)
+                    .execute()
+                )
+                return result.data or []
+            except Exception as e:
+                logger.warning("Supabase get_notes failed, using in-memory fallback: %s", e)
+        sim = next((item for item in self._saved if item["id"] == str(simulation_id)), None)
+        if sim is None:
+            return []
+        return sim.get("notes", [])
+
+    async def list_all_simulations_unpaged(self) -> list[dict[str, Any]]:
+        """Return all simulations (for stats aggregation)."""
+        if self._client:
+            try:
+                result = await self._retry(
+                    lambda: self._client.table("simulations")
+                    .select("id,region_id,params,result_summary,created_at")
+                    .execute()
+                )
+                return result.data or []
+            except Exception:
+                logger.debug("Supabase list_all_simulations_unpaged failed, using in-memory fallback")
+        return self._saved
+
     async def save_simulation(
         self,
         region_id: UUID | None,
