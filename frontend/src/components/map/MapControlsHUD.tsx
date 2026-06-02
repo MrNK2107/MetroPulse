@@ -33,7 +33,7 @@ export const MapControlsHUD = React.memo(function MapControlsHUD() {
         <select
           value={activeCityId}
           onChange={handleCityChange}
-          className="bg-transparent text-gray-100 outline-none font-semibold cursor-pointer py-0.5"
+          className="bg-transparent text-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 font-semibold cursor-pointer py-0.5"
         >
           <option value="" disabled className="bg-dark-300 text-gray-400">Select city...</option>
           {Object.entries(cityCoords).map(([id, cfg]) => (
@@ -87,7 +87,7 @@ export const MapControlsHUD = React.memo(function MapControlsHUD() {
         <select
           value={activeMetric}
           onChange={handleMetricChange}
-          className="bg-transparent text-gray-100 outline-none font-semibold cursor-pointer py-0.5"
+          className="bg-transparent text-gray-100 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 font-semibold cursor-pointer py-0.5"
         >
           {Object.entries(METRIC_SCALES).map(([key, scale]) => (
             <option key={key} value={key} className="bg-dark-300 text-gray-200">

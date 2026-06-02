@@ -22,6 +22,7 @@ interface MetricChartProps {
   color: string;
   formatter: (value: number) => string;
   currentValue: number | null;
+  tooltip?: string;
   metadata?: { confidence: number; confidence_label: string; origin: string; sources: string[] };
 }
 
@@ -32,6 +33,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "gdpDelta",
     color: "emerald",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
+    tooltip: "Change in city economic output compared to baseline",
   },
   {
     title: "Unemployment",
@@ -39,6 +41,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "unemploymentRate",
     color: "amber",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
+    tooltip: "Percentage of workforce looking for jobs",
   },
   {
     title: "Real Estate Index",
@@ -46,6 +49,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "realEstateIndex",
     color: "violet",
     formatter: (v: number) => v.toFixed(3),
+    tooltip: "Relative value of commercial and residential property",
   },
   {
     title: "Transit Congestion",
@@ -53,6 +57,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "transitCongestion",
     color: "rose",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
+    tooltip: "How crowded roads and public transport are",
   },
   {
     title: "Informal Share",
@@ -60,6 +65,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "informalEmployment",
     color: "cyan",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
+    tooltip: "Share of workers in unregulated jobs",
   },
   {
     title: "Affordability",
@@ -67,6 +73,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "housingAffordability",
     color: "indigo",
     formatter: (v: number) => v.toFixed(2),
+    tooltip: "Ratio of income to housing costs — lower means less affordable",
   },
 ];
 
@@ -174,6 +181,16 @@ function WaterStressPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: Wat
     </button>
   );
 }
+
+/** Thresholds for semantic color-coding of metric pills */
+const UNEMPLOYMENT_RED_THRESHOLD = 0.08;
+const UNEMPLOYMENT_GREEN_THRESHOLD = 0.06;
+const REAL_ESTATE_GREEN_THRESHOLD = 1.05;
+const REAL_ESTATE_RED_THRESHOLD = 0.95;
+const TRANSIT_RED_THRESHOLD = 0.40;
+const TRANSIT_GREEN_THRESHOLD = 0.25;
+const AFFORDABILITY_GREEN_THRESHOLD = 1.0;
+const AFFORDABILITY_RED_THRESHOLD = 0.9;
 
 export function MetricPanel() {
   const stage = useSimulationStore((s) => s.pipelineStage);
@@ -294,13 +311,13 @@ export function MetricPanel() {
               if (config.dataKey === "gdpDelta") {
                 valColor = rawVal >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold";
               } else if (config.dataKey === "unemploymentRate") {
-                valColor = rawVal >= 0.08 ? "text-red-400 font-bold" : rawVal < 0.06 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
+                valColor = rawVal >= UNEMPLOYMENT_RED_THRESHOLD ? "text-red-400 font-bold" : rawVal < UNEMPLOYMENT_GREEN_THRESHOLD ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
               } else if (config.dataKey === "realEstateIndex") {
-                valColor = rawVal > 1.05 ? "text-emerald-400 font-bold" : rawVal < 0.95 ? "text-red-400 font-bold" : "text-gray-300 font-bold";
+                valColor = rawVal > REAL_ESTATE_GREEN_THRESHOLD ? "text-emerald-400 font-bold" : rawVal < REAL_ESTATE_RED_THRESHOLD ? "text-red-400 font-bold" : "text-gray-300 font-bold";
               } else if (config.dataKey === "transitCongestion") {
-                valColor = rawVal > 0.40 ? "text-red-400 font-bold" : rawVal < 0.25 ? "text-emerald-400 font-bold" : "text-gray-300 font-bold";
+                valColor = rawVal > TRANSIT_RED_THRESHOLD ? "text-red-400 font-bold" : rawVal < TRANSIT_GREEN_THRESHOLD ? "text-emerald-400 font-bold" : "text-gray-300 font-bold";
               } else if (config.dataKey === "housingAffordability") {
-                valColor = rawVal >= 1.0 ? "text-emerald-400 font-bold" : rawVal < 0.9 ? "text-red-400 font-bold" : "text-gray-300 font-bold";
+                valColor = rawVal >= AFFORDABILITY_GREEN_THRESHOLD ? "text-emerald-400 font-bold" : rawVal < AFFORDABILITY_RED_THRESHOLD ? "text-red-400 font-bold" : "text-gray-300 font-bold";
               } else if (config.dataKey === "informalEmployment") {
                 valColor = "text-sky-400 font-bold"; // Neutral informational blue
               }
@@ -311,6 +328,7 @@ export function MetricPanel() {
                 key={config.dataKey}
                 onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
                 aria-label={`${config.title}: ${valStr}`}
+                title={config.tooltip}
                 className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
               >
                 <div className="flex flex-col justify-center min-w-0">

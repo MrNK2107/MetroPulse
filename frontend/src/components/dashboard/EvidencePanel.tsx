@@ -89,6 +89,9 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   const caseRetrieval = evidence?.case_retrieval;
 
   // Streaming text reveal for Report tab
+  const STREAM_INTERVAL_MS = 15;
+  const STREAM_WORDS_PER_TICK = 3;
+
   const [visibleWords, setVisibleWords] = useState(0);
   const totalWordsRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,16 +105,15 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
     totalWordsRef.current = words.length;
     setVisibleWords(0);
 
-    // Fast reveal: ~15ms per word
     intervalRef.current = setInterval(() => {
       setVisibleWords((prev) => {
         if (prev >= totalWordsRef.current) {
           if (intervalRef.current) clearInterval(intervalRef.current);
           return prev;
         }
-        return prev + 3; // reveal 3 words at a time for speed
+        return prev + STREAM_WORDS_PER_TICK;
       });
-    }, 15);
+    }, STREAM_INTERVAL_MS);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -181,10 +183,14 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
         // Tabbed Panel
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Tabs Navigation */}
-          <div className="flex border-b border-dark-100/30 bg-dark-300/20 p-2 gap-1 select-none">
+          <div className="flex border-b border-dark-100/30 bg-dark-300/20 p-2 gap-1 select-none" role="tablist">
             {hasSimpleView && (
               <button
                 onClick={() => setActiveTab("simple")}
+                role="tab"
+                id="tab-simple"
+                aria-selected={activeTab === "simple"}
+                aria-controls="tabpanel-simple"
                 className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   activeTab === "simple"
                     ? "bg-emerald-600/95 text-white shadow-md shadow-emerald-500/10"
@@ -199,6 +205,10 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
             )}
             <button
               onClick={() => setActiveTab("detailed")}
+              role="tab"
+              id="tab-detailed"
+              aria-selected={activeTab === "detailed"}
+              aria-controls="tabpanel-detailed"
               className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg transition-all ${
                 activeTab === "detailed"
                   ? "bg-blue-600/95 text-white shadow-md shadow-blue-500/10"
@@ -209,6 +219,10 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
             </button>
             <button
               onClick={() => setActiveTab("cases")}
+              role="tab"
+              id="tab-cases"
+              aria-selected={activeTab === "cases"}
+              aria-controls="tabpanel-cases"
               className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "cases"
                   ? "bg-blue-600/95 text-white shadow-md shadow-blue-500/10"
@@ -224,6 +238,10 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
             </button>
             <button
               onClick={() => setActiveTab("technical")}
+              role="tab"
+              id="tab-technical"
+              aria-selected={activeTab === "technical"}
+              aria-controls="tabpanel-technical"
               className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg transition-all ${
                 activeTab === "technical"
                   ? "bg-blue-600/95 text-white shadow-md shadow-blue-500/10"
@@ -251,7 +269,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
               <>
                 {/* Tab: Simple (plain-language view) */}
                 {activeTab === "simple" && evidence?.translation && (
-                  <div className="space-y-4">
+                  <div className="space-y-4" role="tabpanel" id="tabpanel-simple" aria-labelledby="tab-simple">
                     {/* Hero headline */}
                     <div className={`rounded-xl border p-4 ${
                       translation.overall_verdict.includes("positive")
@@ -396,7 +414,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
 
                 {/* Tab: Detailed (original report) */}
                 {activeTab === "detailed" && (
-                  <div className="space-y-4">
+                  <div className="space-y-4" role="tabpanel" id="tabpanel-detailed" aria-labelledby="tab-detailed">
                     {evidence ? (
                       <article className="font-sans text-gray-300 leading-[1.5]">
                         {/* Blinking cursor while streaming */}
@@ -484,7 +502,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
 
                 {/* Tab: Precedent Case Studies */}
                 {activeTab === "cases" && (
-                  <div className="space-y-3">
+                  <div className="space-y-3" role="tabpanel" id="tabpanel-cases" aria-labelledby="tab-cases">
                     {caseStudies.length > 0 ? (
                       caseStudies.map((study) => (
                         <div key={study.id} className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-4 hover:border-dark-100 transition-all select-none">
@@ -549,7 +567,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
 
                 {/* Tab: Technical (Math & Data Proof) */}
                 {activeTab === "technical" && (
-                  <div className="space-y-4 leading-[1.5]">
+                  <div className="space-y-4 leading-[1.5]" role="tabpanel" id="tabpanel-technical" aria-labelledby="tab-technical">
                     {/* Active Loops Inspector */}
                     <div className="rounded-xl border border-dark-100/50 bg-dark-300/40 p-4">
                       <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400 block mb-1">State Machine</span>

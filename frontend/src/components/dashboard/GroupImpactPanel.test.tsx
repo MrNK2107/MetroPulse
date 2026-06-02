@@ -39,9 +39,9 @@ const mockGroups: GroupImpact[] = [
 ]
 
 describe('GroupImpactPanel', () => {
-  it('renders nothing when no group scores', () => {
-    const { container } = render(<GroupImpactPanel />)
-    expect(container.firstChild).toBeNull()
+  it('shows placeholder when no group scores', () => {
+    render(<GroupImpactPanel />)
+    expect(screen.getByText(/Group impact data will appear/)).toBeInTheDocument()
   })
 
   it('renders group impact cards when scores provided', () => {

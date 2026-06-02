@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.db import get_db, DatabaseClient
 
@@ -26,12 +26,7 @@ async def list_simulations(
 async def get_simulation(simulation_id: UUID, db: DatabaseClient = Depends(get_db)):
     simulation = await db.get_simulation(simulation_id)
     if simulation is None:
-        return {
-            "success": False,
-            "data": None,
-            "error": {"code": "NOT_FOUND", "message": "Simulation not found"},
-            "meta": {},
-        }
+        raise HTTPException(status_code=404, detail="Simulation not found")
     return {
         "success": True,
         "data": simulation,

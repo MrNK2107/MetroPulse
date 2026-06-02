@@ -34,7 +34,15 @@ export const GroupImpactPanel = React.memo(function GroupImpactPanel() {
   const groupScores = useSimulationStore((s) => s.groupScores);
   const citizenSatisfaction = useSimulationStore((s) => s.citizenSatisfaction);
 
-  if (groupScores.length === 0) return null;
+  if (groupScores.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-dark-100/50 bg-dark-300/10 p-6 text-center">
+        <p className="text-xs text-gray-500 font-medium leading-[1.5]">
+          Group impact data will appear after simulation completes.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

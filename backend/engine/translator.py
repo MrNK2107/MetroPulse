@@ -7,6 +7,7 @@ Deterministic — no LLM calls.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from inspect import signature
 from typing import Any
 
 from engine.models import AggregateMetrics, SECTOR_LABELS, SECTOR_NAMES
@@ -698,14 +699,13 @@ def translate_to_plain_language(
             continue
         translator = _SECTOR_TRANSLATORS.get(sector)
         if translator:
-            try:
-                impact = translator(delta, city_config, original_query=original_query,
-                                    sector_deltas=sector_deltas)
-            except TypeError:
-                try:
-                    impact = translator(delta, city_config, original_query=original_query)
-                except TypeError:
-                    impact = translator(delta, city_config)
+            params = signature(translator).parameters
+            kwargs: dict[str, Any] = {}
+            if "original_query" in params:
+                kwargs["original_query"] = original_query
+            if "sector_deltas" in params:
+                kwargs["sector_deltas"] = sector_deltas
+            impact = translator(delta, city_config, **kwargs)
             sector_impacts.append(impact)
 
     # Sort by absolute delta (most impactful first)

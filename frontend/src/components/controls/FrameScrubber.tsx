@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useSimulationStore } from "@/store/simulationStore";
 
+/** Base playback interval in milliseconds before speed adjustment */
+const BASE_PLAYBACK_INTERVAL_MS = 450;
+
 export const FrameScrubber = React.memo(function FrameScrubber() {
   const frames = useSimulationStore((s) => s.frames);
   const activeFrameIndex = useSimulationStore((s) => s.activeFrameIndex);
@@ -34,7 +37,7 @@ export const FrameScrubber = React.memo(function FrameScrubber() {
       } else {
         setActiveFrameIndex(state.activeFrameIndex + 1);
       }
-    }, 450 / playbackSpeed); // Advance frame adjusted by playback speed
+    }, BASE_PLAYBACK_INTERVAL_MS / playbackSpeed);
 
     return () => clearInterval(interval);
   }, [isPlaying, total, setActiveFrameIndex, playbackSpeed]);

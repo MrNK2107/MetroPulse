@@ -393,6 +393,10 @@ class DatabaseClient:
     async def close(self):
         self._client = None
 
+    def is_connected(self) -> bool:
+        """Return True if a real Supabase client is available (not fallback)."""
+        return self._client is not None
+
     async def list_regions(self) -> list[dict[str, Any]]:
         return list_available_cities()
 

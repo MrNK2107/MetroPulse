@@ -7,7 +7,7 @@ router = APIRouter()
 
 @router.get("/api/health")
 async def health_check(db: DatabaseClient = Depends(get_db)):
-    db_status = "connected" if db._client else "in_memory_fallback"
+    db_status = "connected" if db.is_connected() else "in_memory_fallback"
     return {
         "success": True,
         "data": {
