@@ -304,3 +304,150 @@ def test_headline_auto_display_label():
     result = translate_to_plain_language(deltas, metrics, cfg, "What if auto prices go up?")
     # Should use display label "auto-rickshaws" instead of "auto"
     assert "auto-rickshaws" in result.headline.lower() or "auto" in result.headline.lower()
+
+
+# ── Zero sector deltas produces metrics fallback ────────────────────────
+
+
+def test_zero_sector_deltas_produces_metrics_fallback():
+    """When all sector deltas are zero, result should use metrics-based fallback."""
+    cfg = _make_city_config()
+    metrics = _make_metrics(gdpDelta=-0.02, unemploymentRate=0.06)
+    deltas = _default_sector_deltas()  # all zeros
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+
+    # Should have no sector impacts
+    assert len(result.sector_impacts) == 0
+    # Should still produce a result with headline
+    assert len(result.headline) > 0
+    # Takeaways should be populated from metrics
+    assert len(result.takeaways) >= 1
+    # GDP summary should still exist
+    assert len(result.gdp_summary) > 0
+    # Overall verdict should be determined
+    assert len(result.overall_verdict) > 0
+
+
+def test_zero_sector_deltas_with_normal_metrics():
+    """Zero deltas with normal metrics should produce 'minimal change' verdict."""
+    cfg = _make_city_config()
+    metrics = _make_metrics(gdpDelta=0.0, unemploymentRate=0.04)
+    deltas = _default_sector_deltas()
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+    assert "minimal" in result.overall_verdict.lower() or "minimal" in result.headline.lower() or "same" in result.gdp_summary.lower()
+
+
+# ── Single sector with 0.3% delta is skipped ───────────────────────────
+
+
+def test_single_sector_03_delta_is_skipped():
+    """A delta of 0.3% should be below the 0.5% threshold and skipped."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(transport_logistics=0.3)
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+    assert len(result.sector_impacts) == 0
+
+
+def test_single_sector_03_negative_delta_is_skipped():
+    """A delta of -0.3% should also be below threshold."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(it_ites=-0.3)
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+    assert len(result.sector_impacts) == 0
+
+
+# ── Single sector with 0.5% delta is included ──────────────────────────
+
+
+def test_single_sector_05_delta_is_included():
+    """A delta of 0.5% should be at the threshold and included."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(it_ites=0.5)
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+    assert len(result.sector_impacts) == 1
+    assert result.sector_impacts[0].sector == "it_ites"
+    assert result.sector_impacts[0].delta_pct == 0.5
+
+
+def test_single_sector_05_negative_delta_is_included():
+    """A delta of -0.5% should also be at the threshold and included."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(manufacturing=-0.5)
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+    assert len(result.sector_impacts) == 1
+    assert result.sector_impacts[0].sector == "manufacturing"
+    assert result.sector_impacts[0].delta_pct == -0.5
+
+
+# ── Transport with negative delta uses crash/disaster language ──────────
+
+
+def test_transport_negative_delta_normal_uses_cost_language():
+    """Normal negative transport delta should mention costs going up."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(transport_logistics=-15.0)
+
+    result = translate_to_plain_language(deltas, metrics, cfg, "What if petrol prices spike?")
+    transport = next(s for s in result.sector_impacts if s.sector == "transport_logistics")
+
+    assert transport.direction == "negative"
+    assert "cost" in transport.headline.lower() or "up" in transport.headline.lower() or "transport" in transport.headline.lower()
+
+
+def test_transport_negative_delta_restriction_uses_ban_language():
+    """Negative transport delta with restriction context should mention restrictions."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(transport_logistics=-20.0)
+
+    result = translate_to_plain_language(deltas, metrics, cfg, "What if auto-rickshaws get banned?")
+    transport = next(s for s in result.sector_impacts if s.sector == "transport_logistics")
+
+    assert transport.direction == "negative"
+    assert "restrict" in transport.headline.lower() or "transit" in transport.headline.lower()
+
+
+def test_transport_negative_delta_disaster_uses_crash_language():
+    """Transport delta in disaster context should use 'blocked/disrupted' language."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(
+        transport_logistics=-20.0,
+        it_ites=-25.0,
+        manufacturing=-18.0,
+    )
+
+    result = translate_to_plain_language(
+        deltas, metrics, cfg,
+        "What if there's a flood in Mumbai?",
+    )
+    transport = next(s for s in result.sector_impacts if s.sector == "transport_logistics")
+
+    assert transport.direction == "negative"
+    # Disaster mode should use crash/block language
+    text = (transport.headline + transport.person_example).lower()
+    assert "blocked" in text or "disrupted" in text or "roads" in text
+
+
+def test_transport_positive_delta_uses_growth_language():
+    """Positive transport delta should use growth language."""
+    cfg = _make_city_config()
+    metrics = _make_metrics()
+    deltas = _default_sector_deltas(transport_logistics=10.0)
+
+    result = translate_to_plain_language(deltas, metrics, cfg)
+    transport = next(s for s in result.sector_impacts if s.sector == "transport_logistics")
+
+    assert transport.direction == "positive"
+    assert "grow" in transport.headline.lower() or "boost" in transport.headline.lower() or "sector" in transport.headline.lower()

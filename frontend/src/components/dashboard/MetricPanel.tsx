@@ -33,7 +33,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "gdpDelta",
     color: "emerald",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
-    tooltip: "Change in city economic output compared to baseline",
+    tooltip: "GDP Δ: Change in city economic output. Positive = growth, negative = contraction. Values above 5% indicate significant expansion.",
   },
   {
     title: "Unemployment",
@@ -41,7 +41,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "unemploymentRate",
     color: "amber",
     formatter: (v: number) => `${(v * 100).toFixed(1)}%`,
-    tooltip: "Percentage of workforce looking for jobs",
+    tooltip: "Unemployment: Share of workforce actively seeking jobs. Below 6% is healthy; above 8% signals labor stress. Rising rates may indicate economic slowdown.",
   },
   {
     title: "Real Estate Index",
@@ -49,7 +49,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "realEstateIndex",
     color: "violet",
     formatter: (v: number) => v.toFixed(3),
-    tooltip: "Relative value of commercial and residential property",
+    tooltip: "Real Estate Index: Relative property value (1.0 = baseline). Above 1.05 = appreciating market; below 0.95 = declining values. Tracks commercial & residential.",
   },
   {
     title: "Transit Congestion",
@@ -57,7 +57,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "transitCongestion",
     color: "rose",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
-    tooltip: "How crowded roads and public transport are",
+    tooltip: "Transit Congestion: Road & public transport load. Below 25% = smooth flow; above 40% = significant delays. Affects commute times and productivity.",
   },
   {
     title: "Informal Share",
@@ -65,7 +65,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "informalEmployment",
     color: "cyan",
     formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
-    tooltip: "Share of workers in unregulated jobs",
+    tooltip: "Informal Share: Portion of workers in unregulated/informal jobs. Higher values suggest weaker labor protections and lower tax base. Purely informational metric.",
   },
   {
     title: "Affordability",
@@ -73,7 +73,7 @@ const CHART_CONFIGS: Omit<MetricChartProps, "currentValue" | "metadata">[] = [
     dataKey: "housingAffordability",
     color: "indigo",
     formatter: (v: number) => v.toFixed(2),
-    tooltip: "Ratio of income to housing costs — lower means less affordable",
+    tooltip: "Affordability: Ratio of median income to housing costs. Above 1.0 = affordable; below 0.9 = housing stress. Lower values mean less affordable housing.",
   },
 ];
 
@@ -148,6 +148,7 @@ function AQIPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: AQIPillProp
     <button
       onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
       aria-label={`Air Quality Index: ${value.toFixed(0)}`}
+      title="AQI: Air Quality Index (0–500 scale). 0–50 = Good, 51–100 = Moderate, 101–200 = Unhealthy for sensitive groups, 200+ = Unhealthy. Lower is better."
       className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
     >
       <div className="flex flex-col justify-center min-w-0">
@@ -171,6 +172,7 @@ function WaterStressPill({ value, isBottomDrawerOpen, setBottomDrawerOpen }: Wat
     <button
       onClick={() => setBottomDrawerOpen(!isBottomDrawerOpen)}
       aria-label={`Water Stress: ${(value * 100).toFixed(0)}%`}
+      title="Water Stress: Ratio of water demand to supply. Below 40% = low stress, 40–70% = medium stress, above 70% = high stress. Higher means water scarcity risk."
       className="flex items-center justify-between rounded-xl border border-dark-100/30 bg-dark-300/40 px-3.5 h-12 cursor-pointer hover:border-blue-500/30 hover:bg-dark-300/60 transition-all select-none text-left"
     >
       <div className="flex flex-col justify-center min-w-0">

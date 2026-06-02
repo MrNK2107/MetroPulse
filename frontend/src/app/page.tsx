@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { FrameScrubber } from "@/components/controls/FrameScrubber";
 import { DataFreshnessPanel } from "@/components/dashboard/DataFreshnessPanel";
@@ -9,6 +9,8 @@ import { MetricPanel } from "@/components/dashboard/MetricPanel";
 import { PipelineFlow } from "@/components/dashboard/PipelineFlow";
 import { SimulationProgress } from "@/components/shared/SimulationProgress";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { ConversationPanelSkeleton, EvidencePanelSkeleton } from "@/components/shared/Skeleton";
+import { KeyboardShortcutsHelp } from "@/components/shared/KeyboardShortcutsHelp";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSimulationStore } from "@/store/simulationStore";
 
@@ -26,11 +28,7 @@ const ConversationPanel = dynamic(
   () => import("@/components/controls/ConversationPanel").then((m) => ({ default: m.ConversationPanel })),
   {
     ssr: false,
-    loading: () => (
-      <div className="w-full md:w-[360px] h-full bg-dark-200/95 flex items-center justify-center">
-        <div className="text-gray-500 text-xs animate-pulse">Loading panel...</div>
-      </div>
-    ),
+    loading: () => <ConversationPanelSkeleton />,
   }
 );
 
@@ -38,16 +36,33 @@ const EvidencePanel = dynamic(
   () => import("@/components/dashboard/EvidencePanel").then((m) => ({ default: m.EvidencePanel })),
   {
     ssr: false,
-    loading: () => (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-gray-500 text-xs animate-pulse">Loading evidence...</div>
-      </div>
-    ),
+    loading: () => <EvidencePanelSkeleton />,
   }
 );
 
 export default function Home() {
   useKeyboardShortcuts();
+
+  // Keyboard shortcuts help modal
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setShowShortcuts((prev) => !prev);
+    window.addEventListener("toggle-shortcuts-help", handler);
+    return () => window.removeEventListener("toggle-shortcuts-help", handler);
+  }, []);
+
+  // Dark mode toggle — stored in localStorage
+  const [isDark, setIsDark] = useState(true);
+  useEffect(() => {
+    const stored = localStorage.getItem("metropulse-theme");
+    if (stored === "light") setIsDark(false);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("metropulse-theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   // Load city coordinates from API on mount (merges with static fallback)
   useEffect(() => {
@@ -58,6 +73,8 @@ export default function Home() {
   const isRightSidebarOpen = useSimulationStore((s) => s.isRightSidebarOpen);
   const setLeftSidebarOpen = useSimulationStore((s) => s.setLeftSidebarOpen);
   const setRightSidebarOpen = useSimulationStore((s) => s.setRightSidebarOpen);
+
+  const toggleDark = useCallback(() => setIsDark((d) => !d), []);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-dark-400 text-gray-100 font-sans">
@@ -75,6 +92,26 @@ export default function Home() {
             <PipelineFlow />
           </ErrorBoundary>
         </div>
+      </div>
+
+      {/* Top-right controls: Dark mode toggle + Shortcuts help */}
+      <div className="absolute top-4 right-4 z-30 flex items-center gap-1.5">
+        <button
+          onClick={toggleDark}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all text-xs"
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDark ? "☀️" : "🌙"}
+        </button>
+        <button
+          onClick={() => setShowShortcuts(true)}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-dark-100/50 bg-dark-200/90 text-gray-400 hover:text-white backdrop-blur-md shadow-lg transition-all"
+          title="Keyboard shortcuts (?)"
+          aria-label="Show keyboard shortcuts"
+        >
+          <span className="text-[11px] font-bold font-mono">?</span>
+        </button>
       </div>
 
       {/* Mobile Hamburger Button */}
@@ -180,6 +217,9 @@ export default function Home() {
 
       {/* 7. Loading Overlays */}
       <SimulationProgress />
+
+      {/* 8. Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </main>
   );
 }

@@ -88,13 +88,16 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   const dataSources = currentFrame?.proof?.dataSources ?? evidence?.proof?.dataSources ?? {};
   const caseRetrieval = evidence?.case_retrieval;
 
-  // Streaming text reveal for Report tab
-  const STREAM_INTERVAL_MS = 15;
+  // Streaming text reveal for Report tab — optimized with requestAnimationFrame
+  // and throttled state updates (~100ms) to avoid re-rendering ReactMarkdown at 15ms
   const STREAM_WORDS_PER_TICK = 3;
+  const THROTTLE_MS = 100;
 
   const [visibleWords, setVisibleWords] = useState(0);
   const totalWordsRef = useRef(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const wordsRef = useRef(0);
+  const lastUpdateRef = useRef(0);
 
   useEffect(() => {
     if (!evidence?.markdown) {
@@ -103,20 +106,28 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
     }
     const words = evidence.markdown.split(/\s+/);
     totalWordsRef.current = words.length;
+    wordsRef.current = 0;
+    lastUpdateRef.current = 0;
     setVisibleWords(0);
 
-    intervalRef.current = setInterval(() => {
-      setVisibleWords((prev) => {
-        if (prev >= totalWordsRef.current) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return prev;
-        }
-        return prev + STREAM_WORDS_PER_TICK;
-      });
-    }, STREAM_INTERVAL_MS);
+    const tick = (timestamp: number) => {
+      if (wordsRef.current >= totalWordsRef.current) return;
+
+      wordsRef.current += STREAM_WORDS_PER_TICK;
+
+      // Throttle state updates to every ~100ms for smoother rendering
+      if (timestamp - lastUpdateRef.current >= THROTTLE_MS || wordsRef.current >= totalWordsRef.current) {
+        lastUpdateRef.current = timestamp;
+        setVisibleWords(Math.min(wordsRef.current, totalWordsRef.current));
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [evidence?.markdown]);
 

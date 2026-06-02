@@ -13,6 +13,12 @@ export function useKeyboardShortcuts() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         const runBtn = document.querySelector("[data-run-btn]") as HTMLButtonElement | null;
@@ -23,6 +29,12 @@ export function useKeyboardShortcuts() {
       if (e.key === "Escape" && drawMode !== "none") {
         setDrawMode("none");
         e.preventDefault();
+        return;
+      }
+
+      if (e.key === "?") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("toggle-shortcuts-help"));
         return;
       }
 
