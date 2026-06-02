@@ -3,6 +3,7 @@ import asyncio
 import logging
 import json
 import time
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -103,8 +104,20 @@ app = FastAPI(
 )
 
 
+class CorrelationIdMiddleware(BaseHTTPMiddleware):
+    """Assigns a unique X-Request-ID to every request for distributed tracing."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        # Stash on request state so downstream middleware/handlers can access it
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Structured JSON logging for all requests except health checks."""
+    """Structured JSON logging for all requests except health checks. Includes correlation ID."""
 
     async def dispatch(self, request: Request, call_next):
         # Skip logging for health check endpoints
@@ -121,6 +134,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             "status": response.status_code,
             "response_time_ms": elapsed_ms,
         }
+        request_id = getattr(request.state, "request_id", None)
+        if request_id:
+            log_entry["request_id"] = request_id
         logger.info(json.dumps(log_entry))
 
         # Add version header to response
@@ -187,6 +203,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RateLimitMiddleware)
 

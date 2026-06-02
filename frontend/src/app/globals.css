@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-dark-50: #f8fafc;
+  --color-dark-100: #1e1e2e;
+  --color-dark-200: #181825;
+  --color-dark-300: #11111b;
+  --color-dark-400: #0a0a14;
+  --color-dark-500: #05050a;
+}
+
+/* Light mode overrides — toggled by adding .light class on <html> */
+:root.light {
+  --color-dark-50: #0f172a;
+  --color-dark-100: #e2e8f0;
+  --color-dark-200: #f1f5f9;
+  --color-dark-300: #f8fafc;
+  --color-dark-400: #ffffff;
+  --color-dark-500: #ffffff;
+}
+
+/* Light mode: invert text colors for readability on light backgrounds */
+:root.light .text-gray-100 { color: #0f172a !important; }
+:root.light .text-gray-200 { color: #1e293b !important; }
+:root.light .text-gray-300 { color: #334155 !important; }
+:root.light .text-gray-400 { color: #475569 !important; }
+:root.light .text-gray-500 { color: #64748b !important; }
+:root.light .text-gray-600 { color: #94a3b8 !important; }
+:root.light .border-dark-100\/50 { border-color: rgba(148, 163, 184, 0.3) !important; }
+:root.light .border-dark-100\/30 { border-color: rgba(148, 163, 184, 0.2) !important; }
+:root.light .border-dark-100\/40 { border-color: rgba(148, 163, 184, 0.25) !important; }
+:root.light .border-dark-100\/60 { border-color: rgba(148, 163, 184, 0.35) !important; }
+
 * {
   box-sizing: border-box;
 }

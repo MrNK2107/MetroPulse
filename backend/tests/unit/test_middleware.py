@@ -13,7 +13,7 @@ import pytest
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
-from app.main import RequestLoggingMiddleware
+from app.main import CorrelationIdMiddleware, RequestLoggingMiddleware
 
 
 def _make_starlette_request(method: str = "GET", path: str = "/api/v1/regions") -> Request:
@@ -193,3 +193,77 @@ async def test_response_time_is_positive():
         assert len(info_calls) >= 1
         log_data = json.loads(info_calls[0][0][0])
         assert log_data["response_time_ms"] >= 0
+
+
+# ── CorrelationIdMiddleware tests ───────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_correlation_id_header_present():
+    """Every response should have an X-Request-ID header."""
+    request = _make_starlette_request("GET", "/api/v1/regions")
+
+    middleware = CorrelationIdMiddleware(app=MagicMock())
+    mock_response = Response(content="ok", status_code=200)
+    call_next = AsyncMock(return_value=mock_response)
+
+    response = await middleware.dispatch(request, call_next)
+    assert "X-Request-ID" in response.headers
+    # Should be a valid UUID
+    import uuid
+    uuid.UUID(response.headers["X-Request-ID"])
+
+
+@pytest.mark.asyncio
+async def test_correlation_id_passthrough():
+    """If the client sends X-Request-ID, it should be echoed back."""
+    client_request_id = "my-custom-trace-id-123"
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/regions",
+        "query_string": b"",
+        "headers": [(b"x-request-id", client_request_id.encode())],
+        "server": ("testserver", 80),
+    }
+    request = Request(scope)
+
+    middleware = CorrelationIdMiddleware(app=MagicMock())
+    mock_response = Response(content="ok", status_code=200)
+    call_next = AsyncMock(return_value=mock_response)
+
+    response = await middleware.dispatch(request, call_next)
+    assert response.headers["X-Request-ID"] == client_request_id
+
+
+@pytest.mark.asyncio
+async def test_correlation_id_stashed_on_request_state():
+    """The middleware should stash the request_id on request.state."""
+    request = _make_starlette_request("GET", "/api/v1/regions")
+
+    middleware = CorrelationIdMiddleware(app=MagicMock())
+    mock_response = Response(content="ok", status_code=200)
+    call_next = AsyncMock(return_value=mock_response)
+
+    response = await middleware.dispatch(request, call_next)
+    assert hasattr(request.state, "request_id")
+    assert request.state.request_id == response.headers["X-Request-ID"]
+
+
+@pytest.mark.asyncio
+async def test_request_logging_includes_correlation_id(caplog):
+    """The JSON log entry should include request_id when correlation middleware runs."""
+    request = _make_starlette_request("GET", "/api/v1/regions")
+    # Simulate what CorrelationIdMiddleware would do
+    request.state.request_id = "test-req-id-abc"
+    with caplog.at_level(logging.INFO):
+        response = await _run_middleware(request, response_status=200)
+    json_logs = []
+    for record in caplog.records:
+        try:
+            json_logs.append(json.loads(record.message))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    assert len(json_logs) >= 1
+    assert json_logs[0].get("request_id") == "test-req-id-abc"

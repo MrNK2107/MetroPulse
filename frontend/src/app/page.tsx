@@ -60,7 +60,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.classList.toggle("light", !isDark);
     localStorage.setItem("metropulse-theme", isDark ? "dark" : "light");
   }, [isDark]);
 

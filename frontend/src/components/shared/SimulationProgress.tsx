@@ -1,7 +1,7 @@
 "use client";
 
 import { useSimulationStore } from "@/store/simulationStore";
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 const ERROR_HINTS: Record<string, string> = {
   parsing: "Could not understand the scenario. Try including a city name and a sector change.",
@@ -17,6 +17,16 @@ export function SimulationProgress() {
   const error = useSimulationStore((s) => s.error);
   const frames = useSimulationStore((s) => s.frames);
   const total = useSimulationStore((s) => s.parsedScenario?.horizon_months ?? 0);
+  const [showToast, setShowToast] = useState(false);
+
+  // Show success toast when simulation completes
+  useEffect(() => {
+    if (stage === "done") {
+      setShowToast(true);
+      const timer = setTimeout(() => setShowToast(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [stage]);
 
   const dismissError = useCallback(() => {
     useSimulationStore.setState({ error: null, errorStage: null, pipelineStage: "idle" });
@@ -35,6 +45,16 @@ export function SimulationProgress() {
           >
             ✕
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (showToast) {
+    return (
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 max-w-lg">
+        <div className="rounded-xl border border-emerald-500/30 bg-dark-200/95 px-4 py-3 text-sm text-emerald-300 shadow-lg backdrop-blur-sm" role="alert" aria-live="polite">
+          <span className="font-semibold text-emerald-400">✅</span> Simulation complete! Results are ready.
         </div>
       </div>
     );

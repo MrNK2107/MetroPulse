@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSimulationStore, selectCurrentFrame } from "@/store/simulationStore";
@@ -16,7 +16,7 @@ function getKatex() {
   return katexModule;
 }
 
-type ActiveTab = "simple" | "detailed" | "cases" | "technical";
+type ActiveTab = "simple" | "detailed" | "cases" | "technical" | "history";
 
 function LaTeX({ math, block = false }: { math: string; block?: boolean }) {
   try {
@@ -63,6 +63,7 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   const prediction = useSimulationStore((s) => s.prediction);
   const pipelineStage = useSimulationStore((s) => s.pipelineStage);
   const currentFrame = useSimulationStore(selectCurrentFrame);
+  const simulationHistory = useSimulationStore((s) => s.simulationHistory);
 
   const translation: TranslationResult = useMemo(() => ({
     headline: evidence?.translation?.headline ?? "",
@@ -75,6 +76,29 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
   const explainabilityTopDrivers = evidence?.explainability?.top_drivers ?? [];
   const hasSimpleView = Boolean(translation.sector_impacts.length);
   const [activeTab, setActiveTab] = useState<ActiveTab>("simple");
+  const [caseSearch, setCaseSearch] = useState("");
+  const [caseTierFilter, setCaseTierFilter] = useState<string>("all");
+  const [showCopyToast, setShowCopyToast] = useState(false);
+
+  // Filtered case studies
+  const filteredCaseStudies = useMemo(() => {
+    return caseStudies.filter((study) => {
+      const matchesSearch = caseSearch === "" ||
+        study.title.toLowerCase().includes(caseSearch.toLowerCase()) ||
+        study.description.toLowerCase().includes(caseSearch.toLowerCase());
+      const matchesTier = caseTierFilter === "all" || study.relevance_tier === caseTierFilter;
+      return matchesSearch && matchesTier;
+    });
+  }, [caseStudies, caseSearch, caseTierFilter]);
+
+  // Copy share link
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShowCopyToast(true);
+      setTimeout(() => setShowCopyToast(false), 2000);
+    } catch { /* clipboard API may fail in some contexts */ }
+  }, []);
 
   // Switch to simple tab when evidence with simpleView arrives after mount
   useEffect(() => {
@@ -261,6 +285,20 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
             >
               Technical
             </button>
+            <button
+              onClick={() => setActiveTab("history")}
+              role="tab"
+              id="tab-history"
+              aria-selected={activeTab === "history"}
+              aria-controls="tabpanel-history"
+              className={`flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg transition-all ${
+                activeTab === "history"
+                  ? "bg-blue-600/95 text-white shadow-md shadow-blue-500/10"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-dark-300/35"
+              }`}
+            >
+              History
+            </button>
           </div>
 
           {/* Tab Content Area */}
@@ -429,6 +467,20 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                 {/* Tab: Detailed (original report) */}
                 {activeTab === "detailed" && (
                   <div className="space-y-4" role="tabpanel" id="tabpanel-detailed" aria-labelledby="tab-detailed">
+                    {/* Share button + toast */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleShare}
+                        className="flex items-center gap-1.5 rounded-lg border border-dark-100/50 bg-dark-300/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-200 hover:border-blue-500/30 transition-all"
+                      >
+                        🔗 Share
+                      </button>
+                    </div>
+                    {showCopyToast && (
+                      <div className="rounded-lg border border-emerald-500/30 bg-dark-200/95 px-3 py-2 text-xs text-emerald-300 shadow-md">
+                        ✅ Link copied to clipboard!
+                      </div>
+                    )}
                     {evidence ? (
                       <article className="font-sans text-gray-300 leading-[1.5]">
                         {/* Blinking cursor while streaming */}
@@ -517,8 +569,36 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                 {/* Tab: Precedent Case Studies */}
                 {activeTab === "cases" && (
                   <div className="space-y-3" role="tabpanel" id="tabpanel-cases" aria-labelledby="tab-cases">
-                    {caseStudies.length > 0 ? (
-                      caseStudies.map((study) => (
+                    {/* Search & filter controls */}
+                    {caseStudies.length > 0 && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="Search case studies..."
+                          value={caseSearch}
+                          onChange={(e) => setCaseSearch(e.target.value)}
+                          className="w-full rounded-lg border border-dark-100/50 bg-dark-300/60 px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+                        />
+                        <div className="flex items-center gap-2">
+                          <label className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Tier:</label>
+                          <select
+                            value={caseTierFilter}
+                            onChange={(e) => setCaseTierFilter(e.target.value)}
+                            className="rounded-lg border border-dark-100/50 bg-dark-300/60 px-2 py-1 text-[10px] text-gray-300 focus:outline-none focus:border-blue-500/50 transition-colors"
+                          >
+                            <option value="all">All</option>
+                            <option value="exact">Exact</option>
+                            <option value="related">Related</option>
+                            <option value="weak">Contextual</option>
+                          </select>
+                          {caseSearch || caseTierFilter !== "all" ? (
+                            <span className="text-[9px] text-gray-500">{filteredCaseStudies.length} of {caseStudies.length}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
+                    {filteredCaseStudies.length > 0 ? (
+                      filteredCaseStudies.map((study) => (
                         <div key={study.id} className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-4 hover:border-dark-100 transition-all select-none">
                           <div className="flex justify-between items-start gap-3 border-b border-dark-100/30 pb-2">
                             <h4 className="text-xs font-bold text-gray-200">
@@ -570,9 +650,11 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                     ) : (
                       <div className="rounded-xl border border-dark-100/60 bg-dark-300/40 p-4 text-center py-8">
                         <span className="text-gray-600 text-2xl block mb-2">📁</span>
-                        <p className="text-xs text-gray-400 font-semibold">No Case Studies Located</p>
+                        <p className="text-xs text-gray-400 font-semibold">{caseStudies.length === 0 ? "No Case Studies Located" : "No matching case studies"}</p>
                         <p className="mt-1 text-[10px] text-gray-500 max-w-[240px] mx-auto leading-[1.5]">
-                          No close historical precedent matched this scenario. The evidence report relies on simulation outputs.
+                          {caseStudies.length === 0
+                            ? "No close historical precedent matched this scenario. The evidence report relies on simulation outputs."
+                            : "Try adjusting your search or filter criteria."}
                         </p>
                       </div>
                     )}
@@ -716,6 +798,37 @@ export const EvidencePanel = React.memo(function EvidencePanel() {
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Tab: History (simulation history from localStorage) */}
+                {activeTab === "history" && (
+                  <div className="space-y-3" role="tabpanel" id="tabpanel-history" aria-labelledby="tab-history">
+                    {simulationHistory.length > 0 ? (
+                      simulationHistory.map((entry) => (
+                        <div key={entry.id} className="rounded-xl border border-dark-100/50 bg-dark-300/30 p-4 hover:border-dark-100 transition-all">
+                          <div className="flex justify-between items-start gap-3 border-b border-dark-100/30 pb-2">
+                            <h4 className="text-xs font-bold text-gray-200">{entry.city}</h4>
+                            <span className="text-[9px] text-gray-500 font-mono">
+                              {new Date(entry.timestamp).toLocaleDateString()} {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-[11px] text-gray-400 leading-[1.5] line-clamp-2">{entry.scenario}</p>
+                          {entry.verdict && (
+                            <p className="mt-2 text-[10px] text-emerald-400/80 italic">{entry.verdict}</p>
+                          )}
+                          <div className="mt-2 text-[9px] text-gray-600 font-mono">ID: {entry.id}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dark-100/60 bg-dark-300/40 p-4 text-center py-8">
+                        <span className="text-gray-600 text-2xl block mb-2">📋</span>
+                        <p className="text-xs text-gray-400 font-semibold">No Simulation History</p>
+                        <p className="mt-1 text-[10px] text-gray-500 max-w-[240px] mx-auto leading-[1.5]">
+                          Completed simulations will appear here. Run a scenario to get started.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

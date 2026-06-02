@@ -9,12 +9,12 @@ const config: Config = {
     extend: {
       colors: {
         dark: {
-          50: "#f8fafc",
-          100: "#1e1e2e",
-          200: "#181825",
-          300: "#11111b",
-          400: "#0a0a14",
-          500: "#05050a",
+          50: "var(--color-dark-50, #f8fafc)",
+          100: "var(--color-dark-100, #1e1e2e)",
+          200: "var(--color-dark-200, #181825)",
+          300: "var(--color-dark-300, #11111b)",
+          400: "var(--color-dark-400, #0a0a14)",
+          500: "var(--color-dark-500, #05050a)",
         },
       },
     },

@@ -14,11 +14,11 @@ describe('SimulationProgress (LoadingOverlay)', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders nothing when done', () => {
+  it('shows success toast when done', () => {
     useSimulationStore.getState().setStage('done', 'Complete')
 
-    const { container } = render(<SimulationProgress />)
-    expect(container.firstChild).toBeNull()
+    render(<SimulationProgress />)
+    expect(screen.getByText(/Simulation complete/)).toBeInTheDocument()
   })
 
   it('shows loading text during parsing stage', () => {

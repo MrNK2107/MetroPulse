@@ -18,6 +18,14 @@ import type { MapMetricKey } from "@/lib/colorScale";
 
 export type DrawMode = "none" | "point" | "polygon";
 
+export interface SimulationHistoryEntry {
+  id: string;
+  city: string;
+  scenario: string;
+  timestamp: number;
+  verdict: string;
+}
+
 export interface ConversationMessage {
   role: "user" | "system";
   text: string;
@@ -84,6 +92,9 @@ interface SimulationStore {
   errorStage: PipelineStage | null;
   simulationId: string | null;
   snapshot: SnapshotSummary | null;
+
+  // Simulation history
+  simulationHistory: SimulationHistoryEntry[];
 
   // Conversation state
   conversationMessages: ConversationMessage[];
@@ -161,6 +172,24 @@ const EXAMPLE_SCENARIOS = [
 
 const EXAMPLE = EXAMPLE_SCENARIOS[Math.floor(Math.random() * EXAMPLE_SCENARIOS.length)];
 
+const HISTORY_KEY = "metropulse-simulation-history";
+
+function loadHistory(): SimulationHistoryEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: SimulationHistoryEntry[]) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+  } catch { /* storage full */ }
+}
+
 const DEFAULT_MAP_VIEW_STATE = {
   longitude: 78.4867,
   latitude: 17.385,
@@ -183,6 +212,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   errorStage: null,
   simulationId: null,
   snapshot: null,
+  simulationHistory: loadHistory(),
 
   conversationMessages: [],
   conversationMode: "quick",
@@ -269,13 +299,25 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     })),
 
   setSimulationId: (id) =>
-    set((state) => ({
-      simulationId: id,
-      pipelineStage: "done",
-      stageHistory: state.stageHistory.map((entry) =>
-        entry.status === "active" ? { ...entry, status: "complete" as const } : entry
-      ),
-    })),
+    set((state) => {
+      const newEntry: SimulationHistoryEntry = {
+        id,
+        city: state.parsedScenario?.city ?? "unknown",
+        scenario: state.scenarioText,
+        timestamp: Date.now(),
+        verdict: state.evidence?.translation?.overall_verdict ?? "",
+      };
+      const updatedHistory = [newEntry, ...state.simulationHistory].slice(0, 10);
+      saveHistory(updatedHistory);
+      return {
+        simulationId: id,
+        pipelineStage: "done",
+        simulationHistory: updatedHistory,
+        stageHistory: state.stageHistory.map((entry) =>
+          entry.status === "active" ? { ...entry, status: "complete" as const } : entry
+        ),
+      };
+    }),
 
   setDrawMode: (mode) => set({ drawMode: mode, pendingVertices: [] }),
 
