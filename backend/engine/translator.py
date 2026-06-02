@@ -695,7 +695,7 @@ def translate_to_plain_language(
     sector_impacts: list[SectorImpact] = []
 
     for sector, delta in sector_deltas.items():
-        if abs(delta) < 1.0:
+        if abs(delta) < 0.5:
             continue
         translator = _SECTOR_TRANSLATORS.get(sector)
         if translator:

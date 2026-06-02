@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import logging
+import re
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -68,4 +72,26 @@ class Settings(BaseSettings):
     model_config = {"env_file": ".env", "case_sensitive": False}
 
 
-settings = Settings()
+_url_pattern = re.compile(r"^https?://[^\s]+$")
+
+def _validate_settings(s: Settings) -> Settings:
+    """Validate settings at startup: CORS origins, security warnings."""
+    origins = s.cors_origin_list
+    for origin in origins:
+        if origin == "*":
+            if s.environment not in ("development", "dev", "local"):
+                logger.warning(
+                    "CORS_ORIGINS contains '*' in non-dev environment '%s'. "
+                    "This is a security risk — restrict to specific origins in production.",
+                    s.environment,
+                )
+        elif not _url_pattern.match(origin):
+            logger.warning(
+                "CORS_ORIGINS contains invalid URL: '%s'. "
+                "Expected format: http://host:port or https://domain.",
+                origin,
+            )
+    return s
+
+
+settings = _validate_settings(Settings())

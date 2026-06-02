@@ -51,29 +51,36 @@ def to_frame(state: GridState, month: int) -> dict:
     else:
         cell_confidence = np.full(state.n_cells, 0.35)
 
+    # Pre-compute proof strings vectorized
+    delta_pct = np.round(deltas * 100, 1)
+    r_vals = np.round(state.R, 2)
+    t_vals = np.round(state.T, 2)
+
+    # Build cells using zip() — avoids per-index bracket access in Python loop
     cells = [
         {
-            "h3Index": state.h3_indices[i],
-            "economicActivity": float(kt_round[i]),
-            "delta": float(deltas_round[i]),
-            "jobDensity": float(e_formal_round[i]),
-            "jobDensityInformal": float(e_informal_round[i]),
-            "realEstateIndex": float(r_round[i]),
-            "congestion": float(t_round[i]),
-            "housingAffordability": float(h_round[i]),
-            "floodRisk": float(f_round[i]),
-            "migrationPressure": float(m_round[i]),
-            "visualCue": str(cues[i]),
-            "confidence": float(cell_confidence[i]),
-            "proof": (
-                f"\\Delta K {(deltas[i] * 100):+.1f}%; "
-                f"jobs {total_jobs[i]:,.0f}; "
-                f"R={state.R[i]:.2f}, T={state.T[i]:.2f}; "
-                f"{mode_label} via {source_label}; "
-                f"drivers: {drivers}"
-            ),
+            "h3Index": h3,
+            "economicActivity": ea,
+            "delta": d,
+            "jobDensity": jf,
+            "jobDensityInformal": ji,
+            "realEstateIndex": re_idx,
+            "congestion": cong,
+            "housingAffordability": ha,
+            "floodRisk": fr,
+            "migrationPressure": mp,
+            "visualCue": vc,
+            "confidence": cf,
+            "proof": f"\\Delta K {dp:+.1f}%; jobs {tj:,.0f}; R={rv:.2f}, T={tv:.2f}; {mode_label} via {source_label}; drivers: {drivers}",
         }
-        for i in range(state.n_cells)
+        for h3, ea, d, jf, ji, re_idx, cong, ha, fr, mp, vc, cf, dp, tj, rv, tv in zip(
+            state.h3_indices,
+            kt_round, deltas_round,
+            e_formal_round, e_informal_round,
+            r_round, t_round, h_round, f_round, m_round,
+            cues, cell_confidence,
+            delta_pct, total_jobs, r_vals, t_vals,
+        )
     ]
 
     year = datetime.now().year + (month - 1) // 12

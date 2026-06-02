@@ -25,12 +25,29 @@ from engine.nl_engine.group_scorer import score_groups, compute_satisfaction
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+MAX_WS_MESSAGE_BYTES = 64 * 1024  # 64 KB per WebSocket text message
+
+# Track active WebSocket connections for connection-count enforcement
+_active_ws_connections: int = 0
+
 _intent_router = IntentRouter()
 
 
 @router.websocket("/ws/simulate")
 async def simulation_websocket(websocket: WebSocket):
+    global _active_ws_connections
+
+    # ── Connection-count enforcement ──────────────────────────────
+    if _active_ws_connections >= settings.ws_max_connections:
+        logger.warning(
+            "WebSocket connection rejected: at capacity (%d/%d)",
+            _active_ws_connections, settings.ws_max_connections,
+        )
+        await websocket.close(code=1013, reason="Server at capacity — try again later")
+        return
+
     await websocket.accept()
+    _active_ws_connections += 1
     simulation_id = str(uuid4())
     db = await get_db()
 
@@ -375,6 +392,7 @@ async def simulation_websocket(websocket: WebSocket):
         except Exception:
             pass
     finally:
+        _active_ws_connections = max(0, _active_ws_connections - 1)
         try:
             await websocket.close()
         except Exception:
@@ -388,6 +406,15 @@ async def _receive_start(websocket: WebSocket) -> StartScenarioMessage:
         if remaining <= 0:
             raise asyncio.TimeoutError()
         message = await asyncio.wait_for(websocket.receive_text(), timeout=remaining)
+        if len(message.encode("utf-8")) > MAX_WS_MESSAGE_BYTES:
+            await websocket.send_json({
+                "type": "ERROR",
+                "stage": "parsing",
+                "code": "MESSAGE_TOO_LARGE",
+                "message": f"Message exceeds {MAX_WS_MESSAGE_BYTES // 1024}KB limit.",
+            })
+            await websocket.close(code=1009, reason="Message too large")
+            raise ScenarioParseError("WebSocket message exceeds size limit")
         try:
             payload = json.loads(message)
         except json.JSONDecodeError as e:
@@ -411,6 +438,15 @@ async def _receive_input_response(websocket: WebSocket) -> InputResponseMessage:
         if remaining <= 0:
             raise asyncio.TimeoutError()
         message = await asyncio.wait_for(websocket.receive_text(), timeout=remaining)
+        if len(message.encode("utf-8")) > MAX_WS_MESSAGE_BYTES:
+            await websocket.send_json({
+                "type": "ERROR",
+                "stage": "parsing",
+                "code": "MESSAGE_TOO_LARGE",
+                "message": f"Message exceeds {MAX_WS_MESSAGE_BYTES // 1024}KB limit.",
+            })
+            await websocket.close(code=1009, reason="Message too large")
+            raise ScenarioParseError("WebSocket message exceeds size limit")
         try:
             payload = json.loads(message)
         except json.JSONDecodeError as e:

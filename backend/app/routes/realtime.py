@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+import time
+from collections import defaultdict
+
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import JSONResponse
 
 from app.db import DatabaseClient, get_db
 from app.realtime import run_ingestion_cycle, snapshot_quality
 
 router = APIRouter()
+
+# ── In-memory rate limiter for POST /ingest ───────────────────────
+_ingest_rate_limit: dict[str, list[float]] = defaultdict(list)
+_INGEST_MAX_REQUESTS = 3
+_INGEST_WINDOW_SECONDS = 60.0
 
 
 @router.get("/data-sources")
@@ -50,9 +59,30 @@ async def latest_snapshot(
 
 @router.post("/ingest")
 async def trigger_ingestion(
+    request: Request,
     city: str = Query(..., description="City ID (e.g. bengaluru, mumbai, delhi_ncr)"),
     db: DatabaseClient = Depends(get_db),
 ):
+    # ── Rate limit check ─────────────────────────────────────────
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    timestamps = _ingest_rate_limit[client_ip]
+    # Evict expired entries
+    _ingest_rate_limit[client_ip] = [t for t in timestamps if now - t < _INGEST_WINDOW_SECONDS]
+    timestamps = _ingest_rate_limit[client_ip]
+    if len(timestamps) >= _INGEST_MAX_REQUESTS:
+        retry_after = _INGEST_WINDOW_SECONDS - (now - timestamps[0])
+        return JSONResponse(
+            status_code=429,
+            content={
+                "success": False,
+                "data": None,
+                "error": f"Rate limit exceeded. Max {_INGEST_MAX_REQUESTS} requests per {_INGEST_WINDOW_SECONDS:.0f}s.",
+                "meta": {"city": city, "retry_after_seconds": round(retry_after, 1)},
+            },
+        )
+    timestamps.append(now)
+
     snapshot = await run_ingestion_cycle(db, city)
     return {
         "success": snapshot is not None,

@@ -77,10 +77,15 @@ def _fallback_parse(text: str) -> ParsedScenario:
         if any(_contains_keyword(lowered, keyword) for keyword in keywords)
     ]
 
-    horizon, horizon_was_explicit = _extract_horizon(lowered)
+    horizon, horizon_was_explicit, original_value = _extract_horizon(lowered)
     assumptions = []
     if not horizon_was_explicit:
         assumptions.append("Time horizon defaulted to 24 months because the prompt did not specify duration.")
+    elif original_value is not None:
+        assumptions.append(
+            f"Requested horizon of {original_value} months was rounded to {horizon} months "
+            f"(nearest supported interval from 6, 12, 24, 60)."
+        )
 
     if not mentioned_sectors and not policies:
         if any(word in lowered for word in ["boom", "growth", "investment", "improve"]):
@@ -141,16 +146,22 @@ def _infer_delta(text: str, keywords: list[str]) -> float:
     return magnitude if any(_contains_keyword(text, keyword) for keyword in keywords) else 0.0
 
 
-def _extract_horizon(text: str) -> tuple[int, bool]:
+def _extract_horizon(text: str) -> tuple[int, bool, int | None]:
     match = re.search(r"(\d{1,2})\s*(month|months|m)\b", text)
     if match:
         value = int(match.group(1))
-        return min([6, 12, 24, 60], key=lambda x: abs(x - value)), True
+        snapped = min([6, 12, 24, 60], key=lambda x: abs(x - value))
+        if snapped != value:
+            return snapped, True, value
+        return snapped, True, None
     match = re.search(r"(\d)\s*(year|years|yr|yrs)\b", text)
     if match:
         value = int(match.group(1)) * 12
-        return min([6, 12, 24, 60], key=lambda x: abs(x - value)), True
-    return 24, False
+        snapped = min([6, 12, 24, 60], key=lambda x: abs(x - value))
+        if snapped != value:
+            return snapped, True, value
+        return snapped, True, None
+    return 24, False, None
 
 
 def _contains_keyword(text: str, keyword: str) -> bool:
