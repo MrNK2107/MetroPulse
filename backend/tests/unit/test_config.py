@@ -57,7 +57,7 @@ class TestMissingCity:
             CityConfig.load("atlantis_nonexistent")
 
     def test_load_raises_for_empty_string(self):
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises((FileNotFoundError, ValueError)):
             CityConfig.load("")
 
     def test_load_raises_for_wrong_case(self):

@@ -121,11 +121,13 @@ def _make_translation_result():
     tr.sector_impacts = [
         MagicMock(
             sector="transport_logistics",
+            sector_label="Transport & Logistics",
             direction="negative",
             headline="Transport jobs declining",
             person_example="A delivery driver in Mumbai could see ₹8,000 less per month",
             city_wide="About 81,000 transport workers across Mumbai feel the pressure",
             numbers={"jobs_affected": 81000},
+            delta_pct=-15.0,
         ),
     ]
     tr.takeaways = ["Transport costs rise for daily commuters", "Logistics sector sees reduced margins"]
@@ -143,12 +145,11 @@ def _make_translation_result():
     (-0.003, "Partially Confirmed"),  # |gdp| <= 0.005
     (0.003, "Partially Confirmed"),
 ])
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_verdict_confirmed_when_gdp_above_threshold(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
     gdp_delta, expected,
 ):
     mock_translate.return_value = _make_translation_result()
@@ -163,12 +164,11 @@ def test_verdict_confirmed_when_gdp_above_threshold(
     assert result["verdict"] == expected
 
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_verdict_surprise_when_gdp_drops_but_sectors_positive(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     # GDP drops below -2% AND some sector deltas are positive
@@ -183,12 +183,11 @@ def test_verdict_surprise_when_gdp_drops_but_sectors_positive(
     assert result["verdict"] == "Surprise"
 
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_verdict_partially_confirmed_when_no_prediction(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -202,12 +201,11 @@ def test_verdict_partially_confirmed_when_no_prediction(
 
 # ── Markdown output ─────────────────────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_markdown_contains_expected_sections(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -229,12 +227,11 @@ def test_markdown_contains_expected_sections(
     assert "Mumbai" in md
 
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_simple_markdown_contains_headline_and_takeaways(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -253,12 +250,11 @@ def test_simple_markdown_contains_headline_and_takeaways(
 
 # ── Empty case studies ───────────────────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_empty_case_studies_produces_no_precedent_message(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -274,12 +270,11 @@ def test_empty_case_studies_produces_no_precedent_message(
 
 # ── Missing prediction (None) ───────────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_missing_prediction_produces_partially_confirmed(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -295,12 +290,11 @@ def test_missing_prediction_produces_partially_confirmed(
 
 # ── Evidence pack with low vs high confidence ────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_evidence_pack_high_confidence(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -317,12 +311,11 @@ def test_evidence_pack_high_confidence(
     assert result["evidence_pack"]["overall_evidence_confidence"] == 0.85
 
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_evidence_pack_low_confidence(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -340,12 +333,11 @@ def test_evidence_pack_low_confidence(
 
 # ── Return structure completeness ───────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_result_has_all_required_keys(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -368,12 +360,11 @@ def test_result_has_all_required_keys(
 
 # ── Translation sub-structure ───────────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_translation_sub_structure(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -395,12 +386,11 @@ def test_translation_sub_structure(
 
 # ── Case retrieval defaults ─────────────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_case_retrieval_populated_from_params_when_not_supplied(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params(sector_deltas={"transport_logistics": -15.0})
@@ -418,12 +408,11 @@ def test_case_retrieval_populated_from_params_when_not_supplied(
 
 # ── Case retrieval override ─────────────────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_case_retrieval_override(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -441,12 +430,11 @@ def test_case_retrieval_override(
 
 # ── Assumptions include counter-intuitive from prediction ───────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_counter_intuitive_in_assumptions(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params(assumptions=["Base assumption"])
@@ -462,12 +450,11 @@ def test_counter_intuitive_in_assumptions(
 
 # ── Weak relevance tier cases filtered ───────────────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", return_value={})
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_weak_cases_excluded_from_markdown(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
@@ -484,21 +471,24 @@ def test_weak_cases_excluded_from_markdown(
 
 # ── Explainability failure is handled gracefully ─────────────────────────────
 
-@patch("engine.tertiary_loop.build_explanation", side_effect=Exception("boom"))
 @patch("engine.tertiary_loop.format_explanation_narrative", return_value="")
 @patch("engine.tertiary_loop.explain_metric_deltas", return_value={})
 @patch("engine.tertiary_loop.translate_to_plain_language")
 def test_explainability_failure_handled_gracefully(
-    mock_translate, mock_explain, mock_format, mock_build,
+    mock_translate, mock_explain, mock_format,
 ):
     mock_translate.return_value = _make_translation_result()
     params = _make_params()
     prediction = _make_prediction()
     frame = _make_final_frame()
 
+    # Pass an explainability_fn that raises — the function should handle it gracefully
+    def bad_explainability_fn(*args, **kwargs):
+        raise Exception("boom")
+
     from engine.tertiary_loop import synthesize_evidence
     # Should not raise
-    result = synthesize_evidence(params, prediction, frame, [])
+    result = synthesize_evidence(params, prediction, frame, [], explainability_fn=bad_explainability_fn)
 
     assert result["verdict"] is not None
     assert result["explainability"] == {}

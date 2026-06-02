@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class GridFactory:
     @classmethod
-    def initialize(cls, region_boundary: dict[str, Any], params: SimulationParams) -> GridState:
+    def initialize(cls, region_boundary: dict[str, Any], params: SimulationParams, overlay_fn=None) -> GridState:
         resolution = 8
         shape = h3.geo_to_h3shape(region_boundary)
         h3_indices = list(h3.h3shape_to_cells(shape, resolution))
@@ -79,10 +79,8 @@ class GridFactory:
         # Apply real-time overlay from snapshot (city-level signals → per-cell modifiers)
         snapshot = getattr(params, "realtime_snapshot", None)
         overlay_summary: dict[str, Any] = {}
-        if snapshot:
-            from app.simulation.overlay import generate_overlay
-
-            overlay = generate_overlay(snapshot, h3_indices, params.city_config)
+        if snapshot and overlay_fn is not None:
+            overlay = overlay_fn(snapshot, h3_indices, params.city_config)
             if overlay:
                 confidences = []
                 sources: set[str] = set()
@@ -210,6 +208,8 @@ class GridFactory:
 
     @staticmethod
     def _zone_flags(h3_indices: list[str], city_config: Any) -> dict[str, np.ndarray]:
+        import os
+        import re as _re
         flags: dict[str, np.ndarray] = {}
         n = len(h3_indices)
         centers = np.array([h3.cell_to_latlng(idx) for idx in h3_indices], dtype=np.float64)
@@ -221,7 +221,11 @@ class GridFactory:
 
             # Try GeoJSON polygon containment first
             if zone_file:
-                import os
+                # Sanitize zone_file: only allow alphanumeric, underscore, hyphen, dot, forward slash
+                if not _re.fullmatch(r'[a-zA-Z0-9_\-./]+', zone_file) or '..' in zone_file:
+                    logger.warning("Zone file path rejected (potential path traversal): %s", zone_file)
+                    zone_file = None
+            if zone_file:
                 abs_path = os.path.join(os.path.dirname(__file__), "..", "..", zone_file)
                 if os.path.exists(abs_path):
                     try:
@@ -262,6 +266,11 @@ def public_zone_mask(state: GridState, zone_geojson: dict[str, Any] | None) -> n
             # Cache the public zone distance computation by hash of coords
             zone_key = hash(str(zone_geojson["coordinates"]))
             if zone_key not in state.public_dist_cache:
+                # Evict oldest entries if cache grows too large
+                if len(state.public_dist_cache) > 100:
+                    keys = list(state.public_dist_cache.keys())
+                    for old_key in keys[:len(keys) // 2]:
+                        del state.public_dist_cache[old_key]
                 shape = h3.geo_to_h3shape(zone_geojson)
                 zone_cells = set(h3.h3shape_to_cells(shape, 8))
                 state.public_dist_cache[zone_key] = np.isin(

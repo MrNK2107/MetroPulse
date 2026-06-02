@@ -548,6 +548,9 @@ class DatabaseClient:
                 logger.warning("Supabase save_simulation failed: %s", e)
         else:
             self._saved.append(record)
+            # Evict oldest entries to prevent unbounded memory growth
+            if len(self._saved) > 1000:
+                self._saved = self._saved[-1000:]
         return sim_id
 
     async def seed_case_studies(self) -> None:

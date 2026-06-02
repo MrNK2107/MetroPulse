@@ -4,6 +4,7 @@ import functools
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -57,6 +58,8 @@ class CityConfig:
     @classmethod
     @functools.lru_cache(maxsize=32)
     def load(cls, city_name: str) -> CityConfig:
+        if not re.fullmatch(r'[a-zA-Z0-9_]+', city_name):
+            raise ValueError(f"Invalid city name (potential path traversal): {city_name}")
         yaml_path = os.path.join(DATA_DIR, "cities", f"{city_name}.yaml")
         if not os.path.exists(yaml_path):
             raise FileNotFoundError(f"City config not found: {yaml_path}")
@@ -96,6 +99,8 @@ class CityConfig:
     @classmethod
     @functools.lru_cache(maxsize=32)
     def load_geojson(cls, city_name: str) -> dict[str, Any]:
+        if not re.fullmatch(r'[a-zA-Z0-9_]+', city_name):
+            raise ValueError(f"Invalid city name (potential path traversal): {city_name}")
         geojson_path = os.path.join(DATA_DIR, "cities", f"{city_name}.geojson")
         if not os.path.exists(geojson_path):
             raise FileNotFoundError(f"City boundary not found: {geojson_path}")

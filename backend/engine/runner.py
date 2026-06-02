@@ -18,8 +18,9 @@ async def run_simulation(
     db: Any = None,
     deadline: float | None = None,
     state_ref: list | None = None,
+    overlay_fn=None,
 ) -> AsyncGenerator[dict[str, Any], None]:
-    state = GridFactory.initialize(region_boundary, params)
+    state = GridFactory.initialize(region_boundary, params, overlay_fn=overlay_fn)
     last_frame: dict[str, Any] | None = None
 
     for month in range(1, params.horizon_months + 1):

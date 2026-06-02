@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 from engine.models import AggregateMetrics, CaseStudy, Prediction, SECTOR_LABELS, SimulationParams
 from engine.translator import translate_to_plain_language, TranslationResult
 from engine.simulation_explainability import explain_metric_deltas, format_explanation_narrative
-from app.simulation.explainability import build_explanation
 
 
 def synthesize_evidence(
@@ -21,6 +20,7 @@ def synthesize_evidence(
     case_retrieval: dict[str, Any] | None = None,
     evidence_pack: dict[str, Any] | None = None,
     grid_state: Any | None = None,
+    explainability_fn=None,
 ) -> dict[str, Any]:
     metrics = final_frame["metrics"]
     proof = final_frame.get("proof", {})
@@ -118,7 +118,8 @@ Pair the scenario shock with targeted transit and housing support in the most af
     try:
         driver_explanations = explain_metric_deltas(params, metrics, proof)
         explanation_narrative = format_explanation_narrative(driver_explanations)
-        explainability = build_explanation(params, metrics, proof, evidence_pack)
+        if explainability_fn is not None:
+            explainability = explainability_fn(params, metrics, proof, evidence_pack)
     except Exception as e:
         logger.warning("Explainability generation failed: %s", e)
 

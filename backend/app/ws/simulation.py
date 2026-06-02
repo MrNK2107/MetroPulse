@@ -21,15 +21,24 @@ from engine.tertiary_loop import synthesize_evidence
 from engine.nl_engine.router import IntentRouter
 from engine.nl_engine.conversation import ConversationManager, ConversationMode
 from engine.nl_engine.group_scorer import score_groups, compute_satisfaction
+from app.simulation.overlay import generate_overlay
+from app.simulation.explainability import build_explanation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _intent_router = IntentRouter()
 
+_active_connections: int = 0
+
 
 @router.websocket("/ws/simulate")
 async def simulation_websocket(websocket: WebSocket):
+    global _active_connections
+    if _active_connections >= settings.ws_max_connections:
+        await websocket.close(code=1013, reason="Too many connections. Try again later.")
+        return
+    _active_connections += 1
     await websocket.accept()
     simulation_id = str(uuid4())
     db = await get_db()
@@ -196,7 +205,7 @@ async def simulation_websocket(websocket: WebSocket):
         frames = []
         grid_state_ref: list = []
         try:
-            async for frame in run_simulation(params, boundary, db=None, deadline=deadline, state_ref=grid_state_ref):
+            async for frame in run_simulation(params, boundary, db=None, deadline=deadline, state_ref=grid_state_ref, overlay_fn=generate_overlay):
                 frames.append(frame)
                 await websocket.send_json({"type": "FRAME", "payload": frame})
         except SimulationTimeoutError:
@@ -272,6 +281,7 @@ async def simulation_websocket(websocket: WebSocket):
                 case_retrieval=db.last_case_retrieval.model_dump(),
                 evidence_pack=params.evidence_pack,
                 grid_state=grid_state_ref[0] if grid_state_ref else None,
+                explainability_fn=build_explanation,
             )
             await websocket.send_json({"type": "EVIDENCE", "evidence": evidence})
         except Exception as e:
@@ -330,6 +340,7 @@ async def simulation_websocket(websocket: WebSocket):
         except Exception:
             pass
     finally:
+        _active_connections -= 1
         try:
             await websocket.close()
         except Exception:
