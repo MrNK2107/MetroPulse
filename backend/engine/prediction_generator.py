@@ -3,26 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass
 from typing import Any
 
 from engine.models import Prediction, SectorPrediction, SECTOR_LABELS, SECTOR_NAMES, SimulationParams
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class LLMConfig:
-    """LLM configuration passed in from the app layer.
-
-    Keeps engine/ free of app.config imports.
-    """
-    provider: str = ""
-    api_key: str = ""
-    base_url: str = ""
-    model: str = ""
-    timeout_ms: int = 10_000
-
 
 _PREDICTION_PROMPT = """You are an urban economics analyst specializing in Indian cities.
 Given this scenario for {city_name} over {horizon_months} months:
@@ -80,6 +65,117 @@ def _build_prompt(params: SimulationParams) -> str:
     )
 
 
+def _build_enriched_prompt(params: SimulationParams) -> str:
+    """Build a context-rich prompt with city data, zones, baselines, and case studies."""
+    cfg = params.city_config
+
+    # --- Section A: City context ---
+    weights = cfg.sector_weights if hasattr(cfg, "sector_weights") and cfg.sector_weights else {}
+    weight_str = ", ".join(
+        f"{SECTOR_LABELS.get(s, s)}={w * 100:.0f}%" for s, w in sorted(weights.items(), key=lambda x: -x[1]) if w > 0
+    )
+    city_type = getattr(cfg, "city_type", "generic").replace("_", " ")
+    baselines = cfg.baselines if hasattr(cfg, "baselines") and cfg.baselines else {}
+    pop = getattr(cfg, "population", 0)
+    gdp = baselines.get("gdp_estimate_crores", 0)
+    unemployment = baselines.get("unemployment_rate", 0)
+
+    city_context = (
+        f"City: {cfg.name} ({city_type}), {getattr(cfg, 'state', '')}\n"
+        f"Population: {pop:,} | GDP: {gdp:,.0f} crores | Unemployment: {unemployment:.1%}\n"
+        f"Sector weights: {weight_str}"
+    )
+
+    # --- Section B: Special zones ---
+    zones = cfg.special_zones if hasattr(cfg, "special_zones") and cfg.special_zones else []
+    zone_lines = []
+    for z in zones[:4]:
+        zname = z.get("name", "zone")
+        zsectors = ", ".join(SECTOR_LABELS.get(s, s) for s in z.get("sectors", []))
+        zboost = z.get("boost", 0)
+        zone_lines.append(f"  - {zname} ({zsectors}, boost +{zboost:.0%})")
+    zone_section = ""
+    if zone_lines:
+        zone_section = f"\nSpecial zones:\n" + "\n".join(zone_lines)
+
+    # --- Section C: Real-time signal quality ---
+    snap = params.realtime_snapshot
+    signal_section = ""
+    if snap and hasattr(snap, "quality_score"):
+        mode = "real-time" if getattr(snap, "is_realtime", False) else "demo/baseline"
+        signal_section = f"\nData mode: {mode} | Signal quality: {snap.quality_score:.2f}"
+
+    # --- Section D: Sector changes ---
+    changes = []
+    for sector, delta in params.sector_deltas.items():
+        if abs(delta) > 0:
+            changes.append(f"  - {SECTOR_LABELS[sector]}: {delta:+.0f}%")
+    if not changes:
+        changes = ["  - No explicit sector changes; policy effects only"]
+
+    # --- Section E: Policies ---
+    policies = ", ".join(params.policies_active) if params.policies_active else "none"
+
+    # --- Section F: Case study examples from evidence pack ---
+    evidence_section = ""
+    ep = params.evidence_pack
+    if ep and isinstance(ep, dict):
+        items = ep.get("items", [])
+        if items:
+            top_items = sorted(items, key=lambda x: x.get("relevance", 0), reverse=True)[:3]
+            examples = []
+            for item in top_items:
+                title = item.get("title", "Unknown")
+                summary = item.get("summary", item.get("citation", ""))
+                if summary:
+                    examples.append(f"  - \"{title}\": {summary}")
+            if examples:
+                evidence_section = f"\nRelevant historical precedents:\n" + "\n".join(examples)
+
+    # --- Assemble ---
+    prompt = f"""You are an urban economics analyst specializing in Indian cities.
+Given this scenario for {cfg.name} over {params.horizon_months} months:
+
+{city_context}{zone_section}{signal_section}
+
+Sector changes:
+{chr(10).join(changes)}
+
+Active policies: {policies}{evidence_section}
+
+Predict the impact on employment per sector, real estate, transit, most affected areas, and counter-intuitive effects.
+Consider the city's sector composition and special zones when making predictions.
+
+Respond ONLY with valid JSON matching this exact schema:
+{{
+  "employment_impact": {{
+    "<sector_name>": {{
+      "direction": "up"|"down"|"stable",
+      "magnitude": "low"|"moderate"|"high",
+      "confidence": "low"|"medium"|"high",
+      "rationale": "<one sentence>"
+    }}
+  }},
+  "real_estate_impact": {{
+    "direction": "<up|down|stable|mixed>",
+    "confidence": "<low|medium|high>",
+    "rationale": "<one sentence>"
+  }},
+  "transit_impact": {{
+    "direction": "<higher load|lower demand|stable>",
+    "confidence": "<low|medium|high>",
+    "rationale": "<one sentence>"
+  }},
+  "most_affected_areas": ["<area 1>", "<area 2>", "<area 3>"],
+  "counter_intuitive": ["<insight 1>", "<insight 2>"],
+  "overall_confidence": "<low|medium|high>",
+  "reasoning": "<2-3 sentence summary>"
+}}
+
+Sector names must be exactly: {', '.join(SECTOR_NAMES)}"""
+    return prompt
+
+
 def _parse_llm_response(text: str, params: SimulationParams) -> Prediction:
     """Parse LLM JSON response into Prediction model. Raises on failure."""
     # Extract JSON from possible markdown code fences
@@ -122,142 +218,258 @@ def _parse_llm_response(text: str, params: SimulationParams) -> Prediction:
     )
 
 
-async def _call_gemini(prompt: str, cfg: LLMConfig) -> str:
+async def _call_gemini(prompt: str, timeout_ms: int) -> str:
     from google import genai
+    from app.config import settings
 
-    client = genai.Client(api_key=cfg.api_key)
+    client = genai.Client(api_key=settings.gemini_api_key)
     response = await asyncio.wait_for(
         asyncio.to_thread(
             client.models.generate_content,
-            model=cfg.model or "gemini-2.0-flash",
+            model=settings.resolved_llm_model or "gemini-2.0-flash",
             contents=prompt,
         ),
-        timeout=cfg.timeout_ms / 1000.0,
+        timeout=timeout_ms / 1000.0,
     )
     return response.text
 
 
-async def _call_openai(prompt: str, cfg: LLMConfig) -> str:
+async def _call_openai(prompt: str, timeout_ms: int) -> str:
     from openai import AsyncOpenAI
+    from app.config import settings
 
-    client = AsyncOpenAI(api_key=cfg.api_key)
+    client = AsyncOpenAI(api_key=settings.openai_api_key)
     response = await asyncio.wait_for(
         client.chat.completions.create(
-            model=cfg.model or "gpt-4o-mini",
+            model=settings.resolved_llm_model or "gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
         ),
-        timeout=cfg.timeout_ms / 1000.0,
+        timeout=timeout_ms / 1000.0,
     )
     return response.choices[0].message.content
 
 
-async def _call_mimo(prompt: str, cfg: LLMConfig) -> str:
-    from openai import AsyncOpenAI
+async def _call_mimo(prompt: str, timeout_ms: int) -> str:
+    """Call MiMo via raw httpx (OpenAI SDK triggers a gzip decompression bug on this provider)."""
+    import httpx as _httpx
+    from app.config import settings
 
-    client = AsyncOpenAI(api_key=cfg.api_key, base_url=cfg.base_url)
-    response = await asyncio.wait_for(
-        client.chat.completions.create(
-            model=cfg.model or "mimo-v2.5-pro",
-            messages=[
-                {"role": "system", "content": "You are a JSON-only API. Respond with valid JSON only, no markdown fences."},
-                {"role": "user", "content": prompt},
-            ],
-        ),
-        timeout=cfg.timeout_ms / 1000.0,
-    )
-    return response.choices[0].message.content
+    headers = {
+        "Authorization": f"Bearer {settings.mimo_api_key}",
+        "Content-Type": "application/json",
+        "Accept-Encoding": "identity",
+    }
+    body = {
+        "model": settings.resolved_llm_model or "mimo-v2.5-pro",
+        "messages": [
+            {"role": "system", "content": "You are a JSON-only API. Respond with valid JSON only, no markdown fences."},
+            {"role": "user", "content": prompt},
+        ],
+    }
+    async with _httpx.AsyncClient(timeout=timeout_ms / 1000.0) as client:
+        resp = await client.post(
+            f"{settings.mimo_base_url}/chat/completions",
+            headers=headers,
+            json=body,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
 
 
 def _deterministic_prediction(params: SimulationParams) -> Prediction:
-    """Existing rule-based fallback."""
+    """Legacy deterministic fallback — kept for backward compat."""
+    return _enhanced_deterministic_prediction(params)
+
+
+_CITY_TYPE_CONTEXT: dict[str, str] = {
+    "tech_hub": "tech employment spillovers and housing demand near IT corridors",
+    "financial_hub": "financial services concentration and CBD real estate pressure",
+    "port_city": "logistics throughput and export-oriented manufacturing",
+    "industrial": "factory employment and supply-chain linkages",
+    "heritage_tourism": "seasonal tourism revenue and informal service jobs",
+    "government": "public-sector employment and administrative spending",
+    "generic": "mixed economic activity and balanced sector contributions",
+}
+
+
+def _enhanced_deterministic_prediction(params: SimulationParams) -> Prediction:
+    """City-aware rule-based prediction using city_config data."""
+    cfg = params.city_config
+    weights = cfg.sector_weights if hasattr(cfg, "sector_weights") and cfg.sector_weights else {}
+    zones = cfg.special_zones if hasattr(cfg, "special_zones") and cfg.special_zones else []
+    city_type = getattr(cfg, "city_type", "generic")
+    baselines = cfg.baselines if hasattr(cfg, "baselines") and cfg.baselines else {}
+
+    # --- Employment impact per sector ---
     impacts: dict[str, SectorPrediction] = {}
     for sector in SECTOR_NAMES:
         delta = float(params.sector_deltas.get(sector, 0.0))
+        weight = weights.get(sector, 0.1)
+
         direction = "stable"
         if delta > 5:
             direction = "up"
         elif delta < -5:
             direction = "down"
+
         magnitude = "low"
         if abs(delta) >= 50:
             magnitude = "high"
         elif abs(delta) >= 20:
             magnitude = "moderate"
+
+        # Confidence scales with how important this sector is to the city
+        if weight >= 0.25:
+            confidence = "high"
+        elif weight <= 0.08:
+            confidence = "low"
+        else:
+            confidence = "medium"
+
+        weight_pct = f"{weight * 100:.0f}%"
+        rationale = (
+            f"{cfg.name}'s {SECTOR_LABELS[sector]} sector ({weight_pct} of city economy) "
+            f"receives a {delta:+.0f}% shock."
+        )
+        if weight >= 0.2:
+            rationale += f" This is a dominant sector — effects will cascade to housing and transport."
+
         impacts[sector] = SectorPrediction(
             direction=direction,
             magnitude=magnitude,
-            confidence="medium",
-            rationale=f"{SECTOR_LABELS[sector]} receives a {delta:+.0f}% scenario shock.",
+            confidence=confidence,
+            rationale=rationale,
         )
 
+    # --- Most affected areas from real zone data ---
+    zone_names = [z.get("name", "Unnamed zone") for z in zones[:3]] if zones else []
+    if not zone_names:
+        zone_names = [
+            f"{cfg.name} CBD and high-density corridors",
+            f"outer wards with higher informal employment",
+            f"areas near major transport junctions",
+        ]
+
+    # --- Contextual reasoning ---
     active = [SECTOR_LABELS[s] for s, v in params.sector_deltas.items() if abs(v) > 0]
     policy_text = ", ".join(params.policies_active) if params.policies_active else "no explicit policy offset"
+    type_context = _CITY_TYPE_CONTEXT.get(city_type, _CITY_TYPE_CONTEXT["generic"])
+
+    top_sector = max(params.sector_deltas.items(), key=lambda x: abs(x[1])) if params.sector_deltas else None
+    top_label = SECTOR_LABELS[top_sector[0]] if top_sector else "the economy"
+    top_delta = top_sector[1] if top_sector else 0
+
+    reasoning = (
+        f"{cfg.name} is a {city_type.replace('_', ' ')} — {type_context}. "
+        f"The largest shock is {top_label} at {top_delta:+.0f}%. "
+        f"Policy context: {policy_text}."
+    )
+
+    # --- Real estate ---
+    re_direction = "mixed"
+    re_rationale = "Sector shifts create mixed pressure on land values."
+    positive_sectors = [s for s, v in params.sector_deltas.items() if v > 10]
+    if positive_sectors:
+        dominant = positive_sectors[0]
+        re_direction = "up"
+        re_rationale = (
+            f"{SECTOR_LABELS[dominant]} growth drives demand for commercial and residential space, "
+            f"especially near {zone_names[0] if zone_names else 'activity centers'}."
+        )
+    elif all(v < -5 for v in params.sector_deltas.values()):
+        re_direction = "down"
+        re_rationale = "Broad sector contraction reduces demand for commercial and residential space."
+
+    # --- Transit ---
+    transit_dir = "stable"
+    transit_rationale = "No major shift in commuter pressure expected."
+    if any(v > 15 for v in params.sector_deltas.values()):
+        transit_dir = "higher load"
+        transit_rationale = f"Job growth increases commuter pressure on corridors serving {zone_names[0] if zone_names else 'activity centers'}."
+    elif any(v < -15 for v in params.sector_deltas.values()):
+        transit_dir = "lower demand"
+        transit_rationale = "Sector contraction reduces commuter volume."
+
+    # --- Confidence ---
+    overall = "medium"
+    if baselines.get("unemployment_rate", 0.05) < 0.04 and any(abs(v) > 30 for v in params.sector_deltas.values()):
+        overall = "high"
+    elif baselines.get("unemployment_rate", 0.05) > 0.08:
+        overall = "low"
+
+    # --- Counter-intuitive ---
+    counter = []
+    if any(v > 20 for v in params.sector_deltas.values()):
+        counter.append(
+            f"Rapid growth in {top_label} can strain housing affordability near {zone_names[0] if zone_names else 'growth zones'}, "
+            f"displacing informal workers even as formal jobs increase."
+        )
+    if "smart_city" in [p.lower().replace(" ", "_") for p in params.policies_active]:
+        counter.append("Smart City infrastructure investments can reduce congestion even while employment rises.")
+    if not counter:
+        counter.append("Policy effects often lag sector shocks by 6-12 months.")
+
     return Prediction(
         employment_impact=impacts,
         real_estate_impact={
-            "direction": "up" if any(v > 0 for v in params.sector_deltas.values()) else "mixed",
+            "direction": re_direction,
             "confidence": "medium",
-            "rationale": "Capital changes propagate into land values through neighbor distance decay.",
+            "rationale": re_rationale,
         },
         transit_impact={
-            "direction": "higher load" if any(v > 0 for v in params.sector_deltas.values()) else "lower demand",
+            "direction": transit_dir,
             "confidence": "medium",
-            "rationale": "Employment shifts change commuter pressure; monsoon months can add congestion.",
+            "rationale": transit_rationale,
         },
-        most_affected_areas=[
-            "central high-activity H3 cells",
-            "special economic zones near configured city corridors",
-            "outer cells with higher informal and migration pressure",
-        ],
-        counter_intuitive=[
-            "A positive investment shock can still reduce affordability near growth cells.",
-            "Smart City or AMRUT policies can reduce congestion even while jobs rise.",
-        ],
-        overall_confidence="medium",
-        reasoning=(
-            f"Expected effects are driven by {', '.join(active) if active else 'policy and baseline'} "
-            f"changes in {params.city_config.name}; policy context: {policy_text}."
-        ),
+        most_affected_areas=zone_names,
+        counter_intuitive=counter,
+        overall_confidence=overall,
+        reasoning=reasoning,
     )
 
 
-async def generate_prediction(params: SimulationParams, llm_config: LLMConfig | None = None) -> Prediction:
-    """Generate prediction via LLM with deterministic fallback.
+async def generate_prediction(params: SimulationParams, mode: str = "deep") -> Prediction:
+    """Generate prediction. Quick mode = enhanced deterministic (no LLM). Deep mode = LLM with enriched context."""
+    from app.config import settings
 
-    Parameters
-    ----------
-    params : SimulationParams
-    llm_config : LLMConfig | None
-        Injected by the app layer.  When *None* or when no API key is
-        configured, falls back to the deterministic rule-based prediction.
-    """
-    cfg = llm_config or LLMConfig()
+    # Quick mode: always use enhanced deterministic — fast, no timeout risk
+    if mode == "quick":
+        logger.info("Quick mode: using enhanced deterministic prediction for %s", params.city_config.name)
+        return _enhanced_deterministic_prediction(params)
 
-    provider = cfg.provider.lower()
-    has_key = bool(cfg.api_key) or provider == "ollama"
+    # Deep mode: try LLM with enriched prompt
+    provider = settings.llm_provider.lower()
+    has_key = (
+        (provider == "gemini" and settings.gemini_api_key)
+        or (provider == "openai" and settings.openai_api_key)
+        or (provider == "mimo" and settings.mimo_api_key)
+        or (provider == "ollama")
+    )
 
     if not has_key:
-        logger.info("No LLM key configured for %s, using deterministic prediction", provider)
-        return _deterministic_prediction(params)
+        logger.info("No LLM key configured for %s, using enhanced deterministic prediction", provider)
+        return _enhanced_deterministic_prediction(params)
 
-    prompt = _build_prompt(params)
+    prompt = _build_enriched_prompt(params)
 
     try:
         if provider == "gemini":
-            text = await _call_gemini(prompt, cfg)
+            text = await _call_gemini(prompt, settings.llm_timeout_ms)
         elif provider == "openai":
-            text = await _call_openai(prompt, cfg)
+            text = await _call_openai(prompt, settings.llm_timeout_ms)
         elif provider == "mimo":
-            text = await _call_mimo(prompt, cfg)
+            text = await _call_mimo(prompt, settings.llm_timeout_ms)
         else:
-            logger.warning("Unsupported LLM provider %s, using deterministic prediction", provider)
-            return _deterministic_prediction(params)
+            logger.warning("Unsupported LLM provider %s, using enhanced deterministic prediction", provider)
+            return _enhanced_deterministic_prediction(params)
 
         prediction = _parse_llm_response(text, params)
         logger.info("LLM prediction generated for %s via %s", params.city_config.name, provider)
         return prediction
 
     except Exception as e:
-        logger.warning("LLM prediction failed (%s), falling back to deterministic: %s", provider, e)
-        return _deterministic_prediction(params)
+        error_detail = str(e).strip() or f"{type(e).__name__} (no message)"
+        logger.warning("LLM prediction failed (%s), falling back to enhanced deterministic: %s", provider, error_detail)
+        return _enhanced_deterministic_prediction(params)

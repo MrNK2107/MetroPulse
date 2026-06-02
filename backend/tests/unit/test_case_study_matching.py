@@ -41,7 +41,7 @@ async def test_hyderabad_pharma_search_excludes_unrelated_housing():
     )
 
     ids = [study.id for study in studies]
-    assert ids[0] == "hyderabad-genome-valley-pharma"
+    assert ids[0] == "hyderabad-pharma-sez"
     assert "pmay-national-housing" not in ids
     assert all(study.relevance_tier in {"exact", "related"} for study in studies)
 
@@ -56,7 +56,7 @@ async def test_same_city_sector_ranks_above_cross_city_related_cases():
     )
     studies = await db.search_case_studies([], city="hyderabad", sector="manufacturing", context=context)
 
-    assert studies[0].id == "hyderabad-genome-valley-pharma"
+    assert studies[0].id == "hyderabad-pharma-sez"
     assert studies[0].relevance_tier == "exact"
     assert all(study.id != "pmay-national-housing" for study in studies)
 
@@ -73,7 +73,7 @@ async def test_bengaluru_tech_boom_does_not_drift_to_secondary_real_estate_cases
 
     ids = [study.id for study in studies]
     assert "bengaluru-it-infra" in ids
-    assert "bengaluru-startup-ecosystem" in ids
+    assert "pune-it-corridor" in ids
     assert "jaipur-tourism-heritage" not in ids
 
 
@@ -81,13 +81,48 @@ async def test_bengaluru_tech_boom_does_not_drift_to_secondary_real_estate_cases
 async def test_cross_city_related_cases_appear_without_same_city_topic_match():
     db = DatabaseClient()
     context = build_case_study_context(
-        city="mumbai",
-        sectors=["transport_logistics"],
-        keywords=["mumbai", "transport", "logistics"],
+        city="jaipur",
+        sectors=["it_ites"],
+        keywords=["jaipur", "it", "tech"],
     )
-    studies = await db.search_case_studies([], city="mumbai", sector="transport_logistics", context=context)
+    studies = await db.search_case_studies([], city="jaipur", sector="it_ites", context=context)
 
     assert studies
-    assert all(study.relevance_tier in {"exact", "related"} for study in studies)
-    assert all("transport_logistics" in study.matched_sectors for study in studies)
-    assert all(study.id != "mumbai-mill-land" for study in studies)
+    assert all(study.relevance_tier == "related" for study in studies)
+    assert all("it_ites" in study.matched_sectors for study in studies)
+    assert all(study.id != "jaipur-tourism-heritage" for study in studies)
+
+
+@pytest.mark.asyncio
+async def test_power_failure_query_retrieves_power_outage_cases():
+    router = IntentRouter()
+    parsed, _ = await router.route("What happens when all the power lines fail in chennai permanently")
+    db = DatabaseClient()
+    studies = await db.search_case_studies(
+        parsed.keywords,
+        city=parsed.city,
+        context=build_case_study_context(parsed, original_query=parsed.causal_chain),
+    )
+
+    ids = [study.id for study in studies]
+    assert "chennai-cyclone-blackout-2016" in ids
+    # The Chennai-specific grid collapse should rank first for a Chennai query
+    assert studies[0].id == "chennai-cyclone-blackout-2016"
+
+
+@pytest.mark.asyncio
+async def test_vehicle_ban_query_retrieves_transit_restriction_cases():
+    router = IntentRouter()
+    parsed, _ = await router.route("what if all bikes get banned in chennai")
+    assert parsed.city == "chennai"
+    assert parsed.sector_deltas["transport_logistics"] < 0
+    db = DatabaseClient()
+    studies = await db.search_case_studies(
+        parsed.keywords,
+        city=parsed.city,
+        context=build_case_study_context(parsed, original_query=parsed.causal_chain),
+    )
+
+    ids = [study.id for study in studies]
+    assert "chennai-heavy-vehicle-restriction" in ids
+    assert studies[0].id == "chennai-heavy-vehicle-restriction"

@@ -14,31 +14,22 @@ from app.rag import build_evidence_pack, coefficient_factors, extract_coefficien
 from app.realtime import build_demo_manifest, snapshot_quality
 from app.realtime_models import SnapshotData, utc_now
 from engine.models import AggregateMetrics, StartScenarioMessage, InputResponseMessage
-from engine.prediction_generator import generate_prediction, LLMConfig
+from engine.prediction_generator import generate_prediction
 from engine.runner import run_simulation, SimulationTimeoutError
 from engine.scenario_parser import ScenarioParseError, build_params
 from engine.tertiary_loop import synthesize_evidence
 from engine.nl_engine.router import IntentRouter
 from engine.nl_engine.conversation import ConversationManager, ConversationMode
 from engine.nl_engine.group_scorer import score_groups, compute_satisfaction
-from app.simulation.overlay import generate_overlay
-from app.simulation.explainability import build_explanation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _intent_router = IntentRouter()
 
-_active_connections: int = 0
-
 
 @router.websocket("/ws/simulate")
 async def simulation_websocket(websocket: WebSocket):
-    global _active_connections
-    if _active_connections >= settings.ws_max_connections:
-        await websocket.close(code=1013, reason="Too many connections. Try again later.")
-        return
-    _active_connections += 1
     await websocket.accept()
     simulation_id = str(uuid4())
     db = await get_db()
@@ -62,14 +53,12 @@ async def simulation_websocket(websocket: WebSocket):
                     s: float(parsed_data.get("sector_deltas", {}).get(s, 0.0))
                     for s in SECTOR_NAMES
                 }
-                # Clamp sector deltas to [-100, 100]
-                sector_deltas = {s: max(-100.0, min(100.0, v)) for s, v in sector_deltas.items()}
                 parsed = ParsedScenario(
                     city=parsed_data.get("city", "mumbai"),
                     sector_deltas=sector_deltas,
                     policies_active=list(parsed_data.get("policies_active", [])),
                     public_works_zone=parsed_data.get("public_works_zone"),
-                    horizon_months=max(1, min(120, int(parsed_data.get("horizon_months", 24)))),
+                    horizon_months=int(parsed_data.get("horizon_months", 24)),
                     causal_chain=parsed_data.get("causal_chain", "Direct parameter specification"),
                     keywords=list(parsed_data.get("keywords", ["mumbai"])),
                     confidence="high",
@@ -135,7 +124,7 @@ async def simulation_websocket(websocket: WebSocket):
                     "stage": "parsing",
                     "code": "REALTIME_SNAPSHOT_UNAVAILABLE",
                     "message": (
-                        f"Real-Time Mode has no usable **{params.city}** snapshot yet. "
+                        "Real-Time Mode has no usable Bengaluru snapshot yet. "
                         "Run ingestion or disable REALTIME_MODE_REQUIRED to use explicit Demo Mode."
                     ),
                 })
@@ -187,23 +176,8 @@ async def simulation_websocket(websocket: WebSocket):
         # ── Prediction stage ─────────────────────────────────────────
         prediction_source = "llm"
         await _send_stage(websocket, "predicting", "Generating a before-simulation expectation.")
-
-        # Build LLM config from app settings and inject into engine
-        _llm_cfg = LLMConfig(
-            provider=settings.llm_provider,
-            api_key=(
-                settings.gemini_api_key if settings.llm_provider == "gemini"
-                else settings.openai_api_key if settings.llm_provider == "openai"
-                else settings.mimo_api_key if settings.llm_provider == "mimo"
-                else ""
-            ),
-            base_url=settings.mimo_base_url if settings.llm_provider == "mimo" else "",
-            model=settings.resolved_llm_model,
-            timeout_ms=settings.llm_timeout_ms,
-        )
-
         try:
-            prediction = await generate_prediction(params, llm_config=_llm_cfg)
+            prediction = await generate_prediction(params, mode=conv.mode.value)
         except Exception as e:
             logger.warning("Prediction generation failed, using deterministic fallback: %s", e)
             from engine.prediction_generator import _deterministic_prediction
@@ -220,7 +194,7 @@ async def simulation_websocket(websocket: WebSocket):
         frames = []
         grid_state_ref: list = []
         try:
-            async for frame in run_simulation(params, boundary, db=None, deadline=deadline, state_ref=grid_state_ref, overlay_fn=generate_overlay):
+            async for frame in run_simulation(params, boundary, db=None, deadline=deadline, state_ref=grid_state_ref):
                 frames.append(frame)
                 await websocket.send_json({"type": "FRAME", "payload": frame})
         except SimulationTimeoutError:
@@ -296,7 +270,6 @@ async def simulation_websocket(websocket: WebSocket):
                 case_retrieval=db.last_case_retrieval.model_dump(),
                 evidence_pack=params.evidence_pack,
                 grid_state=grid_state_ref[0] if grid_state_ref else None,
-                explainability_fn=build_explanation,
             )
             await websocket.send_json({"type": "EVIDENCE", "evidence": evidence})
         except Exception as e:
@@ -355,7 +328,6 @@ async def simulation_websocket(websocket: WebSocket):
         except Exception:
             pass
     finally:
-        _active_connections -= 1
         try:
             await websocket.close()
         except Exception:
@@ -363,9 +335,9 @@ async def simulation_websocket(websocket: WebSocket):
 
 
 async def _receive_start(websocket: WebSocket) -> StartScenarioMessage:
-    deadline = asyncio.get_running_loop().time() + 30.0
+    deadline = asyncio.get_event_loop().time() + 30.0
     while True:
-        remaining = deadline - asyncio.get_running_loop().time()
+        remaining = deadline - asyncio.get_event_loop().time()
         if remaining <= 0:
             raise asyncio.TimeoutError()
         message = await asyncio.wait_for(websocket.receive_text(), timeout=remaining)
@@ -386,12 +358,24 @@ async def _receive_start(websocket: WebSocket) -> StartScenarioMessage:
 
 
 async def _receive_input_response(websocket: WebSocket) -> InputResponseMessage:
-    message = await asyncio.wait_for(websocket.receive_text(), timeout=60.0)
-    try:
-        payload = json.loads(message)
-        return InputResponseMessage(**payload)
-    except (json.JSONDecodeError, ValidationError) as e:
-        raise ScenarioParseError(f"Invalid input response: {e}") from e
+    deadline = asyncio.get_event_loop().time() + 60.0
+    while True:
+        remaining = deadline - asyncio.get_event_loop().time()
+        if remaining <= 0:
+            raise asyncio.TimeoutError()
+        message = await asyncio.wait_for(websocket.receive_text(), timeout=remaining)
+        try:
+            payload = json.loads(message)
+        except json.JSONDecodeError as e:
+            raise ScenarioParseError(f"Invalid input response. First message must be valid JSON: {e}") from e
+        # Skip heartbeat pings
+        if payload.get("type") == "PING":
+            await websocket.send_json({"type": "PONG"})
+            continue
+        try:
+            return InputResponseMessage(**payload)
+        except ValidationError as e:
+            raise ScenarioParseError(f"Invalid input response: {e}") from e
 
 
 async def _send_stage(websocket: WebSocket, stage: str, message: str) -> None:

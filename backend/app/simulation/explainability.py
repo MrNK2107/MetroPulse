@@ -6,78 +6,6 @@ from app.core.provenance import confidence_label
 from engine.models import SECTOR_LABELS, SimulationParams
 
 
-def _compute_driver_contributions(
-    params: SimulationParams,
-    proof: dict[str, Any],
-    evidence_conf: float,
-) -> list[dict[str, Any]]:
-    """Compute data-driven contribution percentages for each driver.
-
-    Contributions are proportional to the strength of each signal source,
-    then normalised so they sum to 100 %.
-    """
-    # 1. Scenario input: proportional to |delta * sector_weight|
-    scenario_raw = sum(
-        abs(d) * params.city_config.sector_weights.get(s, 0.1)
-        for s, d in params.sector_deltas.items()
-        if abs(d) > 0
-    )
-
-    # 2. Real-time overlay: proportional to overlay signal strength
-    overlay_summary = proof.get("overlaySummary") or {}
-    overlay_conf = float(overlay_summary.get("confidence", 0) or 0)
-    realtime_raw = overlay_conf if proof.get("dataMode") == "real_time" else 0.0
-
-    # 3. RAG evidence: proportional to evidence confidence
-    rag_raw = float(evidence_conf) if evidence_conf > 0 else 0.0
-
-    # 4. Baseline: always present as the foundation
-    baseline_raw = 1.0
-
-    total = scenario_raw + realtime_raw + rag_raw + baseline_raw
-    if total <= 0:
-        total = 1.0
-
-    drivers: list[dict[str, Any]] = []
-
-    if scenario_raw > 0:
-        sectors = [
-            SECTOR_LABELS.get(sector, sector)
-            for sector, delta in params.sector_deltas.items()
-            if abs(delta) > 0
-        ]
-        drivers.append({
-            "factor": f"Scenario sector shock: {', '.join(sectors[:2])}",
-            "contribution": round(scenario_raw / total * 100),
-            "origin": "scenario_input",
-        })
-
-    if realtime_raw > 0:
-        drivers.append({
-            "factor": "real-time contextual signal overlay",
-            "contribution": round(realtime_raw / total * 100),
-            "origin": "real_time_context",
-        })
-
-    if rag_raw > 0:
-        drivers.append({
-            "factor": "retrieved evidence coefficient adjustment",
-            "contribution": round(rag_raw / total * 100),
-            "origin": "rag_evidence",
-        })
-
-    # Baseline gets the remainder to ensure exact 100 %
-    used = sum(d["contribution"] for d in drivers)
-    baseline_pct = max(100 - used, 0)
-    drivers.append({
-        "factor": "estimated city baseline sector weights",
-        "contribution": baseline_pct,
-        "origin": "estimated",
-    })
-
-    return drivers
-
-
 def build_explanation(
     params: SimulationParams,
     metrics: dict[str, float],
@@ -87,8 +15,52 @@ def build_explanation(
     confidence = float(proof.get("overallConfidence", 0.35))
     active = proof.get("activeEffects", [])
     evidence_conf = float((evidence_pack or {}).get("overall_evidence_confidence", 0.0) or 0.0)
+    sectors = [
+        SECTOR_LABELS.get(sector, sector)
+        for sector, delta in params.sector_deltas.items()
+        if abs(delta) > 0
+    ]
+    
+    # Dynamically compute driver scores based on inputs
+    shock_val = sum(abs(v) for v in params.sector_deltas.values())
+    shock_score = min(40.0, shock_val * 1.5)
+    rt_score = 25.0 if proof.get("dataMode") == "real_time" else 0.0
+    ev_score = min(25.0, evidence_conf * 30.0)
+    base_score = 15.0
+    
+    total = max(1.0, shock_score + rt_score + ev_score + base_score)
+    shock_pct = round(shock_score / total * 100)
+    rt_pct = round(rt_score / total * 100)
+    ev_pct = round(ev_score / total * 100)
+    base_pct = 100 - (shock_pct + rt_pct + ev_pct)
+    
+    top_drivers = []
+    if sectors:
+        top_drivers.append({
+            "factor": f"Direct shock to target sectors ({', '.join(sectors[:2])})",
+            "contribution": shock_pct,
+            "origin": "scenario_input",
+        })
+    if proof.get("dataMode") == "real_time":
+        top_drivers.append({
+            "factor": "Real-time news & context modifiers",
+            "contribution": rt_pct,
+            "origin": "real_time_context",
+        })
+    if evidence_conf > 0:
+        top_drivers.append({
+            "factor": "Historical precedent evidence weighting",
+            "contribution": ev_pct,
+            "origin": "rag_evidence",
+        })
+    top_drivers.append({
+        "factor": "City baseline economic structure",
+        "contribution": base_pct,
+        "origin": "estimated",
+    })
 
-    top_drivers = _compute_driver_contributions(params, proof, evidence_conf)
+    # Sort drivers by contribution percentage
+    top_drivers.sort(key=lambda d: d["contribution"], reverse=True)
 
     return {
         "summary": _summary(params, metrics),
@@ -106,9 +78,60 @@ def build_explanation(
 
 
 def _summary(params: SimulationParams, metrics: dict[str, float]) -> str:
-    gdp = metrics.get("gdpDelta", 0.0)
-    direction = "increase" if gdp >= 0 else "decrease"
-    return (
-        f"{params.city_config.name} shows a scenario-estimated {direction} "
-        f"of {abs(gdp) * 100:.1f}% in modeled economic activity."
-    )
+    city = params.city_config.name
+    gdp_pct = metrics.get("gdpDelta", 0.0) * 100
+    unemp_pct = metrics.get("unemploymentRate", 0.0) * 100
+    re_index = metrics.get("realEstateIndex", 1.0)
+    congestion = metrics.get("transitCongestion", 0.0)
+    
+    # Identify shocks
+    shocks = []
+    for sector, delta in params.sector_deltas.items():
+        if abs(delta) > 0:
+            label = SECTOR_LABELS.get(sector, sector)
+            dir_str = "contraction" if delta < 0 else "expansion"
+            shocks.append(f"a {abs(delta):.0f}% {dir_str} in the {label} sector")
+    
+    shock_desc = " and ".join(shocks) if shocks else "general parameter adjustments"
+    
+    # 1. Economic impact
+    if gdp_pct < -0.5:
+        econ = f"The initial shock of {shock_desc} triggers a contraction in {city}'s economy, driving GDP down by {abs(gdp_pct):.2f}%."
+    elif gdp_pct > 0.5:
+        econ = f"The stimulus of {shock_desc} boosts {city}'s economy, causing GDP to rise by {gdp_pct:.2f}%."
+    else:
+        econ = f"The scenario results in a relatively stable economic output for {city}, with GDP changing by {gdp_pct:+.2f}%."
+        
+    # 2. Employment
+    baseline_unemp = params.city_config.baselines.get("unemployment_rate", 0.04) * 100
+    if unemp_pct > baseline_unemp + 0.1:
+        jobs = f"This contraction leads directly to job losses, pushing the city's unemployment rate up from {baseline_unemp:.1f}% to {unemp_pct:.1f}%."
+    elif unemp_pct < baseline_unemp - 0.1:
+        jobs = f"This expansion stimulates job creation, bringing the city's unemployment rate down from {baseline_unemp:.1f}% to {unemp_pct:.1f}%."
+    else:
+        jobs = f"Employment levels remain steady, with unemployment hovering near the baseline of {baseline_unemp:.1f}%."
+        
+    # 3. Real Estate
+    re_change = (re_index - 1.0) * 100
+    if re_change < -0.5:
+        housing = f"Reduced economic confidence and job losses soften the housing market, leading to a {abs(re_change):.1f}% drop in property and rental values across the city."
+    elif re_change > 0.5:
+        housing = f"Increased wages and tech worker migration fuel housing demand, driving property and rental values up by {re_change:.1f}%."
+    else:
+        housing = "Real estate prices and rental rates remain stable, showing no major fluctuations."
+        
+    # 4. Transit
+    if congestion > 0.55:
+        transit = f"Increased economic activity intensifies commuting patterns, causing average transit congestion to rise to {congestion*100:.1f}%."
+    elif congestion < 0.35:
+        transit = f"Slowed business operations and reduced labor commuting ease traffic, lowering average transit congestion to {congestion*100:.1f}%."
+    else:
+        transit = f"Traffic patterns remain normal, with average city congestion at {congestion*100:.1f}%."
+        
+    # 5. Policy context
+    if params.policies_active:
+        policies = f"Active interventions like {', '.join(params.policies_active)} help shape these outcomes by modifying local demand and dampening negative shocks."
+    else:
+        policies = "The absence of active policy interventions means the shock propagates directly through baseline market mechanisms."
+        
+    return f"{econ} {jobs} {housing} {transit} {policies}"

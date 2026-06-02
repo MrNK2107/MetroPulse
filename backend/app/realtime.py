@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Any
@@ -19,6 +21,79 @@ from app.realtime_models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ── Shared HTTP client with connection pooling ─────────────────────────────
+_http_client: httpx.AsyncClient | None = None
+
+
+async def get_http_client() -> httpx.AsyncClient:
+    """Return a shared async HTTP client (connection-pooled, reused across requests)."""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            timeout=15.0,
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            follow_redirects=True,
+        )
+    return _http_client
+
+
+async def close_http_client() -> None:
+    global _http_client
+    if _http_client and not _http_client.is_closed:
+        await _http_client.aclose()
+        _http_client = None
+
+
+# ── In-memory TTL cache for connector responses ────────────────────────────
+_response_cache: dict[str, tuple[float, Any]] = {}
+DEFAULT_CACHE_TTL = 300  # 5 minutes
+
+
+def _cache_key(url: str, params: dict[str, Any] | None) -> str:
+    raw = f"{url}|{sorted((params or {}).items())}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _cache_get(url: str, params: dict[str, Any] | None) -> Any | None:
+    key = _cache_key(url, params)
+    entry = _response_cache.get(key)
+    if entry and time.time() < entry[0]:
+        return entry[1]
+    return None
+
+
+def _cache_set(url: str, params: dict[str, Any] | None, value: Any, ttl: int = DEFAULT_CACHE_TTL) -> None:
+    key = _cache_key(url, params)
+    _response_cache[key] = (time.time() + ttl, value)
+
+
+async def _fetch_with_retry(
+    url: str,
+    params: dict[str, Any] | None = None,
+    timeout: float = 15.0,
+    retries: int = 2,
+    cache_ttl: int = DEFAULT_CACHE_TTL,
+) -> httpx.Response:
+    """Fetch a URL with retry on transient network errors and TTL caching."""
+    cached = _cache_get(url, params)
+    if cached is not None:
+        return cached
+
+    client = await get_http_client()
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            resp = await client.get(url, params=params, timeout=timeout)
+            resp.raise_for_status()
+            if cache_ttl > 0:
+                _cache_set(url, params, resp, cache_ttl)
+            return resp
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout, OSError) as e:
+            last_exc = e
+            if attempt < retries:
+                await asyncio.sleep(1.0 * (attempt + 1))
+    raise last_exc  # type: ignore[misc]
 
 PRIORITY_DOMAINS = ("mobility", "jobs", "land_value", "census", "news")
 
@@ -161,10 +236,8 @@ class GoogleNewsConnector(RealtimeConnector):
         url = "https://news.google.com/rss/search"
         params = {"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"}
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, params=params)
-                resp.raise_for_status()
-                return {"xml": resp.text, "city": display}
+            resp = await _fetch_with_retry(url, params=params, timeout=10.0)
+            return {"xml": resp.text, "city": display}
         except Exception as e:
             logger.warning("Google News RSS fetch failed for %s: %s", city, e)
             return None
@@ -233,10 +306,8 @@ class GDELTNewsConnector(RealtimeConnector):
             "sort": "DateDesc",
         }
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                resp = await client.get(url, params=params)
-                resp.raise_for_status()
-                return resp.json()
+            resp = await _fetch_with_retry(url, params=params, timeout=5.0)
+            return resp.json()
         except Exception as e:
             logger.warning("GDELT fetch failed for %s: %s", city, e)
             return None
@@ -280,10 +351,8 @@ class NewsMobilitySentimentConnector(RealtimeConnector):
         url = "https://news.google.com/rss/search"
         params = {"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"}
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, params=params)
-                resp.raise_for_status()
-                return {"xml": resp.text}
+            resp = await _fetch_with_retry(url, params=params, timeout=10.0)
+            return {"xml": resp.text}
         except Exception as e:
             logger.warning("Mobility news fetch failed for %s: %s", city, e)
             return None
@@ -326,10 +395,8 @@ class NewsJobsSentimentConnector(RealtimeConnector):
         url = "https://news.google.com/rss/search"
         params = {"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"}
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, params=params)
-                resp.raise_for_status()
-                return {"xml": resp.text}
+            resp = await _fetch_with_retry(url, params=params, timeout=10.0)
+            return {"xml": resp.text}
         except Exception as e:
             logger.warning("Jobs news fetch failed for %s: %s", city, e)
             return None
@@ -372,10 +439,8 @@ class NewsLandValueSentimentConnector(RealtimeConnector):
         url = "https://news.google.com/rss/search"
         params = {"q": query, "hl": "en-IN", "gl": "IN", "ceid": "IN:en"}
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url, params=params)
-                resp.raise_for_status()
-                return {"xml": resp.text}
+            resp = await _fetch_with_retry(url, params=params, timeout=10.0)
+            return {"xml": resp.text}
         except Exception as e:
             logger.warning("Land value news fetch failed for %s: %s", city, e)
             return None

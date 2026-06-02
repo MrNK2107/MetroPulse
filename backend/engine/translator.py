@@ -109,7 +109,7 @@ def _find_user_keyword(original_query: str, sector: str) -> str | None:
     return None
 
 
-def _translate_transport(delta_pct: float, city_config: Any) -> SectorImpact:
+def _translate_transport(delta_pct: float, city_config: Any, original_query: str = "") -> SectorImpact:
     """Translate transport & logistics delta to plain language."""
     abs_delta = abs(delta_pct)
     daily_fuel = COST_PROXIES["auto_daily_fuel"] * abs_delta / 100
@@ -117,7 +117,29 @@ def _translate_transport(delta_pct: float, city_config: Any) -> SectorImpact:
     jobs_affected = int(jobs * abs_delta / 100)
     delivery_cost = COST_PROXIES["delivery_daily_cost"] * abs_delta / 100
 
+    lowered = original_query.lower()
+    is_restriction = any(w in lowered for w in ["ban", "banned", "bans", "banning", "restrict", "restricted", "restriction", "restrictions", "outlaw", "prohibit", "prohibited", "ration", "odd-even"])
+
     if delta_pct < 0:
+        if is_restriction:
+            return SectorImpact(
+                sector="transport_logistics",
+                sector_label="Transport & Daily Commute",
+                delta_pct=delta_pct,
+                direction="negative",
+                headline="Transit restrictions reduce mobility",
+                person_example=(
+                    "Commuters experience travel delays and must shift to alternative transit modes. "
+                    "Logistics operators face routing constraints and scheduling overhead."
+                ),
+                city_wide=(
+                    f"City-wide, roughly {jobs_affected:,} transit-dependent workers face daily commute disruption. "
+                    "Pressure on public bus and metro networks increases substantially."
+                ),
+                numbers={
+                    "jobs_affected": jobs_affected,
+                },
+            )
         return SectorImpact(
             sector="transport_logistics",
             sector_label="Transport & Daily Commute",
@@ -443,11 +465,18 @@ def _generate_headline(
     dominant_sector = max(active, key=lambda s: abs(active[s]))
     delta = active[dominant_sector]
 
-    # Try to connect to user's original words
+    lowered_query = original_query.lower()
+    is_ban = any(w in lowered_query for w in ["ban", "banned", "bans", "banning", "restrict", "restricted", "restriction", "restrictions", "outlaw", "prohibit", "prohibited", "ration", "odd-even"])
     user_keyword = _find_user_keyword(original_query, dominant_sector)
 
     if user_keyword:
-        if delta < -10:
+        if is_ban:
+            return (
+                f"If {user_keyword} get restricted or banned in {city_name}, "
+                f"the biggest impact would be on {SECTOR_LABELS[dominant_sector].lower()} "
+                f"\u2014 here is what that means for daily life."
+            )
+        elif delta < -10:
             return (
                 f"If {user_keyword} costs spike in {city_name}, "
                 f"the biggest impact would be on {SECTOR_LABELS[dominant_sector].lower()} "
@@ -604,7 +633,10 @@ def translate_to_plain_language(
             continue
         translator = _SECTOR_TRANSLATORS.get(sector)
         if translator:
-            impact = translator(delta, city_config)
+            try:
+                impact = translator(delta, city_config, original_query=original_query)
+            except TypeError:
+                impact = translator(delta, city_config)
             sector_impacts.append(impact)
 
     # Sort by absolute delta (most impactful first)

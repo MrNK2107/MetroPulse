@@ -57,12 +57,16 @@ async def _ingestion_loop(db: object) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.realtime import get_http_client
     db = await get_db()
     if settings.seed_case_studies_on_startup:
         try:
             await db.seed_case_studies()
         except Exception as e:
             logger.warning("Case study seeding failed: %s", e)
+
+    # Warm up the shared HTTP client for all connectors
+    await get_http_client()
 
     ingestion_task = asyncio.create_task(_ingestion_loop(db))
 
@@ -73,6 +77,9 @@ async def lifespan(app: FastAPI):
         await ingestion_task
     except asyncio.CancelledError:
         pass
+
+    from app.realtime import close_http_client
+    await close_http_client()
 
 
 app = FastAPI(
