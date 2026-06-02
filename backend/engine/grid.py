@@ -8,6 +8,7 @@ import h3
 import numpy as np
 
 from engine.models import GridState, N_SECTORS, SECTOR_INDEX, SECTOR_NAMES, SimulationParams
+from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +68,6 @@ class GridFactory:
         slum_flag = (np.array([hash(h) % 1000 for h in h3_indices]) / 1000.0 < slum_pct)
 
         # Initialize confidence arrays (all synthetic initially)
-        from engine.provenance import ORIGIN_CONFIDENCE, DataOrigin, DEFAULT_ORIGINS
-
         confidence_K = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
         confidence_R = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
         confidence_T = np.full(n, ORIGIN_CONFIDENCE[DataOrigin.SYNTHETIC])
@@ -88,20 +87,26 @@ class GridFactory:
                 confidences = []
                 sources: set[str] = set()
                 modified = 0
-                for i, h3_index in enumerate(h3_indices):
-                    mod = overlay.get(h3_index)
-                    if not mod:
-                        continue
-                    modified += 1
-                    K[i, :] *= float(mod["economic_activity_multiplier"])
-                    M[i] *= float(mod["migration_pressure_multiplier"])
-                    R[i] *= float(mod["real_estate_multiplier"])
-                    confidence = float(mod.get("confidence", 0.0))
-                    confidence_K[i] = max(confidence_K[i], confidence)
-                    confidence_M[i] = max(confidence_M[i], confidence)
-                    confidence_R[i] = max(confidence_R[i], confidence * 0.9)
-                    confidences.append(confidence)
-                    sources.update(mod.get("sources", []))
+                # Build arrays of multipliers for cells that have overlay data
+                has_mod = np.array([overlay.get(idx) is not None for idx in h3_indices])
+                k_mult = np.array([float(overlay[idx]["economic_activity_multiplier"]) if idx in overlay else 1.0 for idx in h3_indices])
+                m_mult = np.array([float(overlay[idx]["migration_pressure_multiplier"]) if idx in overlay else 1.0 for idx in h3_indices])
+                r_mult = np.array([float(overlay[idx]["real_estate_multiplier"]) if idx in overlay else 1.0 for idx in h3_indices])
+                conf_arr = np.array([float(overlay[idx].get("confidence", 0.0)) if idx in overlay else 0.0 for idx in h3_indices])
+                modified = int(np.sum(has_mod))
+                if modified > 0:
+                    K *= k_mult[:, None]
+                    M *= m_mult
+                    R *= r_mult
+                    confidence_K = np.maximum(confidence_K, conf_arr)
+                    confidence_M = np.maximum(confidence_M, conf_arr)
+                    confidence_R = np.maximum(confidence_R, conf_arr * 0.9)
+                    confidences = conf_arr[has_mod].tolist()
+                    for idx in h3_indices:
+                        if idx in overlay:
+                            sources.update(overlay[idx].get("sources", []))
+                else:
+                    confidences = []
                 data_origins["K"] = "real_time_context"
                 data_origins["M"] = "real_time_context"
                 data_origins["R"] = "real_time_context"

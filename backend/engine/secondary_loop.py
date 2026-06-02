@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from engine.models import GridState, SimulationParams
+from engine.provenance import SECONDARY_CASCADE_DECAY, MONSOON_DECAY
 
 
 def step(state: GridState, params: SimulationParams, month: int) -> GridState:
@@ -33,21 +34,25 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
 
     if "RERA Compliance" in params.policies_active:
         delta_r *= rera_dampening
-        state.active_effects.append("RERA volatility dampening")
+        if "RERA volatility dampening" not in state.active_effects:
+            state.active_effects.append("RERA volatility dampening")
 
     if "PM Awas Yojana" in params.policies_active:
         state.H[state.slum_flag] += float(state.constants.get("slum_upgrade_rate", 0.008)) * pmay_multiplier
         state.H = np.clip(state.H, 0.2, 1.8)
-        state.active_effects.append("PMAY housing upgrade")
+        if "PMAY housing upgrade" not in state.active_effects:
+            state.active_effects.append("PMAY housing upgrade")
 
     if "AMRUT" in params.policies_active:
         state.H += amrut_housing
         state.T += amrut_congestion
-        state.active_effects.append("AMRUT services improvement")
+        if "AMRUT services improvement" not in state.active_effects:
+            state.active_effects.append("AMRUT services improvement")
 
     if "Smart City Mission" in params.policies_active:
         state.T += smart_city_congestion
-        state.active_effects.append("Smart City operations")
+        if "Smart City operations" not in state.active_effects:
+            state.active_effects.append("Smart City operations")
 
     # Housing/migration coefficients from city constants
     housing_xi = float(state.constants.get("housing_xi", 0.08))
@@ -59,7 +64,8 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
         flood_impact = float(state.constants.get("flood_impact", 0.20)) / max(len(params.city_config.monsoon_season), 1)
         state.K *= (1.0 - flood_impact * state.F[:, None] * flood_k_impact)
         state.T += float(state.constants.get("flood_congestion_bonus", 0.2)) * state.F * flood_t_impact
-        state.active_effects.append("monsoon flood pressure")
+        if "monsoon flood pressure" not in state.active_effects:
+            state.active_effects.append("monsoon flood pressure")
 
     state.R = np.clip(state.R + delta_r, 0.0, 2.0)
     capacity = np.maximum(state.E_formal + state.E_informal, 1.0)
@@ -77,7 +83,6 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     state.migration_balance = float(np.mean(state.M) - np.mean(state.baselines.get("M", state.M)))
 
     # Confidence propagation — secondary effects are less certain than primary
-    from engine.provenance import SECONDARY_CASCADE_DECAY, MONSOON_DECAY
     if state.confidence_R is not None:
         state.confidence_R = np.clip(state.confidence_R * SECONDARY_CASCADE_DECAY, 0.1, 1.0)
     if state.confidence_T is not None:

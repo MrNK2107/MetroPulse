@@ -4,6 +4,7 @@ import numpy as np
 
 from engine.grid import public_zone_mask
 from engine.models import GridState, SECTOR_INDEX, SECTOR_NAMES, SimulationParams
+from engine.provenance import PRIMARY_LOOP_DECAY
 
 
 def step(state: GridState, params: SimulationParams, month: int) -> GridState:
@@ -87,7 +88,6 @@ def step(state: GridState, params: SimulationParams, month: int) -> GridState:
     state.active_effects = effects or ["baseline drift"]
 
     # Confidence propagation — each step accumulates uncertainty
-    from engine.provenance import PRIMARY_LOOP_DECAY
     if state.confidence_K is not None:
         state.confidence_K = np.clip(state.confidence_K * PRIMARY_LOOP_DECAY, 0.1, 1.0)
         if params.coefficient_adjustments:

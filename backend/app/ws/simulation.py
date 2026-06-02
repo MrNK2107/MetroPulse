@@ -53,12 +53,14 @@ async def simulation_websocket(websocket: WebSocket):
                     s: float(parsed_data.get("sector_deltas", {}).get(s, 0.0))
                     for s in SECTOR_NAMES
                 }
+                # Clamp sector deltas to [-100, 100]
+                sector_deltas = {s: max(-100.0, min(100.0, v)) for s, v in sector_deltas.items()}
                 parsed = ParsedScenario(
                     city=parsed_data.get("city", "mumbai"),
                     sector_deltas=sector_deltas,
                     policies_active=list(parsed_data.get("policies_active", [])),
                     public_works_zone=parsed_data.get("public_works_zone"),
-                    horizon_months=int(parsed_data.get("horizon_months", 24)),
+                    horizon_months=max(1, min(120, int(parsed_data.get("horizon_months", 24)))),
                     causal_chain=parsed_data.get("causal_chain", "Direct parameter specification"),
                     keywords=list(parsed_data.get("keywords", ["mumbai"])),
                     confidence="high",
