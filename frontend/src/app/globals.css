@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --map-bg: #05070d;
+}
+
 * {
   box-sizing: border-box;
 }
