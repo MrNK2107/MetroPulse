@@ -39,6 +39,7 @@ NEW_DISTRICT_ID = "district:999"
 OLD_A_ID = "census2011_district:10226"
 OLD_B_ID = "census2011_district:10229"
 OLD_C_ID = "census2011_district:27519"
+OLD_E_ID = "census2011_district:27522"
 
 
 @pytest.fixture

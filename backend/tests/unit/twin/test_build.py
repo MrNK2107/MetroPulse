@@ -23,7 +23,7 @@ def test_build_backbone_end_to_end(fx, tmp_paths):
 
 def test_districts_without_census2011_link(fx, tmp_paths):
     rep = build_backbone(fixture_inputs(fx), tmp_paths, "lgd-test")
-    assert rep.districts_without_census2011_link == 2  # Newpur + Chhatrapati Sambhajinagar (no 2011 geometry in fixture)
+    assert rep.districts_without_census2011_link == 1  # Newpur only
 
 
 def test_load_backbone_not_built(tmp_path):

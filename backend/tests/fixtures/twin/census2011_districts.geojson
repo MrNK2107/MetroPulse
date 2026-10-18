@@ -140,6 +140,41 @@
      ]
     ]
    }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "ST_CEN_CD": "27",
+    "DT_CEN_CD": "522",
+    "DISTRICT": "Aurangabad"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       71.002,
+       12
+      ],
+      [
+       72,
+       12
+      ],
+      [
+       72,
+       13
+      ],
+      [
+       71.002,
+       13
+      ],
+      [
+       71.002,
+       12
+      ]
+     ]
+    ]
+   }
   }
  ]
 }
