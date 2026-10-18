@@ -53,3 +53,19 @@ def old(fx):
 @pytest.fixture
 def new(districts):
     return districts
+
+
+@pytest.fixture
+def districts_with_island(districts):
+    import geopandas as gpd
+    import pandas as pd
+    from shapely.geometry import MultiPolygon, box
+
+    island = MultiPolygon([box(79.0, 18.0, 79.018, 18.018)])
+    row = gpd.GeoDataFrame(
+        {"place_id": ["district:island"]}, geometry=[island], crs=districts.crs
+    )
+    return gpd.GeoDataFrame(
+        pd.concat([districts[["place_id", "geometry"]], row], ignore_index=True),
+        crs=districts.crs,
+    )
