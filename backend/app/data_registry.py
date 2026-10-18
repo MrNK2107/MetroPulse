@@ -51,6 +51,10 @@ SOURCE_REGISTRY: tuple[SourceDefinition, ...] = (
     SourceDefinition("ghsl", "Global Human Settlement Layer", "European Commission JRC", ("population", "land_use"), "grid", "multi-year release", "download", "European Commission reuse notice", "open_proxy", "https://human-settlement.emergency.copernicus.eu/"),
     SourceDefinition("worldpop", "WorldPop gridded population", "WorldPop, University of Southampton", ("population",), "grid", "annual", "download/API", "CC BY 4.0 where marked", "open_proxy", "https://www.worldpop.org/", freshness_sla_days=550),
     SourceDefinition("gdelt-news", "GDELT / news context", "GDELT and publishers", ("context",), "city query", "near-real-time", "API/RSS", "Source-specific", "context_only", "https://www.gdeltproject.org/"),
+    SourceDefinition("lgd", "Local Government Directory", "MoPR / NIC", ("administrative",), "state/district", "continuous", "download", "Government Open Data License - India", "measured_official", "https://lgdirectory.gov.in/"),
+    SourceDefinition("soi-boundaries", "Survey of India administrative boundaries", "Survey of India", ("administrative",), "district/state/national", "release", "download", "Survey of India terms", "measured_official", "https://onlinemaps.surveyofindia.gov.in/"),
+    SourceDefinition("census2011-pca-district", "Census 2011 Primary Census Abstract (district)", "ORGI", ("population", "employment"), "district (2011 boundaries)", "decennial", "download", "Government Open Data License where marked", "measured_official", "https://censusindia.gov.in/"),
+    SourceDefinition("census2011-district-boundaries", "Census 2011 district boundaries (DataMeet; crosswalk only, never drawn)", "DataMeet", ("administrative",), "district (2011 boundaries)", "static", "download", "CC BY 2.5 IN", "open_proxy", "https://github.com/datameet/maps"),
 )
 
 

@@ -69,3 +69,20 @@ def districts_with_island(districts):
         pd.concat([districts[["place_id", "geometry"]], row], ignore_index=True),
         crs=districts.crs,
     )
+
+
+@pytest.fixture
+def tmp_paths(tmp_path):
+    from twin.paths import TwinPaths
+
+    return TwinPaths(tmp_path / "twin")
+
+
+@pytest.fixture
+def ctx(tmp_paths, places, districts):
+    from twin.pipeline.base import PipelineContext
+
+    return PipelineContext(
+        paths=tmp_paths, places=places, boundaries={"district": districts},
+        crosswalk=None, known_sources={"dummy"},
+    )
