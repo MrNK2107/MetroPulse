@@ -25,7 +25,7 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 `CityConfig.load()` and `CityConfig.load_geojson()` validate `city_name` with `re.fullmatch(r'[a-zA-Z0-9_]+', city_name)` to prevent directory traversal attacks. Zone file paths in `grid.py` also reject `..` patterns.
 
 ### WebSocket Connection Limit
-Configurable via `WS_MAX_CONNECTIONS` env var (default: 10). Exceeding the limit returns WebSocket close code 1013 (Try Again Later). See `app/config.py` → `ws_max_connections`.
+The `WS_MAX_CONNECTIONS` setting exists (`app/config.py` → `ws_max_connections`, default 10) but is NOT currently enforced on `/ws/agent`; its only enforcer was the retired simulator WebSocket. Connection limits arrive with M2's auth and rate limiting (spec §4).
 
 ## Conventions
 - Python: Use NumPy vectorized ops where arrays are involved

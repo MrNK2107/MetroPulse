@@ -23,6 +23,7 @@ The spec has seven milestones (§7), and each one depends on what the previous o
 - **Single-worker GPU queue for local AI calls (spec §4):** M2. That's the first milestone that calls a model.
 - **Live weather and air quality (spec §5.9):** M2.
 - **WorldPop population weights for the crosswalk (spec §5.1):** M1 builds the weighting hook. M2 loads WorldPop and switches Census apportioning from area to population weights.
+- **WebSocket connection limit for /ws/agent (was enforced only by the retired simulator WS):** M2, with rate limiting.
 
 ## How each plan gets written
 
