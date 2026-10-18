@@ -116,3 +116,13 @@ def ctx_backbone(fx, tmp_paths):
     return load_backbone(
         tmp_paths, known_sources={s.id for s in SOURCE_REGISTRY} | {"dummy"}
     )
+
+
+@pytest.fixture
+def ctx_census(ctx_backbone, fx):
+    import shutil
+
+    d = ctx_backbone.paths.manual / "census2011"
+    d.mkdir(parents=True)
+    shutil.copy2(fx / "pca_district.csv", d / "pca_district.csv")
+    return ctx_backbone
