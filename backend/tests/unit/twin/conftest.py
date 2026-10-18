@@ -145,8 +145,7 @@ def write_viirs_tiff(path):
     return path
 
 
-@pytest.fixture
-def fixture_manual_paths(tmp_path, fx):
+def make_fixture_manual_paths(tmp_path, fx):
     """TwinPaths whose manual/ dir holds every fixture in the documented layout."""
     import shutil
 
@@ -168,3 +167,8 @@ def fixture_manual_paths(tmp_path, fx):
     paths.seed.mkdir(parents=True, exist_ok=True)
     shutil.copy2(fx / "aliases.csv", paths.seed / "aliases.csv")
     return paths
+
+
+@pytest.fixture
+def fixture_manual_paths(tmp_path, fx):
+    return make_fixture_manual_paths(tmp_path, fx)
