@@ -13,7 +13,6 @@ from app.routes.case_studies import router as case_studies_router
 from app.routes.realtime import router as realtime_router
 from app.routes.twin import install_error_handlers as install_twin_error_handlers
 from app.routes.twin import router as twin_router
-from app.ws.agent import router as agent_ws_router
 
 logger = logging.getLogger(__name__)
 
@@ -103,4 +102,5 @@ app.include_router(case_studies_router, prefix="/api", tags=["case-studies"])
 app.include_router(realtime_router, prefix="/api", tags=["realtime-data"])
 app.include_router(twin_router, prefix="/api/twin", tags=["twin"])
 install_twin_error_handlers(app)
-app.include_router(agent_ws_router, tags=["agent-websocket"])
+# No WebSocket endpoints in M1: app/ws/agent.py is parked and M2 re-mounts it with
+# auth and connection limits.

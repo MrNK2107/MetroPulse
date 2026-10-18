@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -11,10 +12,12 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
+from app.config import settings
 from app.data_registry import SOURCE_REGISTRY
 from twin.paths import TwinPaths
 from twin.pipeline.base import Indicator
 from twin.places.build import load_backbone
+from twin.places.normalize import normalize_state_code
 from twin.places.resolver import PlaceResolver, load_aliases
 from twin.store.catalog import list_indicators
 from twin.store.parquet_store import query_observations, read_current
@@ -48,6 +51,9 @@ _lock = threading.Lock()
 
 
 def get_twin_paths() -> TwinPaths:
+    """Settings.twin_data_dir (TWIN_DATA_DIR env or .env) when set, else the repo default."""
+    if settings.twin_data_dir:
+        return TwinPaths(Path(settings.twin_data_dir))
     return TwinPaths.default()
 
 
@@ -89,6 +95,10 @@ def _fail(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content=_envelope(None, error=message))
 
 
+def is_twin_path(path: str) -> bool:
+    return path == "/api/twin" or path.startswith("/api/twin/")
+
+
 def install_error_handlers(app) -> None:
     @app.exception_handler(TwinNotBuilt)
     async def _not_built(_request, _exc):
@@ -96,7 +106,7 @@ def install_error_handlers(app) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError):
-        if not request.url.path.startswith("/api/twin"):
+        if not is_twin_path(request.url.path):
             return await request_validation_exception_handler(request, exc)
         msg = "; ".join(
             f"{'.'.join(str(p) for p in e.get('loc', ()))}: {e.get('msg', '')}"
@@ -119,7 +129,7 @@ def resolve_place(
     state: str | None = Query(None, max_length=10),
     ctx: TwinContext = Depends(get_twin_context),
 ):
-    res = ctx.resolver.resolve(q, level=level, state_code=state)
+    res = ctx.resolver.resolve(q, level=level, state_code=normalize_state_code(state))
     return _envelope({"matches": [asdict(m) for m in res.matches], "ambiguous": res.ambiguous})
 
 

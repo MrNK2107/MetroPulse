@@ -104,3 +104,46 @@ def test_503_when_not_built(tmp_path):
         app.dependency_overrides.clear()
     assert r.status_code == 503 and r.json()["success"] is False
     assert r.json()["error"] == "twin data not built — run scripts/twin_build.py build"
+
+
+def test_resolve_single_digit_state_hint(client):
+    for st in ("6", "06"):
+        body = client.get(
+            "/api/twin/places/resolve", params={"q": "Gurgaon", "level": "district", "state": st}
+        ).json()
+        assert body["success"] and body["data"]["ambiguous"] is False
+        m = body["data"]["matches"][0]
+        assert (m["place_id"], m["state_code"], m["method"]) == ("district:76", "06", "alias")
+
+
+def test_get_twin_paths_follows_settings(monkeypatch, tmp_path):
+    from app.config import settings
+    from twin.paths import TwinPaths
+
+    monkeypatch.setattr(settings, "twin_data_dir", str(tmp_path / "data"))
+    assert get_twin_paths() == TwinPaths(tmp_path / "data")
+    monkeypatch.setattr(settings, "twin_data_dir", "")
+    monkeypatch.delenv("TWIN_DATA_DIR", raising=False)
+    assert get_twin_paths() == TwinPaths.default()
+
+
+def test_settings_data_dir_serves_the_build(monkeypatch, built_paths):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "twin_data_dir", str(built_paths.root))
+    body = TestClient(app).get("/api/twin/indicators").json()
+    assert body["success"] and body["data"]
+
+
+def test_twin_path_prefix_match():
+    from app.routes.twin import is_twin_path
+
+    assert is_twin_path("/api/twin") and is_twin_path("/api/twin/places/resolve")
+    assert not is_twin_path("/api/twinkle") and not is_twin_path("/api/twins/x")
+
+
+def test_no_websocket_endpoints_mounted_in_m1():
+    from starlette.routing import WebSocketRoute
+
+    assert not [r for r in app.routes if isinstance(r, WebSocketRoute)]
+    assert "/ws/agent" not in {getattr(r, "path", None) for r in app.routes}
