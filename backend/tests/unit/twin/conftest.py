@@ -30,3 +30,26 @@ def districts(fx, places, resolver):
         fx / "soi_districts.geojson", fx / "soi_outline.geojson", places, resolver
     )
     return gdf
+
+
+X_ID = "district:217"
+Y_ID = "district:222"
+Z_ID = "district:201"
+NEW_DISTRICT_ID = "district:999"
+OLD_A_ID = "census2011_district:10226"
+OLD_B_ID = "census2011_district:10229"
+OLD_C_ID = "census2011_district:27519"
+
+
+@pytest.fixture
+def old(fx):
+    import geopandas as gpd
+
+    gdf = gpd.read_file(fx / "census2011_districts.geojson")
+    gdf["place_id"] = "census2011_district:" + gdf["ST_CEN_CD"] + gdf["DT_CEN_CD"]
+    return gdf[["place_id", "geometry"]].set_crs(4326, allow_override=True)
+
+
+@pytest.fixture
+def new(districts):
+    return districts

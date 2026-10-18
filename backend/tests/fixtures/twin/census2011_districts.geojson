@@ -1,0 +1,145 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "ST_CEN_CD": "10",
+    "DT_CEN_CD": "226",
+    "DISTRICT": "Patna"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       72,
+       15
+      ],
+      [
+       73,
+       15
+      ],
+      [
+       73,
+       16
+      ],
+      [
+       72,
+       16
+      ],
+      [
+       72,
+       15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "ST_CEN_CD": "10",
+    "DT_CEN_CD": "229",
+    "DISTRICT": "Gaya"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       74,
+       15
+      ],
+      [
+       76.5,
+       15
+      ],
+      [
+       76.5,
+       16
+      ],
+      [
+       74,
+       16
+      ],
+      [
+       74,
+       15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "ST_CEN_CD": "27",
+    "DT_CEN_CD": "519",
+    "DISTRICT": "Mumbai"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       70,
+       12
+      ],
+      [
+       71.002,
+       12
+      ],
+      [
+       71.002,
+       13
+      ],
+      [
+       70,
+       13
+      ],
+      [
+       70,
+       12
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "ST_CEN_CD": "31",
+    "DT_CEN_CD": "587",
+    "DISTRICT": "Lakshadweep"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       73,
+       11
+      ],
+      [
+       73.05,
+       11
+      ],
+      [
+       73.05,
+       11.05
+      ],
+      [
+       73,
+       11.05
+      ],
+      [
+       73,
+       11
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
