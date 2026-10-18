@@ -1,6 +1,7 @@
 """Area-weighted crosswalk from Census 2011 districts to current districts."""
 from __future__ import annotations
 
+import warnings
 from typing import Literal
 
 import geopandas as gpd
@@ -21,12 +22,17 @@ def build_crosswalk(
     Returns columns old_id, new_id, area_weight, pop_weight. area_weight is the
     share of the old district's area falling in the new one (computed in
     EPSG:6933); pieces below `sliver` are dropped and weights renormalised so
-    each old_id sums to 1. `pop_weights` (optional; columns old_id, new_id,
+    each old_id sums to 1. Also returns piece_area (m2, EPSG:6933 area of the
+    old/new piece, after the sliver drop; used to weight "mean") and piece_pop
+    (population of the piece from pop_weights, NaN when not provided). Input
+    geometries are repaired with make_valid first. `pop_weights` (optional; columns old_id, new_id,
     population = population inside each old/new piece) gives pop_weight =
     piece population / old total, over the retained pieces; otherwise NaN.
     """
     o = old[["place_id", "geometry"]].rename(columns={"place_id": "old_id"}).to_crs(AREA_CRS)
+    o["geometry"] = o.geometry.make_valid()
     n = new[["place_id", "geometry"]].rename(columns={"place_id": "new_id"}).to_crs(AREA_CRS)
+    n["geometry"] = n.geometry.make_valid()
     pieces = gpd.overlay(o, n, how="intersection", keep_geom_type=True)
     pieces["area"] = pieces.geometry.area
     pieces = pieces[pieces["area"] > 0]
@@ -34,15 +40,19 @@ def build_crosswalk(
     pieces["area_weight"] = pieces["area"] / pieces["old_id"].map(old_area)
     pieces = pieces[pieces["area_weight"] >= sliver]
     pieces["area_weight"] = pieces["area_weight"] / pieces.groupby("old_id")["area_weight"].transform("sum")
-    out = pieces[["old_id", "new_id", "area_weight"]].reset_index(drop=True)
+    out = pieces[["old_id", "new_id", "area_weight", "area"]].rename(
+        columns={"area": "piece_area"}
+    ).reset_index(drop=True)
 
     out["pop_weight"] = np.nan
+    out["piece_pop"] = np.nan
     if pop_weights is not None:
         pop = pop_weights[["old_id", "new_id", "population"]]
         out = out.merge(pop, on=["old_id", "new_id"], how="left")
         pop_v = out["population"].fillna(0.0)
         total = pop_v.groupby(out["old_id"]).transform("sum")
         out["pop_weight"] = (pop_v / total.where(total > 0)).astype(float)
+        out["piece_pop"] = pop_v.astype(float)
         out = out.drop(columns="population")
     return out.sort_values(["old_id", "new_id"]).reset_index(drop=True)
 
@@ -63,31 +73,57 @@ def apply_crosswalk(
     "sum": sum of value * weight. Null pieces are skipped; a new district whose
       contributing pieces are ALL null is null (never 0).
     "mean": weighted mean over the non-null pieces (weights taken from those
-      pieces only); all-null gives null.
-    Old ids absent from the crosswalk are dropped.
+      pieces only) with each piece weighted by its piece_area (area mode) or
+      piece_pop (pop mode); all-null gives null.
+    Non-null observations whose old id has no crosswalk rows cannot be mapped:
+    they are dropped, a warning is emitted, and out.attrs["unmapped_old_ids"]
+    (sorted list) and out.attrs["unmapped_totals"] ({indicator: summed value})
+    record them (both empty when everything mapped).
     """
     if method not in ("sum", "mean"):
         raise ValueError(f"unknown method: {method!r}")
     wcol = {"area": "area_weight", "pop": "pop_weight"}[weight]
+    mcol = {"area": "piece_area", "pop": "piece_pop"}[weight]
     keys = [c for c in obs.columns if c not in ("place_id", "value")]
-    x = xwalk[["old_id", "new_id", wcol]].rename(columns={wcol: "w"})
-    m = obs.merge(x, left_on="place_id", right_on="old_id", how="inner")
-    m["wv"] = m["value"] * m["w"]
-    has = m["value"].notna() & m["w"].notna()
-    m["w_ok"] = m["w"].where(has)
-    m["wv"] = m["wv"].where(has)
+    x = xwalk.assign(**({} if mcol in xwalk else {mcol: np.nan}))[
+        ["old_id", "new_id", wcol, mcol]
+    ].rename(columns={wcol: "w", mcol: "mw"})
+    m = obs.merge(x, left_on="place_id", right_on="old_id", how="left")
 
-    g = m.groupby(keys + ["new_id"], dropna=False, sort=True)
-    agg = g.agg(
-        wv=("wv", lambda s: s.sum(min_count=1)),
-        w_ok=("w_ok", "sum"),
+    unmapped = m[m["new_id"].isna() & m["value"].notna()]
+    ids = sorted(unmapped["place_id"].unique().tolist())
+    totals = unmapped.groupby("indicator")["value"].sum().to_dict()
+    if ids:
+        warnings.warn(
+            f"{len(ids)} old id(s) with non-null values have no crosswalk rows "
+            f"and were dropped: {ids}",
+            stacklevel=2,
+        )
+    m = m[m["new_id"].notna()].copy()
+
+    if method == "sum":
+        ok = m["value"].notna() & m["w"].notna()
+        m["num"] = (m["value"] * m["w"]).where(ok)
+        m["den"] = m["w"].where(ok)
+    else:
+        ok = m["value"].notna() & m["mw"].notna()
+        m["num"] = (m["value"] * m["mw"]).where(ok)
+        m["den"] = m["mw"].where(ok)
+    m["cnt"] = ok.astype(int)
+
+    agg = m.groupby(keys + ["new_id"], dropna=False, sort=True).agg(
+        num=("num", "sum"),
+        den=("den", "sum"),
+        cnt=("cnt", "sum"),
         n_sources=("old_id", "nunique"),
         max_weight=("w", "max"),
     ).reset_index()
     if method == "sum":
-        agg["value"] = agg["wv"]
+        agg["value"] = agg["num"].where(agg["cnt"] > 0)
     else:
-        agg["value"] = agg["wv"] / agg["w_ok"].where(agg["w_ok"] > 0)
+        agg["value"] = (agg["num"] / agg["den"].where(agg["den"] > 0)).where(agg["cnt"] > 0)
     agg = agg.rename(columns={"new_id": "place_id"})
-    cols = [c for c in obs.columns] + ["n_sources", "max_weight"]
-    return agg[cols].reset_index(drop=True)
+    out = agg[list(obs.columns) + ["n_sources", "max_weight"]].reset_index(drop=True)
+    out.attrs["unmapped_old_ids"] = ids
+    out.attrs["unmapped_totals"] = {k: float(v) for k, v in totals.items()}
+    return out

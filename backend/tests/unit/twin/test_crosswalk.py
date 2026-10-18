@@ -1,6 +1,8 @@
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
+from shapely.geometry import Polygon, box
 
 from tests.unit.twin.conftest import (
     NEW_DISTRICT_ID, OLD_A_ID, OLD_B_ID, OLD_C_ID, X_ID, Y_ID, Z_ID,
@@ -59,7 +61,8 @@ def test_sum_partial_null_sums_non_null():
 
 def test_mean_is_weighted_and_skips_nulls():
     x = pd.DataFrame({"old_id": ["a", "b", "c"], "new_id": ["n"] * 3,
-                      "area_weight": [0.25, 0.75, 1.0], "pop_weight": [np.nan] * 3})
+                      "area_weight": [0.25, 0.75, 1.0], "piece_area": [25.0, 75.0, 100.0],
+                      "pop_weight": [np.nan] * 3, "piece_pop": [np.nan] * 3})
     out = apply_crosswalk(obs_frame({"a": 10, "b": 20, "c": None}), x, "mean")
     assert out.value.iloc[0] == pytest.approx(17.5)
     out = apply_crosswalk(obs_frame({"a": None, "b": None, "c": None}), x, "mean")
@@ -74,3 +77,40 @@ def test_pop_weights_used_when_provided(old, new):
     assert b.pop_weight[Y_ID] == pytest.approx(0.9)
     out = apply_crosswalk(obs_frame({OLD_B_ID: 1000}), x, "sum", weight="pop")
     assert out.set_index("place_id").value[Y_ID] == pytest.approx(900)
+
+
+def test_unmapped_ids_signalled(old, new):
+    x = build_crosswalk(old, new)
+    obs = obs_frame({OLD_A_ID: 100, "census2011_district:99999": 7})
+    with pytest.warns(UserWarning, match="1 old id"):
+        out = apply_crosswalk(obs, x, "sum")
+    assert out.attrs["unmapped_old_ids"] == ["census2011_district:99999"]
+    assert out.attrs["unmapped_totals"] == {"population_total": 7.0}
+    assert out.value.sum() == pytest.approx(100)
+    clean = apply_crosswalk(obs_frame({OLD_A_ID: 1}), x, "sum")
+    assert clean.attrs["unmapped_old_ids"] == [] and clean.attrs["unmapped_totals"] == {}
+
+
+def test_mean_weights_by_piece_area():
+    # new N = 10x10 slice of big old O1 (100x100) + all of small old O2 (10x10)
+    o = gpd.GeoDataFrame({"place_id": ["census2011_district:1", "census2011_district:2"],
+                          "geometry": [box(0, 0, 10, 10), box(10, 0, 11, 1)]}, crs=4326)
+    o.loc[0, "geometry"] = box(0, 0, 10, 10)
+    n = gpd.GeoDataFrame({"place_id": ["district:N", "district:M"],
+                          "geometry": [box(0, 0, 5, 10).union(box(10, 0, 11, 1)), box(5, 0, 10, 10)]}, crs=4326)
+    x = build_crosswalk(o, n)
+    out = apply_crosswalk(obs_frame({"census2011_district:1": 10, "census2011_district:2": 100}), x, "mean")
+    pa = x.set_index(["old_id", "new_id"]).piece_area
+    a1, a2 = pa[("census2011_district:1", "district:N")], pa[("census2011_district:2", "district:N")]
+    expected = (10 * a1 + 100 * a2) / (a1 + a2)
+    assert out.set_index("place_id").value["district:N"] == pytest.approx(expected)
+    assert expected < 55  # old-share weighting would give (10*.5+100*1)/1.5 = 70
+
+
+def test_invalid_old_geometry_is_repaired(new):
+    bow = Polygon([(72, 15), (73, 16), (73, 15), (72, 16)])
+    assert not bow.is_valid
+    o = gpd.GeoDataFrame({"place_id": [OLD_A_ID], "geometry": [bow]}, crs=4326)
+    x = build_crosswalk(o, new)
+    assert set(x.new_id) == {X_ID}
+    assert x.area_weight.iloc[0] == pytest.approx(1.0)
