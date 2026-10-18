@@ -52,6 +52,7 @@ backend/data/
 
 graphify-out/
 .understand-anything/
-data/twin/manual/
+data/twin/manual/*
+!data/twin/manual/README.md
 data/twin/raw/
 data/twin/published/

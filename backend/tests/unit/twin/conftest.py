@@ -126,3 +126,45 @@ def ctx_census(ctx_backbone, fx):
     d.mkdir(parents=True)
     shutil.copy2(fx / "pca_district.csv", d / "pca_district.csv")
     return ctx_backbone
+
+
+VIIRS_NAME = "VNL_v2_npp_2023_global_vcmslcfg_c202402081600.average_masked.dat.tif"
+
+
+def write_viirs_tiff(path):
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_origin
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with rasterio.open(
+        path, "w", driver="GTiff", height=20, width=20, count=1, dtype="float32",
+        crs="EPSG:4326", transform=from_origin(70, 20, 0.5, 0.5),
+    ) as dst:
+        dst.write(np.ones((20, 20), dtype="float32"), 1)
+    return path
+
+
+@pytest.fixture
+def fixture_manual_paths(tmp_path, fx):
+    """TwinPaths whose manual/ dir holds every fixture in the documented layout."""
+    import shutil
+
+    from twin.paths import TwinPaths
+
+    paths = TwinPaths(tmp_path / "twin")
+    m = paths.manual
+    for rel, src in {
+        "lgd/states.csv": "lgd_states.csv",
+        "lgd/districts.csv": "lgd_districts.csv",
+        "soi/district_boundaries.geojson": "soi_districts.geojson",
+        "soi/india_outline.geojson": "soi_outline.geojson",
+        "census2011/district_boundaries.geojson": "census2011_districts.geojson",
+        "census2011/pca_district.csv": "pca_district.csv",
+    }.items():
+        (m / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(fx / src, m / rel)
+    write_viirs_tiff(m / "viirs" / VIIRS_NAME)
+    paths.seed.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(fx / "aliases.csv", paths.seed / "aliases.csv")
+    return paths
