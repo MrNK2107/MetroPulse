@@ -20,3 +20,13 @@ def resolver(places, fx):
     from twin.places.resolver import PlaceResolver, load_aliases
 
     return PlaceResolver(places, load_aliases(fx / "aliases.csv"))
+
+
+@pytest.fixture
+def districts(fx, places, resolver):
+    from twin.places.boundaries import build_district_boundaries
+
+    gdf, _ = build_district_boundaries(
+        fx / "soi_districts.geojson", fx / "soi_outline.geojson", places, resolver
+    )
+    return gdf

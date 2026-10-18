@@ -1,0 +1,243 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "PATNA",
+    "STATE": "BIHAR"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       72,
+       15
+      ],
+      [
+       73,
+       15
+      ],
+      [
+       73,
+       16
+      ],
+      [
+       72,
+       16
+      ],
+      [
+       72,
+       15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "GAYA DIST.",
+    "STATE": "BIHAR"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       74,
+       15
+      ],
+      [
+       75.5,
+       15
+      ],
+      [
+       75.5,
+       16
+      ],
+      [
+       74,
+       16
+      ],
+      [
+       74,
+       15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "AURANGABAD",
+    "STATE": "BIHAR"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.5,
+       15
+      ],
+      [
+       76.5,
+       15
+      ],
+      [
+       76.5,
+       16
+      ],
+      [
+       75.5,
+       16
+      ],
+      [
+       75.5,
+       15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "NEWPUR",
+    "STATE": "BIHAR"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77,
+       15
+      ],
+      [
+       78,
+       15
+      ],
+      [
+       78,
+       16
+      ],
+      [
+       77,
+       16
+      ],
+      [
+       77,
+       15
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "MUMBAI",
+    "STATE": "MAHARASHTRA"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       69.5,
+       12
+      ],
+      [
+       71,
+       12
+      ],
+      [
+       71,
+       13
+      ],
+      [
+       69.5,
+       13
+      ],
+      [
+       69.5,
+       12
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "CHHATRAPATI SAMBHAJINAGAR",
+    "STATE": "MAHARASHTRA"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       71,
+       12
+      ],
+      [
+       72,
+       12
+      ],
+      [
+       72,
+       13
+      ],
+      [
+       71,
+       13
+      ],
+      [
+       71,
+       12
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "LAKSHADWEEP",
+    "STATE": "LAKSHADWEEP"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       73,
+       11
+      ],
+      [
+       73.05,
+       11
+      ],
+      [
+       73.05,
+       11.05
+      ],
+      [
+       73,
+       11.05
+      ],
+      [
+       73,
+       11
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
