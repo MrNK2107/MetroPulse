@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     pixel_ui_v1: bool = Field(default=True, alias="PIXEL_UI_V1")
     upload_max_bytes: int = Field(default=10_485_760, alias="UPLOAD_MAX_BYTES")
     source_url_max_bytes: int = Field(default=2_097_152, alias="SOURCE_URL_MAX_BYTES")
+    twin_data_dir: str = Field(default="", alias="TWIN_DATA_DIR")
 
     @property
     def cors_origin_list(self) -> list[str]:
