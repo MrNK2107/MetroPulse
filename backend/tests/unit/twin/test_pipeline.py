@@ -126,16 +126,108 @@ def test_reuse_heals_catalogue_and_current(ctx):
     assert [i.id for i in list_indicators(ctx.paths)] == ["dummy_ind"]
 
 
-def test_version_covers_transform_places_and_filename(ctx):
-    from twin.store.parquet_store import set_current
+def _fake_places(ctx, version, digest):
+    d = ctx.paths.places_dir(version)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "places_digest.txt").write_text(digest)
+    ctx.places_version = version
 
+
+def test_version_covers_transform_places_and_filename(ctx):
     base = run_pipeline(DummyAdapter(), ctx).dataset_version
     t = DummyAdapter()
     t.transform_version = "t2"
     v_t = run_pipeline(t, ctx).dataset_version
-    set_current(ctx.paths, "places", "lgd-x")
+    _fake_places(ctx, "lgd-x", "digest-1")
     v_p = run_pipeline(DummyAdapter(), ctx).dataset_version
     d = ctx.paths.manual / "dummy"
     (d / "d.csv").rename(d / "e.csv")
     v_n = run_pipeline(DummyAdapter(), ctx).dataset_version
     assert len({base, v_t, v_p, v_n}) == 4
+
+
+def test_version_follows_places_digest_not_version_name(ctx):
+    _fake_places(ctx, "lgd-x", "digest-1")
+    a = run_pipeline(DummyAdapter(), ctx).dataset_version
+    _fake_places(ctx, "lgd-x", "digest-2")  # same version name, rebuilt content
+    b = run_pipeline(DummyAdapter(), ctx).dataset_version
+    _fake_places(ctx, "lgd-y", "digest-2")  # new name, same content
+    c = run_pipeline(DummyAdapter(), ctx).dataset_version
+    assert a != b and b == c
+
+
+def test_missing_places_digest_is_an_error(ctx):
+    ctx.places_version = "lgd-missing"
+    with pytest.raises(FileNotFoundError, match="places_digest"):
+        run_pipeline(DummyAdapter(), ctx)
+
+
+def test_chunked_hash_matches_whole_file_hash(tmp_path, monkeypatch):
+    import hashlib
+
+    from twin.pipeline import base
+
+    f = tmp_path / "a.bin"
+    f.write_bytes(bytes(range(256)) * 41)
+    monkeypatch.setattr(base, "HASH_CHUNK_BYTES", 7)
+    combined, per_file = base._hash_inputs([f], "tv", "pd")
+    assert per_file["a.bin"] == hashlib.sha256(f.read_bytes()).hexdigest()
+    ref = hashlib.sha256(b"a.bin\x00" + f.read_bytes() + b"\x00tv" + b"\x00pd").hexdigest()
+    assert combined == ref == base._sha256([f], "tv", "pd")
+
+
+def _manifest(ctx):
+    import json
+
+    (m,) = list((ctx.paths.raw / "dummy").glob("*/manifest.json"))
+    return m.parent, json.loads(m.read_text())
+
+
+def test_manifest_records_each_file_and_places(ctx):
+    import hashlib
+    import json
+
+    r = run_pipeline(DummyAdapter(), ctx)
+    raw, man = _manifest(ctx)
+    (entry,) = man["files"]
+    src = ctx.paths.manual / "dummy" / "d.csv"
+    assert entry["name"] == "d.csv" and entry["size"] == src.stat().st_size
+    assert entry["sha256"] == hashlib.sha256(src.read_bytes()).hexdigest()
+    assert entry["copied"] is True and (raw / "d.csv").exists()
+    assert man["places_version"] is None and man["places_digest"] == ""
+    rep = json.loads((ctx.paths.dataset_dir("dummy", r.dataset_version) / "report.json").read_text())
+    assert rep["places_version"] is None and rep["places_digest"] == ""
+
+
+def test_large_input_is_hardlinked_not_copied(ctx, monkeypatch):
+    from twin.pipeline import base
+
+    monkeypatch.setattr(base, "RAW_COPY_MAX_BYTES", 2)
+    run_pipeline(DummyAdapter(), ctx)
+    raw, man = _manifest(ctx)
+    (entry,) = man["files"]
+    assert entry["copied"] is False and entry["hardlinked"] is True
+    assert (raw / "d.csv").stat().st_nlink >= 2
+
+
+def test_large_input_referenced_when_hardlink_fails(ctx, monkeypatch):
+    from twin.pipeline import base
+
+    def no_link(*a, **k):
+        raise OSError("cross-device link")
+
+    monkeypatch.setattr(base, "RAW_COPY_MAX_BYTES", 2)
+    monkeypatch.setattr(base.os, "link", no_link)
+    run_pipeline(DummyAdapter(), ctx)
+    raw, man = _manifest(ctx)
+    (entry,) = man["files"]
+    assert entry["copied"] is False and entry["hardlinked"] is False
+    assert not (raw / "d.csv").exists()
+    assert entry["source_path"] == str((ctx.paths.manual / "dummy" / "d.csv").resolve())
+
+
+def test_set_current_on_publish_false_leaves_current(ctx):
+    a = run_pipeline(DummyAdapter(), ctx, set_current_on_publish=False)
+    assert a.published and "dummy" not in read_current(ctx.paths)
+    b = run_pipeline(DummyAdapter(), ctx, set_current_on_publish=False)
+    assert b.reused and "dummy" not in read_current(ctx.paths)

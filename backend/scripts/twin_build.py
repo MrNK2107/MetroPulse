@@ -92,6 +92,15 @@ def _check(paths: TwinPaths) -> int:
     return 1 if missing else 0
 
 
+def default_paths() -> TwinPaths:
+    """Settings.twin_data_dir (TWIN_DATA_DIR env or backend/.env) when set, else the repo default."""
+    from app.config import settings
+
+    if settings.twin_data_dir:
+        return TwinPaths(Path(settings.twin_data_dir))
+    return TwinPaths.default()
+
+
 def _emit(obj) -> None:
     print(json.dumps(asdict(obj), default=str))
 
@@ -102,6 +111,7 @@ def _build(paths: TwinPaths, boundary_version: str) -> int:
     from twin.pipeline.census2011 import Census2011Adapter
     from twin.pipeline.viirs import ViirsAdapter
     from twin.places.build import BackboneInputs, build_backbone, load_backbone
+    from twin.store.parquet_store import set_current_many
 
     found = {rel: _find(paths.manual, rel) for rel in EXPECTED_MANUAL_FILES}
     absent = [rel for rel, f in found.items() if f is None]
@@ -121,6 +131,9 @@ def _build(paths: TwinPaths, boundary_version: str) -> int:
         census2011_districts=found["census2011/district_boundaries.*"],
         aliases=aliases,
     )
+    # Nothing goes live until every gate and adapter passes: build_backbone and
+    # run_pipeline(set_current_on_publish=False) leave CURRENT.json alone, and the
+    # places version plus every dataset version are switched together at the end.
     report = build_backbone(inputs, paths, boundary_version)
     _emit(report)
     if report.unmatched_boundaries:
@@ -130,14 +143,21 @@ def _build(paths: TwinPaths, boundary_version: str) -> int:
         print(f"build failed: {report.districts_without_boundary} districts have no boundary", file=sys.stderr)
         return 1
 
-    ctx = load_backbone(paths, known_sources={s.id for s in SOURCE_REGISTRY})
+    ctx = load_backbone(
+        paths, known_sources={s.id for s in SOURCE_REGISTRY}, boundary_version=boundary_version
+    )
     status = 0
+    live = {"places": boundary_version}
     for adapter in (Census2011Adapter(), ViirsAdapter()):
-        result = run_pipeline(adapter, ctx)
+        result = run_pipeline(adapter, ctx, set_current_on_publish=False)
         _emit(result)
         if not result.report.ok:
             print(f"build failed: {adapter.source_id} validation: {result.report.problems}", file=sys.stderr)
             status = 1
+        else:
+            live[adapter.source_id] = result.dataset_version
+    if status == 0:
+        set_current_many(paths, live)
     return status
 
 
@@ -164,7 +184,7 @@ def main(argv: list[str], paths: TwinPaths | None = None) -> int:
     s = sub.add_parser("sync", help="upsert into Postgres")
     s.add_argument("--dsn", default=None)
     args = parser.parse_args(argv)
-    paths = paths or TwinPaths.default()
+    paths = paths or default_paths()
     if args.cmd == "check":
         return _check(paths)
     if args.cmd == "build":

@@ -22,7 +22,9 @@ def build_crosswalk(
     Returns columns old_id, new_id, area_weight, pop_weight. area_weight is the
     share of the old district's area falling in the new one (computed in
     EPSG:6933); pieces below `sliver` are dropped and weights renormalised so
-    each old_id sums to 1. Also returns piece_area (m2, EPSG:6933 area of the
+    each old_id sums to 1. coverage is the pre-renormalisation sum of the kept
+    area_weights for that old_id (1.0 = the old district is fully covered by new
+    districts; lower means area fell outside them or into dropped slivers). Also returns piece_area (m2, EPSG:6933 area of the
     old/new piece, after the sliver drop; used to weight "mean") and piece_pop
     (population of the piece from pop_weights, NaN when not provided). Input
     geometries are repaired with make_valid first. `pop_weights` (optional; columns old_id, new_id,
@@ -39,8 +41,9 @@ def build_crosswalk(
     old_area = o.set_index("old_id").geometry.area
     pieces["area_weight"] = pieces["area"] / pieces["old_id"].map(old_area)
     pieces = pieces[pieces["area_weight"] >= sliver]
+    pieces["coverage"] = pieces.groupby("old_id")["area_weight"].transform("sum")
     pieces["area_weight"] = pieces["area_weight"] / pieces.groupby("old_id")["area_weight"].transform("sum")
-    out = pieces[["old_id", "new_id", "area_weight", "area"]].rename(
+    out = pieces[["old_id", "new_id", "area_weight", "coverage", "area"]].rename(
         columns={"area": "piece_area"}
     ).reset_index(drop=True)
 

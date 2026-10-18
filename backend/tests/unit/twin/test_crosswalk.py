@@ -114,3 +114,11 @@ def test_invalid_old_geometry_is_repaired(new):
     x = build_crosswalk(o, new)
     assert set(x.new_id) == {X_ID}
     assert x.area_weight.iloc[0] == pytest.approx(1.0)
+
+
+def test_coverage_is_pre_renormalisation_kept_share(old, new):
+    x = build_crosswalk(old, new)
+    cov = x.groupby("old_id").coverage.first()
+    assert cov[OLD_A_ID] == pytest.approx(1.0)
+    assert cov["census2011_district:27519"] == pytest.approx(1 / 1.002, rel=1e-3)
+    assert x.groupby("old_id").coverage.nunique().eq(1).all()

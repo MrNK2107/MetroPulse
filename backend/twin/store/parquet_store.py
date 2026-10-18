@@ -43,8 +43,13 @@ def read_current(paths: TwinPaths) -> dict[str, str]:
 
 
 def set_current(paths: TwinPaths, source_id: str, dataset_version: str) -> None:
+    set_current_many(paths, {source_id: dataset_version})
+
+
+def set_current_many(paths: TwinPaths, mapping: dict[str, str]) -> None:
+    """Point several keys (e.g. places + every dataset) at new versions in one atomic write."""
     cur = read_current(paths)
-    cur[source_id] = dataset_version
+    cur.update(mapping)
     paths.published.mkdir(parents=True, exist_ok=True)
     tmp = paths.current_file.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(cur, indent=2, sort_keys=True), encoding="utf-8")

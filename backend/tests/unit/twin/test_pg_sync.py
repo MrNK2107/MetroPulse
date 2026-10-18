@@ -51,7 +51,10 @@ class _Conn:
 
 
 def test_pg_sync_writes_three_tables(ctx_census, monkeypatch):
+    from twin.store.parquet_store import set_current
+
     run_pipeline(Census2011Adapter(), ctx_census)
+    set_current(ctx_census.paths, "places", ctx_census.places_version)
     conn = _Conn()
     monkeypatch.setattr(psycopg2, "connect", lambda dsn: conn)
     # execute_values drives cursor.execute/mogrify on our fake cursor

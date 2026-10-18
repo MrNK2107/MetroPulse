@@ -114,7 +114,8 @@ def ctx_backbone(fx, tmp_paths):
 
     build_backbone(fixture_inputs(fx), tmp_paths, "lgd-test")
     return load_backbone(
-        tmp_paths, known_sources={s.id for s in SOURCE_REGISTRY} | {"dummy"}
+        tmp_paths, known_sources={s.id for s in SOURCE_REGISTRY} | {"dummy"},
+        boundary_version="lgd-test",
     )
 
 
