@@ -47,3 +47,5 @@ backend/data/
 
 # OpenCode
 .opencode/
+
+.superpowers/
