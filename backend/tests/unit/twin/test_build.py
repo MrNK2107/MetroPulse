@@ -39,3 +39,20 @@ def test_rebuild_replaces_dir_cleanly(fx, tmp_paths):
     assert not (d / "stale.txt").exists()
     assert (d / "places.parquet").exists()
     assert [p.name for p in d.parent.iterdir()] == ["lgd-test"]
+
+
+def test_integer_census_codes_are_zero_padded(fx, tmp_path):
+    import json
+
+    from twin.places.build import _load_census2011
+
+    d = json.loads((fx / "census2011_districts.geojson").read_text())
+    for f in d["features"]:
+        f["properties"]["ST_CEN_CD"] = int(f["properties"]["ST_CEN_CD"])
+        f["properties"]["DT_CEN_CD"] = int(f["properties"]["DT_CEN_CD"])
+    d["features"][0]["properties"].update(ST_CEN_CD=7, DT_CEN_CD=5.0)
+    p = tmp_path / "c.geojson"
+    p.write_text(json.dumps(d))
+    ids = set(_load_census2011(p).place_id)
+    assert "census2011_district:07005" in ids
+    assert "census2011_district:27522" in ids

@@ -1,9 +1,6 @@
 """Orchestrates the places backbone build into a versioned places directory."""
 from __future__ import annotations
 
-import os
-import shutil
-import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -17,6 +14,7 @@ from twin.places.crosswalk import build_crosswalk
 from twin.places.h3link import build_h3_index
 from twin.places.lgd import load_lgd
 from twin.places.resolver import PlaceResolver, load_aliases
+from twin.store.atomic import publish_dir
 from twin.store.parquet_store import read_current, set_current
 
 # DataMeet-style attribute names in the 2011 census district file.
@@ -44,14 +42,25 @@ class BackboneReport:
     districts_without_boundary: int = 0
 
 
+def _code(col: pd.Series, width: int) -> pd.Series:
+    """Census code column -> zero-padded string; tolerates ints, floats (10.0) and strings."""
+    def one(v) -> str:
+        if isinstance(v, float):
+            if v != v or v != int(v):
+                raise ValueError(f"invalid census code: {v!r}")
+            v = int(v)
+        return str(v).strip().zfill(width)
+    return col.map(one)
+
+
 def _load_census2011(path: Path) -> gpd.GeoDataFrame:
     c = CENSUS2011_COLUMNS
     gdf = gpd.read_file(path)
     if gdf.crs is None:
         gdf = gdf.set_crs(4326)
     gdf = gdf.to_crs(4326)
-    st = gdf[c["state_code"]].astype(str).str.strip().str.zfill(2)
-    dt = gdf[c["district_code"]].astype(str).str.strip().str.zfill(3)
+    st = _code(gdf[c["state_code"]], 2)
+    dt = _code(gdf[c["district_code"]], 3)
     gdf["place_id"] = "census2011_district:" + st + dt
     return gdf[["place_id", "geometry"]]
 
@@ -69,22 +78,14 @@ def build_backbone(inputs: BackboneInputs, paths: TwinPaths, boundary_version: s
     crosswalk = build_crosswalk(old, districts)
     h3_index = build_h3_index(districts)
 
-    final = paths.places_dir(boundary_version)
-    final.parent.mkdir(parents=True, exist_ok=True)
-    tmp = final.with_name(f"{final.name}.tmp-{uuid.uuid4().hex}")
-    tmp.mkdir()
-    try:
+    def _write(tmp: Path) -> None:
         places.to_parquet(tmp / "places.parquet", index=False)
         aliases.to_parquet(tmp / "aliases.parquet", index=False)
         write_boundaries(levels, tmp)
         crosswalk.to_parquet(tmp / "crosswalk_census2011.parquet", index=False)
         h3_index.to_parquet(tmp / "h3_index.parquet", index=False)
-        if final.exists():
-            shutil.rmtree(final)
-        os.replace(tmp, final)
-    except BaseException:
-        shutil.rmtree(tmp, ignore_errors=True)
-        raise
+
+    publish_dir(paths.places_dir(boundary_version), _write)
     set_current(paths, "places", boundary_version)
 
     district_ids = set(places.loc[places["level"] == "district", "place_id"])

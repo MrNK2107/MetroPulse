@@ -3,14 +3,13 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
-import uuid
 from pathlib import Path
 
 import duckdb
 import pandas as pd
 
 from twin.paths import TwinPaths
+from twin.store.atomic import publish_dir
 from twin.store.schema import OBSERVATION_COLUMNS
 
 _FILE = "observations.parquet"
@@ -21,20 +20,14 @@ def write_dataset(paths: TwinPaths, source_id: str, dataset_version: str,
                   obs: pd.DataFrame, report: dict | None = None) -> Path:
     """Write observations + report.json into a temp sibling, then rename into place."""
     final = paths.dataset_dir(source_id, dataset_version)
-    final.parent.mkdir(parents=True, exist_ok=True)
-    tmp = final.with_name(f"{final.name}.tmp-{uuid.uuid4().hex}")
-    tmp.mkdir()
-    try:
+
+    def _write(tmp: Path) -> None:
         out = obs.copy()
         out["dataset_version"] = dataset_version
         out[list(OBSERVATION_COLUMNS)].to_parquet(tmp / _FILE, index=False)
         (tmp / _REPORT).write_text(json.dumps(report or {}, indent=2), encoding="utf-8")
-        if final.exists():
-            shutil.rmtree(final)  # incomplete leftover (not published)
-        os.replace(tmp, final)
-    except BaseException:
-        shutil.rmtree(tmp, ignore_errors=True)
-        raise
+
+    publish_dir(final, _write)
     return final
 
 
