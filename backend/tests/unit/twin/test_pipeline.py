@@ -94,3 +94,48 @@ def test_query_observations_filters_and_source_names(ctx):
 def test_query_empty_store(tmp_paths):
     df = query_observations(tmp_paths)
     assert df.empty and "source_name" in df.columns and "place_id" in df.columns
+
+
+def test_failed_write_leaves_nothing_then_clean_run_publishes(ctx, monkeypatch):
+    real = pd.DataFrame.to_parquet
+
+    def boom(self, *a, **k):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", boom)
+    with pytest.raises(RuntimeError):
+        run_pipeline(DummyAdapter(), ctx)
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", real)
+    src = ctx.paths.published / "datasets" / "dummy"
+    assert not list(src.iterdir())  # no final dir, no tmp leftovers
+    assert "dummy" not in read_current(ctx.paths)
+    r = run_pipeline(DummyAdapter(), ctx)
+    assert r.published and not r.reused
+    assert is_published(ctx.paths, "dummy", r.dataset_version)
+
+
+def test_reuse_heals_catalogue_and_current(ctx):
+    from twin.store.catalog import list_indicators
+    from twin.store.parquet_store import set_current
+
+    a = run_pipeline(DummyAdapter(), ctx)
+    (ctx.paths.published / "catalog" / "indicators.parquet").unlink()
+    ctx.paths.current_file.unlink()
+    b = run_pipeline(DummyAdapter(), ctx)
+    assert b.reused and read_current(ctx.paths)["dummy"] == a.dataset_version
+    assert [i.id for i in list_indicators(ctx.paths)] == ["dummy_ind"]
+
+
+def test_version_covers_transform_places_and_filename(ctx):
+    from twin.store.parquet_store import set_current
+
+    base = run_pipeline(DummyAdapter(), ctx).dataset_version
+    t = DummyAdapter()
+    t.transform_version = "t2"
+    v_t = run_pipeline(t, ctx).dataset_version
+    set_current(ctx.paths, "places", "lgd-x")
+    v_p = run_pipeline(DummyAdapter(), ctx).dataset_version
+    d = ctx.paths.manual / "dummy"
+    (d / "d.csv").rename(d / "e.csv")
+    v_n = run_pipeline(DummyAdapter(), ctx).dataset_version
+    assert len({base, v_t, v_p, v_n}) == 4

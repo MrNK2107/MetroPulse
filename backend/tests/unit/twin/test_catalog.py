@@ -23,3 +23,8 @@ def test_upsert_replaces_by_id_and_empty_catalog(tmp_paths):
     got = list_indicators(tmp_paths)
     assert len(got) == 1 and got[0].name == "Population (renamed)"
     assert got[0].domains == ("population",)
+
+
+def test_search_is_case_insensitive(tmp_paths):
+    upsert_indicators(tmp_paths, [_pop()])
+    assert search_indicators(tmp_paths, "POPULATION")[0].id == "population_total"

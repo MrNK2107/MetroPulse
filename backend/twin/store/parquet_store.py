@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import uuid
 from pathlib import Path
 
 import duckdb
@@ -12,20 +14,33 @@ from twin.paths import TwinPaths
 from twin.store.schema import OBSERVATION_COLUMNS
 
 _FILE = "observations.parquet"
+_REPORT = "report.json"
 
 
 def write_dataset(paths: TwinPaths, source_id: str, dataset_version: str,
-                  obs: pd.DataFrame) -> Path:
-    d = paths.dataset_dir(source_id, dataset_version)
-    d.mkdir(parents=True, exist_ok=True)
-    out = obs.copy()
-    out["dataset_version"] = dataset_version
-    out[list(OBSERVATION_COLUMNS)].to_parquet(d / _FILE, index=False)
-    return d
+                  obs: pd.DataFrame, report: dict | None = None) -> Path:
+    """Write observations + report.json into a temp sibling, then rename into place."""
+    final = paths.dataset_dir(source_id, dataset_version)
+    final.parent.mkdir(parents=True, exist_ok=True)
+    tmp = final.with_name(f"{final.name}.tmp-{uuid.uuid4().hex}")
+    tmp.mkdir()
+    try:
+        out = obs.copy()
+        out["dataset_version"] = dataset_version
+        out[list(OBSERVATION_COLUMNS)].to_parquet(tmp / _FILE, index=False)
+        (tmp / _REPORT).write_text(json.dumps(report or {}, indent=2), encoding="utf-8")
+        if final.exists():
+            shutil.rmtree(final)  # incomplete leftover (not published)
+        os.replace(tmp, final)
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    return final
 
 
 def is_published(paths: TwinPaths, source_id: str, dataset_version: str) -> bool:
-    return (paths.dataset_dir(source_id, dataset_version) / _FILE).exists()
+    d = paths.dataset_dir(source_id, dataset_version)
+    return (d / _FILE).exists() and (d / _REPORT).exists()
 
 
 def read_current(paths: TwinPaths) -> dict[str, str]:

@@ -61,10 +61,13 @@ class PublishResult:
     report: ValidationReport
 
 
-def _sha256(files: list[Path]) -> str:
+def _sha256(files: list[Path], transform_version: str, places_version: str) -> str:
     h = hashlib.sha256()
     for f in files:
+        h.update(f.name.encode("utf-8") + b"\x00")
         h.update(f.read_bytes())
+    h.update(b"\x00" + transform_version.encode("utf-8"))
+    h.update(b"\x00" + places_version.encode("utf-8"))
     return h.hexdigest()
 
 
@@ -75,10 +78,11 @@ def run_pipeline(adapter: SourceAdapter, ctx: PipelineContext) -> PublishResult:
     if sid not in ctx.known_sources:
         raise KeyError(f"unknown source: {sid}")
     files = sorted(adapter.input_files(ctx.paths.manual), key=lambda p: p.name)
-    sha = _sha256(files)
+    sha = _sha256(files, adapter.transform_version, parquet_store.read_current(ctx.paths).get("places", ""))
     version = f"{sid}@{adapter.observed_period(files)}#{sha[:12]}"
 
     if parquet_store.is_published(ctx.paths, sid, version):
+        catalog.upsert_indicators(ctx.paths, adapter.indicators)
         parquet_store.set_current(ctx.paths, sid, version)
         return PublishResult(version, True, True, ValidationReport(ok=True))
 
@@ -105,8 +109,7 @@ def run_pipeline(adapter: SourceAdapter, ctx: PipelineContext) -> PublishResult:
     if not report.ok:
         return PublishResult(version, False, False, report)
 
-    out_dir = parquet_store.write_dataset(ctx.paths, sid, version, obs)
-    (out_dir / "report.json").write_text(json.dumps(asdict(report), indent=2), encoding="utf-8")
+    parquet_store.write_dataset(ctx.paths, sid, version, obs, asdict(report))
     catalog.upsert_indicators(ctx.paths, adapter.indicators)
     parquet_store.set_current(ctx.paths, sid, version)
     return PublishResult(version, True, False, report)

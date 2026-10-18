@@ -5,6 +5,7 @@ from dataclasses import asdict
 
 import pandas as pd
 from rapidfuzz import fuzz
+from rapidfuzz.utils import default_process
 
 from twin.paths import TwinPaths
 from twin.pipeline.base import Indicator
@@ -39,7 +40,7 @@ def upsert_indicators(paths: TwinPaths, indicators: list[Indicator]) -> None:
 
 def search_indicators(paths: TwinPaths, query: str, limit: int = 10) -> list[Indicator]:
     scored = [
-        (fuzz.WRatio(query, f"{i.name} {i.description}"), i) for i in list_indicators(paths)
+        (fuzz.WRatio(query, f"{i.name} {i.description}", processor=default_process), i) for i in list_indicators(paths)
     ]
     hits = sorted((s for s in scored if s[0] >= _MIN_SCORE), key=lambda s: -s[0])
     return [i for _, i in hits[:limit]]
