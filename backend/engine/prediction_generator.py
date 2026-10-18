@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-from typing import Any
+from typing import Any, Callable, Coroutine
 
 from engine.models import Prediction, SectorPrediction, SECTOR_LABELS, SECTOR_NAMES, SimulationParams
 
@@ -218,64 +217,7 @@ def _parse_llm_response(text: str, params: SimulationParams) -> Prediction:
     )
 
 
-async def _call_gemini(prompt: str, timeout_ms: int) -> str:
-    from google import genai
-    from app.config import settings
 
-    client = genai.Client(api_key=settings.gemini_api_key)
-    response = await asyncio.wait_for(
-        asyncio.to_thread(
-            client.models.generate_content,
-            model=settings.resolved_llm_model or "gemini-2.0-flash",
-            contents=prompt,
-        ),
-        timeout=timeout_ms / 1000.0,
-    )
-    return response.text
-
-
-async def _call_openai(prompt: str, timeout_ms: int) -> str:
-    from openai import AsyncOpenAI
-    from app.config import settings
-
-    client = AsyncOpenAI(api_key=settings.openai_api_key)
-    response = await asyncio.wait_for(
-        client.chat.completions.create(
-            model=settings.resolved_llm_model or "gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-        ),
-        timeout=timeout_ms / 1000.0,
-    )
-    return response.choices[0].message.content
-
-
-async def _call_mimo(prompt: str, timeout_ms: int) -> str:
-    """Call MiMo via raw httpx (OpenAI SDK triggers a gzip decompression bug on this provider)."""
-    import httpx as _httpx
-    from app.config import settings
-
-    headers = {
-        "Authorization": f"Bearer {settings.mimo_api_key}",
-        "Content-Type": "application/json",
-        "Accept-Encoding": "identity",
-    }
-    body = {
-        "model": settings.resolved_llm_model or "mimo-v2.5-pro",
-        "messages": [
-            {"role": "system", "content": "You are a JSON-only API. Respond with valid JSON only, no markdown fences."},
-            {"role": "user", "content": prompt},
-        ],
-    }
-    async with _httpx.AsyncClient(timeout=timeout_ms / 1000.0) as client:
-        resp = await client.post(
-            f"{settings.mimo_base_url}/chat/completions",
-            headers=headers,
-            json=body,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
 
 
 def _deterministic_prediction(params: SimulationParams) -> Prediction:
@@ -430,46 +372,34 @@ def _enhanced_deterministic_prediction(params: SimulationParams) -> Prediction:
     )
 
 
-async def generate_prediction(params: SimulationParams, mode: str = "deep") -> Prediction:
-    """Generate prediction. Quick mode = enhanced deterministic (no LLM). Deep mode = LLM with enriched context."""
-    from app.config import settings
+async def generate_prediction(
+    params: SimulationParams,
+    mode: str = "deep",
+    llm_fn: Callable[[str], Coroutine[Any, Any, str]] | None = None,
+) -> Prediction:
+    """Generate prediction.
 
-    # Quick mode: always use enhanced deterministic — fast, no timeout risk
-    if mode == "quick":
-        logger.info("Quick mode: using enhanced deterministic prediction for %s", params.city_config.name)
-        return _enhanced_deterministic_prediction(params)
-
-    # Deep mode: try LLM with enriched prompt
-    provider = settings.llm_provider.lower()
-    has_key = (
-        (provider == "gemini" and settings.gemini_api_key)
-        or (provider == "openai" and settings.openai_api_key)
-        or (provider == "mimo" and settings.mimo_api_key)
-        or (provider == "ollama")
-    )
-
-    if not has_key:
-        logger.info("No LLM key configured for %s, using enhanced deterministic prediction", provider)
+    Quick mode = enhanced deterministic (no LLM).
+    Deep mode = LLM with enriched context.
+    The ``llm_fn`` callback receives a prompt string and returns the LLM response text.
+    When ``llm_fn`` is ``None``, always falls back to deterministic.
+    """
+    if mode == "quick" or llm_fn is None:
+        logger.info(
+            "%s mode: using enhanced deterministic prediction for %s",
+            "Quick" if mode == "quick" else "No LLM callback",
+            params.city_config.name,
+        )
         return _enhanced_deterministic_prediction(params)
 
     prompt = _build_enriched_prompt(params)
 
     try:
-        if provider == "gemini":
-            text = await _call_gemini(prompt, settings.llm_timeout_ms)
-        elif provider == "openai":
-            text = await _call_openai(prompt, settings.llm_timeout_ms)
-        elif provider == "mimo":
-            text = await _call_mimo(prompt, settings.llm_timeout_ms)
-        else:
-            logger.warning("Unsupported LLM provider %s, using enhanced deterministic prediction", provider)
-            return _enhanced_deterministic_prediction(params)
-
+        text = await llm_fn(prompt)
         prediction = _parse_llm_response(text, params)
-        logger.info("LLM prediction generated for %s via %s", params.city_config.name, provider)
+        logger.info("LLM prediction generated for %s", params.city_config.name)
         return prediction
-
     except Exception as e:
         error_detail = str(e).strip() or f"{type(e).__name__} (no message)"
-        logger.warning("LLM prediction failed (%s), falling back to enhanced deterministic: %s", provider, error_detail)
+        logger.warning("LLM prediction failed, falling back to enhanced deterministic: %s", error_detail)
         return _enhanced_deterministic_prediction(params)

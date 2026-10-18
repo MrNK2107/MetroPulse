@@ -13,6 +13,7 @@ from app.routes.simulations import router as simulations_router
 from app.routes.case_studies import router as case_studies_router
 from app.routes.realtime import router as realtime_router
 from app.ws.simulation import router as ws_router
+from app.ws.agent import router as agent_ws_router
 
 logger = logging.getLogger(__name__)
 
@@ -102,3 +103,4 @@ app.include_router(simulations_router, prefix="/api", tags=["simulations"])
 app.include_router(case_studies_router, prefix="/api", tags=["case-studies"])
 app.include_router(realtime_router, prefix="/api", tags=["realtime-data"])
 app.include_router(ws_router, tags=["websocket"])
+app.include_router(agent_ws_router, tags=["agent-websocket"])

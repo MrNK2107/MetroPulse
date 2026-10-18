@@ -49,3 +49,9 @@ backend/data/
 .opencode/
 
 .superpowers/
+
+graphify-out/
+.understand-anything/
+data/twin/manual/
+data/twin/raw/
+data/twin/published/

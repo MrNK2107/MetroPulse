@@ -14,10 +14,11 @@ from app.rag import build_evidence_pack, coefficient_factors, extract_coefficien
 from app.realtime import build_demo_manifest, snapshot_quality
 from app.realtime_models import SnapshotData, utc_now
 from engine.models import AggregateMetrics, StartScenarioMessage, InputResponseMessage
-from engine.prediction_generator import generate_prediction
+from engine.prediction_generator import generate_prediction, _deterministic_prediction
 from engine.runner import run_simulation, SimulationTimeoutError
 from engine.scenario_parser import ScenarioParseError, build_params
 from engine.tertiary_loop import synthesize_evidence
+from app.simulation.llm import call_llm
 from engine.nl_engine.router import IntentRouter
 from engine.nl_engine.conversation import ConversationManager, ConversationMode
 from engine.nl_engine.group_scorer import score_groups, compute_satisfaction
@@ -177,10 +178,9 @@ async def simulation_websocket(websocket: WebSocket):
         prediction_source = "llm"
         await _send_stage(websocket, "predicting", "Generating a before-simulation expectation.")
         try:
-            prediction = await generate_prediction(params, mode=conv.mode.value)
+            prediction = await generate_prediction(params, mode=conv.mode.value, llm_fn=call_llm)
         except Exception as e:
             logger.warning("Prediction generation failed, using deterministic fallback: %s", e)
-            from engine.prediction_generator import _deterministic_prediction
             prediction = _deterministic_prediction(params)
             prediction_source = "deterministic_fallback"
 

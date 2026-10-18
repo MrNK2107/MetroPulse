@@ -12,6 +12,13 @@ class SimulationTimeoutError(Exception):
     pass
 
 
+def step_simulation(state, params: SimulationParams, month: int):
+    """Advance an existing city state by one deterministic monthly round."""
+    state = primary_loop.step(state, params, month)
+    state = secondary_loop.step(state, params, month)
+    return state, serializer.to_frame(state, month)
+
+
 async def run_simulation(
     params: SimulationParams,
     region_boundary: dict[str, Any],
@@ -27,9 +34,7 @@ async def run_simulation(
         if deadline is not None and asyncio.get_running_loop().time() > deadline:
             raise SimulationTimeoutError("Simulation exceeded deadline")
 
-        state = primary_loop.step(state, params, month)
-        state = secondary_loop.step(state, params, month)
-        last_frame = serializer.to_frame(state, month)
+        state, last_frame = step_simulation(state, params, month)
         yield last_frame
         await asyncio.sleep(0)
 
