@@ -32,8 +32,6 @@ class Settings(BaseSettings):
     ws_max_connections: int = Field(default=10, alias="WS_MAX_CONNECTIONS")
     sim_timeout_ms: int = Field(default=60000, alias="SIM_TIMEOUT_MS")
     llm_timeout_ms: int = Field(default=25000, alias="LLM_TIMEOUT_MS")
-    agent_swarm_v1: bool = Field(default=True, alias="AGENT_SWARM_V1")
-    pixel_ui_v1: bool = Field(default=True, alias="PIXEL_UI_V1")
     upload_max_bytes: int = Field(default=10_485_760, alias="UPLOAD_MAX_BYTES")
     source_url_max_bytes: int = Field(default=2_097_152, alias="SOURCE_URL_MAX_BYTES")
     twin_data_dir: str = Field(default="", alias="TWIN_DATA_DIR")

@@ -90,7 +90,7 @@ def test_q_too_long_422(client):
 
 
 def test_non_twin_422_keeps_default_shape(client):
-    r = client.get("/api/simulations", params={"page": 0})
+    r = client.get("/api/data-sources")
     assert r.status_code == 422 and isinstance(r.json()["detail"], list)
 
 

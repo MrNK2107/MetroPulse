@@ -50,16 +50,6 @@ async def test_case_studies_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_list_simulations():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/simulations")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-
-
-@pytest.mark.asyncio
 async def test_realtime_data_sources_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
