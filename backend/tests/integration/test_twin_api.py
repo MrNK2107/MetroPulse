@@ -82,7 +82,16 @@ def test_indicators_listed(client):
 
 
 def test_q_too_long_422(client):
-    assert client.get("/api/twin/places/resolve", params={"q": "a" * 101}).status_code == 422
+    r = client.get("/api/twin/places/resolve", params={"q": "a" * 101})
+    body = r.json()
+    assert r.status_code == 422 and body["success"] is False
+    assert isinstance(body["error"], str) and body["error"]
+    assert body["data"] is None
+
+
+def test_non_twin_422_keeps_default_shape(client):
+    r = client.get("/api/simulations", params={"page": 0})
+    assert r.status_code == 422 and isinstance(r.json()["detail"], list)
 
 
 def test_503_when_not_built(tmp_path):

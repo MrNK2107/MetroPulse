@@ -6,7 +6,9 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 import pandas as pd
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from app.data_registry import SOURCE_REGISTRY
@@ -92,13 +94,26 @@ def install_error_handlers(app) -> None:
     async def _not_built(_request, _exc):
         return _fail(503, NOT_BUILT)
 
+    @app.exception_handler(RequestValidationError)
+    async def _validation(request: Request, exc: RequestValidationError):
+        if not request.url.path.startswith("/api/twin"):
+            return await request_validation_exception_handler(request, exc)
+        msg = "; ".join(
+            f"{'.'.join(str(p) for p in e.get('loc', ()))}: {e.get('msg', '')}"
+            for e in exc.errors()
+        ) or "invalid request"
+        return JSONResponse(
+            status_code=422,
+            content={"success": False, "data": None, "error": msg, "meta": None},
+        )
+
 
 def _none(v):
     return None if v is None or (isinstance(v, float) and v != v) or v is pd.NA else v
 
 
 @router.get("/places/resolve")
-async def resolve_place(
+def resolve_place(
     q: str = Query(..., min_length=1, max_length=100),
     level: str | None = Query(None, max_length=30),
     state: str | None = Query(None, max_length=10),
@@ -119,7 +134,7 @@ def _ref(places: pd.DataFrame, place_id) -> dict | None:
 
 
 @router.get("/places/{place_id}")
-async def get_place(place_id: str, ctx: TwinContext = Depends(get_twin_context)):
+def get_place(place_id: str, ctx: TwinContext = Depends(get_twin_context)):
     rows = ctx.places[ctx.places["place_id"] == place_id]
     if rows.empty:
         return _fail(404, f"unknown place: {place_id}")
@@ -137,7 +152,7 @@ async def get_place(place_id: str, ctx: TwinContext = Depends(get_twin_context))
 
 
 @router.get("/places/{place_id}/observations")
-async def place_observations(place_id: str, ctx: TwinContext = Depends(get_twin_context)):
+def place_observations(place_id: str, ctx: TwinContext = Depends(get_twin_context)):
     if not (ctx.places["place_id"] == place_id).any():
         return _fail(404, f"unknown place: {place_id}")
     names = {s.id: s.name for s in SOURCE_REGISTRY}
@@ -173,7 +188,7 @@ async def place_observations(place_id: str, ctx: TwinContext = Depends(get_twin_
 
 
 @router.get("/boundaries/{level}")
-async def boundaries(level: str, ctx: TwinContext = Depends(get_twin_context)):
+def boundaries(level: str, ctx: TwinContext = Depends(get_twin_context)):
     """Simplified GeoJSON FeatureCollection for one level.
 
     Deliberate exception to the {success, data, error, meta} envelope: GeoJSON is a
@@ -193,7 +208,7 @@ async def boundaries(level: str, ctx: TwinContext = Depends(get_twin_context)):
 
 
 @router.get("/indicators")
-async def indicators(ctx: TwinContext = Depends(get_twin_context)):
+def indicators(ctx: TwinContext = Depends(get_twin_context)):
     return _envelope([
         {**asdict(i), "domains": list(i.domains)} for i in ctx.indicators
     ])
