@@ -18,13 +18,11 @@ export default function Home() {
   const [place, setPlace] = useState<PlaceDetail | null>(null);
 
   useEffect(() => {
-    if (!selectedPlaceId) {
-      setPlace(null);
-      return;
-    }
+    setPlace(null);
+    if (!selectedPlaceId) return;
     let live = true;
     getPlace(selectedPlaceId)
-      .then((p) => live && setPlace(p))
+      .then((p) => live && p.placeId === selectedPlaceId && setPlace(p))
       .catch(() => live && setPlace(null));
     return () => {
       live = false;
@@ -69,8 +67,8 @@ export default function Home() {
           {loading && <p className="text-sm text-slate-400">Loading...</p>}
           {!loading && !error && (
             <PlaceCard
-              name={place?.name ?? selectedPlaceId}
-              stateName={place?.state?.name ?? null}
+              name={place && place.placeId === selectedPlaceId ? place.name : "Loading place..."}
+              stateName={place && place.placeId === selectedPlaceId ? place.state?.name ?? null : null}
               observations={observations}
             />
           )}

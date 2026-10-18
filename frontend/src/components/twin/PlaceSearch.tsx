@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { getStateNames, resolvePlace } from "@/lib/twinApi";
 import { useTwinStore } from "@/store/twinStore";
 import type { Resolution } from "@/types/twin";
@@ -12,6 +12,7 @@ export function PlaceSearch() {
   const [failed, setFailed] = useState<string | null>(null);
   const selectPlace = useTwinStore((s) => s.selectPlace);
   const listId = useId();
+  const skipNext = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -24,6 +25,10 @@ export function PlaceSearch() {
   }, []);
 
   useEffect(() => {
+    if (skipNext.current) {
+      skipNext.current = false;
+      return;
+    }
     const term = q.trim();
     if (!term) {
       setResult(null);
@@ -52,6 +57,7 @@ export function PlaceSearch() {
 
   const pick = (id: string, name: string) => {
     void selectPlace(id);
+    skipNext.current = name !== q;
     setQ(name);
     setResult(null);
   };
@@ -68,7 +74,7 @@ export function PlaceSearch() {
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
-            setQ("");
+            e.stopPropagation();
             setResult(null);
           }
         }}

@@ -45,4 +45,34 @@ describe("PlaceSearch", () => {
     await userEvent.click(await screen.findByRole("option", { name: /Gaya/ }));
     expect(useTwinStore.getState().selectedPlaceId).toBe("district:Gaya");
   });
+
+  it("does not re-search or reopen the list after a pick", async () => {
+    mockResolve({
+      ambiguous: true,
+      matches: [m("Aurangabad", "BR"), m("Chhatrapati Sambhajinagar", "MH")],
+    });
+    mocked.resolvePlace.mockClear();
+    render(<PlaceSearch />);
+    const box = screen.getByRole("searchbox");
+    await userEvent.type(box, "Aurang");
+    await userEvent.click(await screen.findByRole("option", { name: /Aurangabad/ }));
+    await new Promise((r) => setTimeout(r, 400));
+    expect(mocked.resolvePlace).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Which one?")).not.toBeInTheDocument();
+    expect(box).toHaveValue("Aurangabad");
+  });
+
+  it("Escape closes the list and does not bubble to window", async () => {
+    mockResolve({ ambiguous: false, matches: [m("Gaya", "BR")] });
+    const onKey = jest.fn();
+    window.addEventListener("keydown", onKey);
+    render(<PlaceSearch />);
+    await userEvent.type(screen.getByRole("searchbox"), "Gay");
+    await screen.findByRole("option", { name: /Gaya/ });
+    onKey.mockClear();
+    await userEvent.keyboard("{Escape}");
+    window.removeEventListener("keydown", onKey);
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+    expect(onKey).not.toHaveBeenCalled();
+  });
 });
