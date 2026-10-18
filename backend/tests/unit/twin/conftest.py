@@ -86,3 +86,32 @@ def ctx(tmp_paths, places, districts):
         paths=tmp_paths, places=places, boundaries={"district": districts},
         crosswalk=None, known_sources={"dummy"},
     )
+
+
+def fixture_inputs(fx):
+    from twin.places.build import BackboneInputs
+
+    return BackboneInputs(
+        lgd_states=fx / "lgd_states.csv",
+        lgd_districts=fx / "lgd_districts.csv",
+        soi_districts=fx / "soi_districts.geojson",
+        soi_outline=fx / "soi_outline.geojson",
+        census2011_districts=fx / "census2011_districts.geojson",
+        aliases=fx / "aliases.csv",
+    )
+
+
+@pytest.fixture
+def backbone_inputs(fx):
+    return fixture_inputs(fx)
+
+
+@pytest.fixture
+def ctx_backbone(fx, tmp_paths):
+    from app.data_registry import SOURCE_REGISTRY
+    from twin.places.build import build_backbone, load_backbone
+
+    build_backbone(fixture_inputs(fx), tmp_paths, "lgd-test")
+    return load_backbone(
+        tmp_paths, known_sources={s.id for s in SOURCE_REGISTRY} | {"dummy"}
+    )
