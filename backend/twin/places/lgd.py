@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from twin.places.normalize import normalize_name
+from twin.places.normalize import normalize_name, normalize_state_code
 from twin.store.schema import place_id
 
 # LGD export header -> our column name. Change only here if the export differs.
@@ -23,10 +23,22 @@ OUT_COLUMNS = [
 ]
 
 
-def _read(path: Path) -> pd.DataFrame:
+STATE_HEADERS = ("State Code", "State Name (In English)")
+DISTRICT_HEADERS = ("State Code", "District Code", "District Name (In English)", "Census 2011 Code")
+
+
+def _read(path: Path, expected: tuple[str, ...]) -> pd.DataFrame:
     df = pd.read_csv(path, dtype=str, keep_default_na=False)
     df.columns = [c.strip() for c in df.columns]
-    return df.rename(columns=LGD_COLUMNS).apply(lambda c: c.str.strip())
+    missing = [h for h in expected if h not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{Path(path).name}: missing LGD header(s) {missing}; "
+            f"expected {list(expected)}, found {list(df.columns)}"
+        )
+    df = df.rename(columns=LGD_COLUMNS).apply(lambda c: c.str.strip())
+    df["state_code"] = df["state_code"].map(normalize_state_code)
+    return df
 
 
 def _check_unique(df: pd.DataFrame, level: str) -> None:
@@ -51,8 +63,8 @@ def _level_frame(level, codes, names, parent_ids, state_codes, census, version):
 
 
 def load_lgd(states_csv: Path, districts_csv: Path, boundary_version: str) -> pd.DataFrame:
-    states = _read(states_csv)
-    districts = _read(districts_csv)
+    states = _read(states_csv, STATE_HEADERS)
+    districts = _read(districts_csv, DISTRICT_HEADERS)
     states = states.rename(columns={"state_code": "lgd_code", "state_name": "name"})
     districts = districts.rename(columns={"district_code": "lgd_code", "district_name": "name"})
     _check_unique(states, "state")

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NamedTuple
 
 import geopandas as gpd
 import pandas as pd
@@ -35,12 +36,26 @@ def _multi(series: gpd.GeoSeries) -> gpd.GeoSeries:
     return gpd.GeoSeries([_to_multipolygon(g) for g in series], index=series.index, crs=series.crs)
 
 
+class BoundaryResult(NamedTuple):
+    districts: gpd.GeoDataFrame
+    # Source district names that could not be matched to exactly one LGD district.
+    unmatched: list[str]
+    # Accepted fuzzy matches as (source name, LGD place name), for owner review.
+    fuzzy_matches: list[tuple[str, str]]
+
+
 def build_district_boundaries(
     districts_path: Path,
     outline_path: Path,
     places: pd.DataFrame,
     resolver: PlaceResolver,
-) -> tuple[gpd.GeoDataFrame, list[str]]:
+) -> BoundaryResult:
+    """Match SoI district features to LGD districts, repair, clip to the outline, dissolve.
+
+    Several features may share a place_id (multipart districts) only when none of them
+    was a fuzzy match: a fuzzy match whose place_id is also claimed by another feature
+    is refused, and every feature claiming that place_id goes to `unmatched`.
+    """
     src = gpd.read_file(districts_path).rename(columns=SOI_DISTRICT_COLUMNS)
     if src.crs is None:
         src = src.set_crs(4326)
@@ -48,7 +63,7 @@ def build_district_boundaries(
     outline = gpd.read_file(outline_path).to_crs(4326)
 
     place_ids: list[str | None] = []
-    unmatched: list[str] = []
+    methods: list[str | None] = []
     state_cache: dict[str, str | None] = {}
     for state_name, district_name in zip(src["state_name"], src["district_name"]):
         if state_name not in state_cache:
@@ -57,16 +72,26 @@ def build_district_boundaries(
                 sr.matches[0].state_code if sr.matches and not sr.ambiguous else None
             )
         state_code = state_cache[state_name]
-        pid = None
+        pid, method = None, None
         if state_code is not None:
             dr = resolver.resolve(str(district_name), level="district", state_code=state_code)
             if dr.matches and not dr.ambiguous:
-                pid = dr.matches[0].place_id
+                pid, method = dr.matches[0].place_id, dr.matches[0].method
         place_ids.append(pid)
-        if pid is None:
-            unmatched.append(str(district_name))
+        methods.append(method)
 
-    src["place_id"] = place_ids
+    m = pd.DataFrame({"name": src["district_name"].astype(str).to_numpy(),
+                      "place_id": place_ids, "method": methods})
+    claimed = m.groupby("place_id")["name"].transform("size")
+    fuzzy_pids = set(m.loc[m["method"] == "fuzzy", "place_id"])
+    clash = m["place_id"].isin(fuzzy_pids) & (claimed > 1)
+    m.loc[clash, "place_id"] = None
+    unmatched = m.loc[m["place_id"].isna(), "name"].tolist()
+    names = places.set_index("place_id")["name"]
+    fz = m[(m["method"] == "fuzzy") & m["place_id"].notna()]
+    fuzzy_matches = list(zip(fz["name"], fz["place_id"].map(names)))
+
+    src["place_id"] = m["place_id"].to_numpy()
     src = src[src["place_id"].notna()]
     repaired = src.geometry.make_valid()
     clipped = repaired.intersection(outline.union_all())
@@ -80,7 +105,7 @@ def build_district_boundaries(
     out = out.dissolve(by="place_id").reset_index()
     out["geometry"] = _multi(out.geometry)
     out = out[["place_id", "geometry"]].reset_index(drop=True)
-    return out, unmatched
+    return BoundaryResult(out, unmatched, fuzzy_matches)
 
 
 def dissolve_levels(districts: gpd.GeoDataFrame, places: pd.DataFrame) -> dict[str, gpd.GeoDataFrame]:

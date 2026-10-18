@@ -238,6 +238,40 @@
      ]
     ]
    }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "DISTRICT": "GURGAON",
+    "STATE": "HARYANA"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77,
+       17
+      ],
+      [
+       78,
+       17
+      ],
+      [
+       78,
+       18
+      ],
+      [
+       77,
+       18
+      ],
+      [
+       77,
+       17
+      ]
+     ]
+    ]
+   }
   }
  ]
 }

@@ -42,6 +42,8 @@ class BackboneReport:
     districts: int
     states: int
     unmatched_boundaries: list[str] = field(default_factory=list)
+    # Boundary features accepted by fuzzy name match, (source name, LGD name): review these.
+    fuzzy_matches: list[tuple[str, str]] = field(default_factory=list)
     districts_without_census2011_link: int = 0
     # Current (LGD) districts that ended up with no boundary geometry.
     districts_without_boundary: int = 0
@@ -133,7 +135,7 @@ def build_backbone(inputs: BackboneInputs, paths: TwinPaths, boundary_version: s
     aliases = load_aliases(inputs.aliases)
     resolver = PlaceResolver(places, aliases)
 
-    districts, unmatched = build_district_boundaries(
+    districts, unmatched, fuzzy = build_district_boundaries(
         inputs.soi_districts, inputs.soi_outline, places, resolver
     )
     levels = dissolve_levels(districts, places)
@@ -158,6 +160,7 @@ def build_backbone(inputs: BackboneInputs, paths: TwinPaths, boundary_version: s
         districts=len(district_ids),
         states=int((places["level"] == "state").sum()),
         unmatched_boundaries=list(unmatched),
+        fuzzy_matches=list(fuzzy),
         districts_without_census2011_link=len(district_ids - set(crosswalk["new_id"])),
         districts_without_boundary=len(district_ids - with_boundary),
         census_code_disagreements=_census_code_disagreements(places, crosswalk),

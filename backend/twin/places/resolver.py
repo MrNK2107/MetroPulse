@@ -8,7 +8,7 @@ from typing import Literal
 import pandas as pd
 from rapidfuzz import fuzz, process
 
-from twin.places.normalize import normalize_name
+from twin.places.normalize import normalize_name, normalize_state_code
 
 FUZZY_CUTOFF = 90.0
 
@@ -35,7 +35,7 @@ def load_aliases(path: Path) -> pd.DataFrame:
         df["state_code"] = ""
     df["alias"] = df["alias"].map(normalize_name)
     df["canonical"] = df["canonical"].map(normalize_name)
-    df["state_code"] = df["state_code"].str.strip().replace("", pd.NA)
+    df["state_code"] = df["state_code"].map(normalize_state_code)
     return df[["alias", "canonical", "state_code"]].reset_index(drop=True)
 
 
@@ -92,6 +92,7 @@ class PlaceResolver:
         norm = normalize_name(text)
         if not norm:
             return Resolution([], False)
+        state_code = normalize_state_code(state_code)
         scope = self._scope(level, state_code)
 
         exact = scope[scope["name_norm"] == norm]
@@ -117,8 +118,8 @@ class PlaceResolver:
 
         matches.sort(key=lambda m: -m.score)
         matches = matches[:limit]
-        ambiguous = False
-        if len(matches) > 1:
-            top = [m for m in matches if m.score == matches[0].score]
-            ambiguous = len(top) > 1 and len({m.state_code for m in top}) > 1
-        return Resolution(matches, ambiguous)
+        # Ambiguous whenever more than one distinct place shares the top score, whether
+        # they sit in different states or the same one (East/West Singhbhum): never a
+        # silent pick.
+        top = {m.place_id for m in matches if m.score == matches[0].score}
+        return Resolution(matches, len(top) > 1)

@@ -8,7 +8,8 @@ from twin.store.parquet_store import read_current
 
 def test_build_backbone_end_to_end(fx, tmp_paths):
     rep = build_backbone(fixture_inputs(fx), tmp_paths, "lgd-test")
-    assert rep.unmatched_boundaries == [] and rep.districts == 7
+    assert rep.unmatched_boundaries == [] and rep.districts == 8
+    assert rep.states == 4 and rep.fuzzy_matches == []
     assert rep.districts_without_boundary == 0
     # build_backbone never switches CURRENT; the caller does once its gates pass
     assert "places" not in read_current(tmp_paths)
@@ -27,7 +28,7 @@ def test_build_backbone_end_to_end(fx, tmp_paths):
 
 def test_districts_without_census2011_link(fx, tmp_paths):
     rep = build_backbone(fixture_inputs(fx), tmp_paths, "lgd-test")
-    assert rep.districts_without_census2011_link == 1  # Newpur only
+    assert rep.districts_without_census2011_link == 2  # Newpur and Gurugram
 
 
 def test_load_backbone_not_built(tmp_path):

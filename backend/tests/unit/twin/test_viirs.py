@@ -8,8 +8,8 @@ from twin.pipeline.viirs import ViirsAdapter
 
 NAME = "VNL_v2_npp_2023_global_vcmslcfg_c202402081600.average_masked.dat.tif"
 # 0.5 deg pixels: Aurangabad 4, Patna 4 minus NaN and negative pixels = 2, Gaya 6,
-# Sambhajinagar 4, Mumbai 4, Newpur 4, Lakshadweep 1 (all_touched fallback).
-EXPECTED_SUM = 4 + 2 + 6 + 4 + 4 + 4 + 1
+# Sambhajinagar 4, Mumbai 4, Newpur 4, Gurugram 4, Lakshadweep 1 (all_touched fallback).
+EXPECTED_SUM = 4 + 2 + 6 + 4 + 4 + 4 + 4 + 1
 
 
 def _write(path, arr):

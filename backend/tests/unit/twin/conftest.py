@@ -26,7 +26,7 @@ def resolver(places, fx):
 def districts(fx, places, resolver):
     from twin.places.boundaries import build_district_boundaries
 
-    gdf, _ = build_district_boundaries(
+    gdf, _, _ = build_district_boundaries(
         fx / "soi_districts.geojson", fx / "soi_outline.geojson", places, resolver
     )
     return gdf
