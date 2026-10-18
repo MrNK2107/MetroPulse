@@ -5,6 +5,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+import shapely
 from shapely.geometry import MultiPolygon, Polygon
 
 from twin.places.resolver import PlaceResolver
@@ -67,13 +68,18 @@ def build_district_boundaries(
 
     src["place_id"] = place_ids
     src = src[src["place_id"].notna()]
-    clipped = src.geometry.intersection(outline.union_all())
+    repaired = src.geometry.make_valid()
+    clipped = repaired.intersection(outline.union_all())
     out = gpd.GeoDataFrame(
         {"place_id": src["place_id"].to_numpy()},
-        geometry=_multi(clipped).to_numpy(),
+        geometry=clipped.to_numpy(),
         crs=4326,
     )
-    out = out[~out.geometry.is_empty].reset_index(drop=True)
+    out = out[~out.geometry.is_empty]
+    # Multipart districts arrive as several features: one row per place_id.
+    out = out.dissolve(by="place_id").reset_index()
+    out["geometry"] = _multi(out.geometry)
+    out = out[["place_id", "geometry"]].reset_index(drop=True)
     return out, unmatched
 
 
@@ -95,7 +101,8 @@ def dissolve_levels(districts: gpd.GeoDataFrame, places: pd.DataFrame) -> dict[s
         geometry=[_to_multipolygon(district.union_all())],
         crs=4326,
     )
-    district = district[["place_id", "name", "geometry"]].reset_index(drop=True)
+    district = district.rename(columns={"_state": "parent_id"})
+    district = district[["place_id", "name", "parent_id", "geometry"]].reset_index(drop=True)
     return {"district": district, "state": state.reset_index(drop=True), "country": country}
 
 
@@ -109,11 +116,35 @@ def write_boundaries(
     out_dir.mkdir(parents=True, exist_ok=True)
     for level, gdf in levels.items():
         gdf.to_parquet(out_dir / f"boundaries_{level}.parquet")
-        metric = gdf.to_crs(METRIC_CRS)
-        simple = metric.geometry.simplify(tol[level], preserve_topology=True).to_crs(4326)
-        slim = gpd.GeoDataFrame(
-            {"place_id": gdf["place_id"].to_numpy(), "name": gdf["name"].to_numpy()},
-            geometry=simple.to_numpy(),
-            crs=4326,
-        )
+
+    # Simplify districts as a coverage (shared borders stay shared), then derive the
+    # state and country layers from the simplified districts so all levels agree.
+    districts = levels["district"]
+    metric = districts.geometry.to_crs(METRIC_CRS)
+    simple = shapely.coverage_simplify(metric.to_numpy(), tol["district"])
+    simple_d = gpd.GeoDataFrame(
+        {
+            "place_id": districts["place_id"].to_numpy(),
+            "name": districts["name"].to_numpy(),
+            "parent_id": districts["parent_id"].to_numpy(),
+        },
+        geometry=gpd.GeoSeries(simple, crs=METRIC_CRS).to_crs(4326).to_numpy(),
+        crs=4326,
+    )
+    simple_d["geometry"] = _multi(simple_d.geometry)
+
+    state_names = levels["state"].set_index("place_id")["name"]
+    simple_s = simple_d[["parent_id", "geometry"]].dissolve(by="parent_id").reset_index()
+    simple_s = simple_s.rename(columns={"parent_id": "place_id"})
+    simple_s["name"] = simple_s["place_id"].map(state_names)
+    simple_s["geometry"] = _multi(simple_s.geometry)
+
+    country = levels["country"].iloc[0]
+    simple_c = gpd.GeoDataFrame(
+        {"place_id": [country["place_id"]], "name": [country["name"]]},
+        geometry=[_to_multipolygon(simple_d.union_all())],
+        crs=4326,
+    )
+    for level, gdf in (("district", simple_d), ("state", simple_s), ("country", simple_c)):
+        slim = gdf[["place_id", "name", "geometry"]]
         (out_dir / f"boundaries_{level}.geojson").write_text(slim.to_json(), encoding="utf-8")
