@@ -45,6 +45,33 @@ describe("PlaceCard", () => {
     );
   });
 
+  it("shows Not published and no link when the receipt is empty", async () => {
+    render(
+      <PlaceCard
+        name="Newpur"
+        stateName="Bihar"
+        observations={[
+          obs({
+            value: null,
+            trustLabel: null,
+            period: null,
+            receipt: {
+              sourceId: "viirs",
+              sourceName: "VIIRS",
+              datasetVersion: null,
+              license: null,
+              url: null,
+            },
+          }),
+        ]}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /source/i }));
+    expect(screen.getAllByText("Not published")).toHaveLength(2);
+    expect(screen.getByText("VIIRS")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("shows name, state and the apportionment footer", () => {
     render(<PlaceCard name="Gaya" stateName="Bihar" observations={[]} />);
     expect(screen.getByText("Gaya")).toBeInTheDocument();

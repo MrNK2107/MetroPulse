@@ -37,7 +37,8 @@ export function PlaceSearch() {
     }
     let live = true;
     const t = setTimeout(() => {
-      resolvePlace(term)
+      // M1 has district data only: a state or country match would be a card of No data.
+      resolvePlace(term, { level: "district" })
         .then((r) => {
           if (!live) return;
           setResult(r);
@@ -69,7 +70,7 @@ export function PlaceSearch() {
         role="searchbox"
         aria-label="Search for a district"
         aria-controls={listId}
-        placeholder="Search a district or state"
+        placeholder="Search a district"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {

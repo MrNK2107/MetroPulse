@@ -35,9 +35,9 @@ const toMatch = (m: any): PlaceMatch => ({
 const toReceipt = (r: any): Receipt => ({
   sourceId: r.source_id,
   sourceName: r.source_name,
-  datasetVersion: r.dataset_version,
-  license: r.license,
-  url: r.url,
+  datasetVersion: r.dataset_version ?? null,
+  license: r.license ?? null,
+  url: r.url ?? null,
 });
 
 export async function resolvePlace(

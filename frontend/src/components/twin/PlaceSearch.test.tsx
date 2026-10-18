@@ -38,6 +38,17 @@ describe("PlaceSearch", () => {
     expect(useTwinStore.getState().selectedPlaceId).toBeNull();
   });
 
+  it("searches districts only, as the placeholder says", async () => {
+    mockResolve({ ambiguous: false, matches: [m("Gaya", "BR")] });
+    mocked.resolvePlace.mockClear();
+    render(<PlaceSearch />);
+    const box = screen.getByRole("searchbox");
+    expect(box).toHaveAttribute("placeholder", "Search a district");
+    await userEvent.type(box, "Gaya");
+    await screen.findByRole("option", { name: /Gaya/ });
+    expect(mocked.resolvePlace).toHaveBeenLastCalledWith("Gaya", { level: "district" });
+  });
+
   it("selects a candidate on click", async () => {
     mockResolve({ ambiguous: false, matches: [m("Gaya", "BR")] });
     render(<PlaceSearch />);

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Observation, TrustLabel } from "@/types/twin";
 
 const nf = new Intl.NumberFormat("en-IN");
+const NOT_PUBLISHED = "Not published";
 
 const CHIP: Record<TrustLabel, { label: string; cls: string }> = {
   fact: { label: "Fact", cls: "bg-emerald-900/70 text-emerald-200" },
@@ -48,23 +49,27 @@ function Row({ o }: { o: Observation }) {
           <div>
             <dt className="inline text-slate-400">Source: </dt>
             <dd className="inline">
-              <a
-                href={o.receipt.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-300 underline"
-              >
-                {o.receipt.sourceName}
-              </a>
+              {o.receipt.url ? (
+                <a
+                  href={o.receipt.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-300 underline"
+                >
+                  {o.receipt.sourceName}
+                </a>
+              ) : (
+                o.receipt.sourceName
+              )}
             </dd>
           </div>
           <div>
             <dt className="inline text-slate-400">Dataset: </dt>
-            <dd className="inline">{o.receipt.datasetVersion}</dd>
+            <dd className="inline">{o.receipt.datasetVersion ?? NOT_PUBLISHED}</dd>
           </div>
           <div>
             <dt className="inline text-slate-400">Licence: </dt>
-            <dd className="inline">{o.receipt.license}</dd>
+            <dd className="inline">{o.receipt.license ?? NOT_PUBLISHED}</dd>
           </div>
         </dl>
       )}

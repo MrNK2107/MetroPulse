@@ -17,9 +17,10 @@ export interface Resolution {
 export interface Receipt {
   sourceId: string;
   sourceName: string;
-  datasetVersion: string;
-  license: string;
-  url: string;
+  /** null when the source has no published dataset yet */
+  datasetVersion: string | null;
+  license: string | null;
+  url: string | null;
 }
 
 export interface Observation {
