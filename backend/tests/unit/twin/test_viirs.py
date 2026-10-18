@@ -66,3 +66,42 @@ def test_validate_and_publish_through_pipeline(ctx_backbone, tiff):
     assert res.published and res.report.ok
     assert res.report.stats["total"] == pytest.approx(EXPECTED_SUM)
     assert res.dataset_version.startswith("viirs@2023#")
+
+
+def _write_west_only(ctx):
+    """Raster covering lon 70-76 only: Newpur (77-78) and Gurugram (77-78) fall outside."""
+    path = ctx.paths.manual / "viirs" / NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with rasterio.open(
+        path, "w", driver="GTiff", height=20, width=12, count=1, dtype="float32",
+        crs="EPSG:4326", transform=from_origin(70, 20, 0.5, 0.5),
+    ) as dst:
+        dst.write(np.ones((20, 12), dtype="float32"), 1)
+    return path
+
+
+def test_district_outside_raster_is_missing_not_zero(ctx_backbone):
+    tif = _write_west_only(ctx_backbone)
+    obs = ViirsAdapter().parse([tif], ctx_backbone)
+    by = _by_name(ctx_backbone, obs)
+    assert np.isnan(by["Newpur"]) and np.isnan(by["Gurugram"])
+    assert by["Patna"] == pytest.approx(4.0)
+
+
+def test_district_outside_raster_fails_validation(ctx_backbone):
+    _write_west_only(ctx_backbone)
+    res = run_pipeline(ViirsAdapter(), ctx_backbone)
+    assert not res.published and not res.report.ok
+    (problem,) = res.report.problems
+    assert "district:999" in problem and "district:76" in problem and "outside the raster" in problem
+
+
+def test_other_mask_errors_propagate(ctx_backbone, tiff, monkeypatch):
+    import rasterio.mask
+
+    def boom(*a, **k):
+        raise ValueError("something else")
+
+    monkeypatch.setattr(rasterio.mask, "mask", boom)
+    with pytest.raises(ValueError, match="something else"):
+        ViirsAdapter().parse([tiff], ctx_backbone)

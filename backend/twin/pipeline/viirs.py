@@ -25,15 +25,24 @@ def _year(path: Path) -> str:
     return m.group(1)
 
 
+_NO_OVERLAP = "Input shapes do not overlap raster"
+
+
 def _zonal_sum(src: rasterio.DatasetReader, geom) -> float:
-    """Sum of non-NaN, non-negative pixels under geom; all_touched fallback if no pixel centre falls inside."""
+    """Sum of non-NaN, non-negative pixels under geom; all_touched fallback if no pixel centre falls inside.
+
+    NaN (missing, never 0) when the district lies outside the raster or no valid pixel
+    covers it, so validation rejects the run instead of publishing a false zero.
+    """
     for all_touched in (False, True):
         try:
             arr, _ = rasterio.mask.mask(
                 src, [geom], crop=True, all_touched=all_touched, filled=False
             )
-        except ValueError:  # shape does not overlap the raster
-            return 0.0
+        except ValueError as e:
+            if _NO_OVERLAP in str(e):
+                return float("nan")
+            raise
         covered = ~np.ma.getmaskarray(arr)
         if covered.any():
             data = np.where(covered, np.ma.getdata(arr).astype("float64"), 0.0)
@@ -42,7 +51,7 @@ def _zonal_sum(src: rasterio.DatasetReader, geom) -> float:
                 data = np.where(data == nodata, 0.0, data)
             data = np.nan_to_num(data, nan=0.0)
             return float(np.clip(data, 0.0, None).sum())
-    return 0.0
+    return float("nan")
 
 
 class ViirsAdapter:
@@ -95,7 +104,9 @@ class ViirsAdapter:
         ok_rows = obs[obs["value"].notna() & (obs["value"] >= 0)]
         bad = sorted(districts - set(ok_rows["place_id"]))
         if bad:
-            problems.append(f"districts without a non-null value >= 0: {bad}")
+            problems.append(
+                f"districts without a non-null value >= 0 (outside the raster or no valid pixel): {bad}"
+            )
         total = float(obs["value"].sum())
         if not total > 0:
             problems.append("total nightlights radiance is not positive")
