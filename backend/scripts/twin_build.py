@@ -106,11 +106,11 @@ def _build(paths: TwinPaths, boundary_version: str) -> int:
     found = {rel: _find(paths.manual, rel) for rel in EXPECTED_MANUAL_FILES}
     absent = [rel for rel, f in found.items() if f is None]
     if absent:
-        print(f"build failed: missing manual files: {', '.join(absent)}")
+        print(f"build failed: missing manual files: {', '.join(absent)}", file=sys.stderr)
         return 1
     aliases = paths.seed / "aliases.csv"
     if not aliases.exists():
-        print(f"build failed: missing {aliases}")
+        print(f"build failed: missing {aliases}", file=sys.stderr)
         return 1
 
     inputs = BackboneInputs(
@@ -124,10 +124,10 @@ def _build(paths: TwinPaths, boundary_version: str) -> int:
     report = build_backbone(inputs, paths, boundary_version)
     _emit(report)
     if report.unmatched_boundaries:
-        print(f"build failed: unmatched boundaries: {report.unmatched_boundaries}")
+        print(f"build failed: unmatched boundaries: {report.unmatched_boundaries}", file=sys.stderr)
         return 1
     if report.districts_without_boundary > 0:
-        print(f"build failed: {report.districts_without_boundary} districts have no boundary")
+        print(f"build failed: {report.districts_without_boundary} districts have no boundary", file=sys.stderr)
         return 1
 
     ctx = load_backbone(paths, known_sources={s.id for s in SOURCE_REGISTRY})
@@ -136,7 +136,7 @@ def _build(paths: TwinPaths, boundary_version: str) -> int:
         result = run_pipeline(adapter, ctx)
         _emit(result)
         if not result.report.ok:
-            print(f"build failed: {adapter.source_id} validation: {result.report.problems}")
+            print(f"build failed: {adapter.source_id} validation: {result.report.problems}", file=sys.stderr)
             status = 1
     return status
 
@@ -146,13 +146,16 @@ def _sync(paths: TwinPaths, dsn: str | None) -> int:
 
     dsn = dsn or os.environ.get("TWIN_PG_DSN", "")
     if not dsn:
-        print("postgres sync skipped")
+        print("postgres sync skipped", file=sys.stderr)
         return 0
     print(json.dumps(sync_to_postgres(paths, dsn)))
     return 0
 
 
 def main(argv: list[str], paths: TwinPaths | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # cp1252 consoles cannot encode the check glyphs
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(prog="twin_build")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("check", help="list expected manual files")
