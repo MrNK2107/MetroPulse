@@ -6,9 +6,9 @@ AI-Powered Macro-Urban Digital Twin Sandbox. Next.js 14 (frontend) + FastAPI (ba
 ## Commands
 - Backend: `cd backend && uvicorn app.main:app --reload --port 8000`
 - Twin data: `cd backend && python scripts/twin_build.py check|build`
-- Backend tests: `cd backend && pytest tests/unit tests/integration` (706 unit + 21 integration tests)
+- Backend tests: `cd backend && pytest tests/unit tests/integration` (738 tests; needs `python -m spacy download en_core_web_sm`)
 - Frontend: `cd frontend && npm run dev`
-- Frontend tests: `cd frontend && npm run test` (13 tests)
+- Frontend tests: `cd frontend && npm run test` (18 tests)
 - Lint/typecheck: `cd frontend && npm run lint && npm run type-check`
 
 ## India Twin
