@@ -56,3 +56,6 @@ data/twin/manual/*
 !data/twin/manual/README.md
 data/twin/raw/
 data/twin/published/
+
+# Impeccable design tool state
+.impeccable/
