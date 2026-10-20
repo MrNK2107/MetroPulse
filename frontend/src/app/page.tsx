@@ -45,14 +45,14 @@ export default function Home() {
         <PlaceSearch />
       </div>
       {!selectedPlaceId && !error && (
-        <p className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border border-slate-700 bg-slate-950/85 px-4 py-2 text-sm text-slate-300">
+        <p className="pointer-events-none absolute bottom-6 left-1/2 z-10 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-lg border text-center border-slate-700 bg-slate-950/85 px-4 py-2 text-sm text-slate-300">
           Click a district or search above to see its indicators
         </p>
       )}
       {error && !selectedPlaceId && (
         <div
           role="alert"
-          className="absolute left-1/2 top-4 z-20 flex max-w-md -translate-x-1/2 items-start gap-3 rounded-md border border-red-700 bg-red-950/95 px-4 py-2 text-sm text-red-100"
+          className="absolute bottom-6 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-md border border-red-700 bg-red-950/95 px-4 py-2 text-sm text-red-100"
         >
           <span className="flex-1">{error}</span>
           <button

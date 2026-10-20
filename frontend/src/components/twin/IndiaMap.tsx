@@ -12,8 +12,9 @@ type FC = { features: any[] };
 
 const INITIAL_VIEW = { longitude: 82.8, latitude: 22.5, zoom: 3.8 };
 
-function useBoundary(level: BoundaryLevel): FC | null {
+function useBoundary(level: BoundaryLevel): { data: FC | null; failed: boolean } {
   const [data, setData] = useState<FC | null>(null);
+  const [failed, setFailed] = useState(false);
   const setError = (m: string) => useTwinStore.setState({ error: m });
   useEffect(() => {
     let live = true;
@@ -26,12 +27,16 @@ function useBoundary(level: BoundaryLevel): FC | null {
         return r.json();
       })
       .then((d) => live && setData(d))
-      .catch((e) => live && setError(e instanceof Error ? e.message : "Map data failed to load"));
+      .catch((e) => {
+        if (!live) return;
+        setFailed(true);
+        setError(e instanceof Error ? e.message : "Map data failed to load");
+      });
     return () => {
       live = false;
     };
   }, [level]);
-  return data;
+  return { data, failed };
 }
 
 function bounds(geom: any): [[number, number], [number, number]] | null {
@@ -60,10 +65,9 @@ function bounds(geom: any): [[number, number], [number, number]] | null {
 export function IndiaMap() {
   const selectedPlaceId = useTwinStore((s) => s.selectedPlaceId);
   const selectPlace = useTwinStore((s) => s.selectPlace);
-  const error = useTwinStore((s) => s.error);
-  const district = useBoundary("district");
-  const state = useBoundary("state");
-  const country = useBoundary("country");
+  const { data: district, failed: districtFailed } = useBoundary("district");
+  const { data: state } = useBoundary("state");
+  const { data: country } = useBoundary("country");
   const [viewState, setViewState] = useState<any>(INITIAL_VIEW);
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -141,7 +145,7 @@ export function IndiaMap() {
         }}
         getCursor={({ isHovering }) => (isHovering ? "pointer" : "grab")}
       />
-      {!district && !error && (
+      {!district && !districtFailed && (
         <div
           role="status"
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
