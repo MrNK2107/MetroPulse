@@ -17,15 +17,15 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 - Backend package: `backend/twin/` (engine-style: never imports from `app/`); API in `backend/app/routes/twin.py` (`/api/twin/*`)
 - Built data: `data/twin/` (produced by `scripts/twin_build.py`)
 - Frontend: `frontend/src/components/twin/`, `store/twinStore.ts`, `lib/twinApi.ts`, `types/twin.ts`
-- Parked for M2 (not wired to the UI): `engine/agent/`, `app/ws/agent.py` (code kept but not mounted; M2 re-mounts `/ws/agent` with auth and connection limits), `app/rag/`, `nl_engine/`, `app/realtime*`; legacy city YAMLs in `data/cities/` still back `/api/regions*`
+- Parked for M2 (not wired to the UI): `engine/agent/` (served by the token-gated `/ws/agent`, no frontend client yet), `app/rag/`, `nl_engine/`, `app/realtime*`; legacy city YAMLs in `data/cities/` still back `/api/regions*`
 
 ## Security
 
 ### Path Traversal Sanitization
 `CityConfig.load()` and `CityConfig.load_geojson()` validate `city_name` with `re.fullmatch(r'[a-zA-Z0-9_]+', city_name)` to prevent directory traversal attacks. Zone file paths in `grid.py` also reject `..` patterns.
 
-### WebSocket Connection Limit
-No WebSocket endpoints are mounted in M1: `app/main.py` does not include the parked `/ws/agent` router. The `WS_MAX_CONNECTIONS` setting (`app/config.py` → `ws_max_connections`, default 10) exists but nothing enforces it; M2 re-mounts `/ws/agent` together with auth and connection limits (spec §4).
+### WebSocket Auth and Connection Limit
+`/ws/agent` is the only WebSocket endpoint (`app/ws/agent.py`, mounted in `app/main.py`). It is **disabled unless `AGENT_WS_TOKEN` is set**; clients send the token as `?token=` or `Authorization: Bearer`, compared with `hmac.compare_digest`. Bad/missing token closes with 1008 before accept. At most `WS_MAX_CONNECTIONS` (default 10) concurrent sessions; extras close with 1013. Client-facing errors are generic (no exception text). Tests: `tests/integration/test_ws_agent.py`. Supabase-Auth-based per-user auth (spec §4) is still to do; the shared token is the interim gate.
 
 ## Conventions
 - Python: Use NumPy vectorized ops where arrays are involved

@@ -142,8 +142,10 @@ def test_twin_path_prefix_match():
     assert not is_twin_path("/api/twinkle") and not is_twin_path("/api/twins/x")
 
 
-def test_no_websocket_endpoints_mounted_in_m1():
+def test_only_gated_agent_websocket_is_mounted():
+    # M2 re-mounted /ws/agent behind AGENT_WS_TOKEN + WS_MAX_CONNECTIONS
+    # (see tests/integration/test_ws_agent.py). No other socket may appear.
     from starlette.routing import WebSocketRoute
 
-    assert not [r for r in app.routes if isinstance(r, WebSocketRoute)]
-    assert "/ws/agent" not in {getattr(r, "path", None) for r in app.routes}
+    ws_paths = {r.path for r in app.routes if isinstance(r, WebSocketRoute)}
+    assert ws_paths == {"/ws/agent"}
