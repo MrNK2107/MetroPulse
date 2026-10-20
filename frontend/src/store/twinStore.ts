@@ -8,6 +8,8 @@ interface TwinState {
   loading: boolean;
   error: string | null;
   selectPlace: (id: string) => Promise<void>;
+  retry: () => Promise<void>;
+  dismissError: () => void;
   clear: () => void;
 }
 
@@ -31,6 +33,11 @@ export const useTwinStore = create<TwinState>((set, get) => ({
       });
     }
   },
+  retry: async () => {
+    const id = get().selectedPlaceId;
+    if (id) await get().selectPlace(id);
+  },
+  dismissError: () => set({ error: null }),
   clear: () =>
     set({ selectedPlaceId: null, observations: [], loading: false, error: null }),
 }));

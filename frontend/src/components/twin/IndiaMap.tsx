@@ -60,6 +60,7 @@ function bounds(geom: any): [[number, number], [number, number]] | null {
 export function IndiaMap() {
   const selectedPlaceId = useTwinStore((s) => s.selectedPlaceId);
   const selectPlace = useTwinStore((s) => s.selectPlace);
+  const error = useTwinStore((s) => s.error);
   const district = useBoundary("district");
   const state = useBoundary("state");
   const country = useBoundary("country");
@@ -140,6 +141,17 @@ export function IndiaMap() {
         }}
         getCursor={({ isHovering }) => (isHovering ? "pointer" : "grab")}
       />
+      {!district && !error && (
+        <div
+          role="status"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        >
+          <span className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-950/85 px-4 py-2 text-sm text-slate-300">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400" aria-hidden="true" />
+            Loading district boundaries...
+          </span>
+        </div>
+      )}
     </div>
   );
 }

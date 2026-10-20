@@ -60,4 +60,34 @@ describe("Home place header", () => {
     });
     expect(screen.queryByText("Alpha")).not.toBeInTheDocument();
   });
+
+  it("shows a hint before any place is selected", async () => {
+    render(<Home />);
+    expect(await screen.findByText(/Click a district or search/)).toBeInTheDocument();
+  });
+
+  it("shows the error in the panel with a working Try again", async () => {
+    mocked.getPlace.mockResolvedValue(detail("district:A", "Alpha"));
+    mocked.getObservations.mockRejectedValueOnce(new Error("twin data not built"));
+    render(<Home />);
+    await act(async () => void useTwinStore.getState().selectPlace("district:A"));
+    expect(screen.getByRole("alert")).toHaveTextContent("twin data not built");
+
+    mocked.getObservations.mockResolvedValueOnce([]);
+    await act(async () => {
+      screen.getByRole("button", { name: "Try again" }).click();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(await screen.findByText("Alpha")).toBeInTheDocument();
+  });
+
+  it("lets the user dismiss a global error banner", async () => {
+    render(<Home />);
+    await act(async () => void useTwinStore.setState({ error: "Boundaries unavailable (503)" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Boundaries unavailable");
+    await act(async () => {
+      screen.getByRole("button", { name: "Dismiss error" }).click();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

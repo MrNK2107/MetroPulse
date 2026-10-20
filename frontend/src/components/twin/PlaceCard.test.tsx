@@ -21,6 +21,12 @@ const obs = (over: Partial<Observation> = {}): Observation => ({
 });
 
 describe("PlaceCard", () => {
+  it("shows an empty state when no indicators are published", () => {
+    render(<PlaceCard name="X" stateName={null} observations={[]} />);
+    expect(screen.getByText(/No indicators are published/)).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+
   it("shows No data for null", () => {
     render(<PlaceCard name="X" stateName="Y" observations={[obs({ value: null })]} />);
     expect(screen.getByText("No data")).toBeInTheDocument();

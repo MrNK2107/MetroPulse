@@ -38,4 +38,19 @@ describe("twinStore", () => {
     expect(s.loading).toBe(false);
     expect(s.observations).toEqual([]);
   });
+
+  it("retry re-fetches the selected place and dismissError clears the message", async () => {
+    mocked.getObservations.mockRejectedValueOnce(new Error("boom"));
+    await useTwinStore.getState().selectPlace("district:3");
+    expect(useTwinStore.getState().error).toBe("boom");
+
+    mocked.getObservations.mockResolvedValueOnce([o]);
+    await useTwinStore.getState().retry();
+    expect(useTwinStore.getState().error).toBeNull();
+    expect(useTwinStore.getState().observations).toEqual([o]);
+
+    useTwinStore.setState({ error: "map failed" });
+    useTwinStore.getState().dismissError();
+    expect(useTwinStore.getState().error).toBeNull();
+  });
 });

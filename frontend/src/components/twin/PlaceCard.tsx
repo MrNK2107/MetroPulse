@@ -92,11 +92,17 @@ export function PlaceCard({
         <h2 className="text-xl font-semibold">{name}</h2>
         {stateName && <p className="text-sm text-slate-400">{stateName}</p>}
       </header>
-      <ul className="flex-1 overflow-y-auto">
-        {observations.map((o) => (
-          <Row key={o.indicator} o={o} />
-        ))}
-      </ul>
+      {observations.length === 0 ? (
+        <p className="flex-1 py-6 text-sm text-slate-400">
+          No indicators are published for this place yet.
+        </p>
+      ) : (
+        <ul className="flex-1 overflow-y-auto">
+          {observations.map((o) => (
+            <Row key={o.indicator} o={o} />
+          ))}
+        </ul>
+      )}
       <footer className="pt-3 text-xs leading-relaxed text-slate-400">
         Census 2011 values for districts created after 2011 are apportioned by area. They&apos;re
         marked Pattern.

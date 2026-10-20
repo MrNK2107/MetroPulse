@@ -14,7 +14,8 @@ const IndiaMap = dynamic(
 );
 
 export default function Home() {
-  const { selectedPlaceId, observations, loading, error, clear } = useTwinStore();
+  const { selectedPlaceId, observations, loading, error, clear, retry, dismissError } =
+    useTwinStore();
   const [place, setPlace] = useState<PlaceDetail | null>(null);
 
   useEffect(() => {
@@ -43,12 +44,25 @@ export default function Home() {
       <div className="absolute left-4 top-4 z-10">
         <PlaceSearch />
       </div>
-      {error && (
+      {!selectedPlaceId && !error && (
+        <p className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full border border-slate-700 bg-slate-950/85 px-4 py-2 text-sm text-slate-300">
+          Click a district or search above to see its indicators
+        </p>
+      )}
+      {error && !selectedPlaceId && (
         <div
           role="alert"
-          className="absolute left-1/2 top-4 z-20 max-w-md -translate-x-1/2 rounded-md border border-red-700 bg-red-950/95 px-4 py-2 text-sm text-red-100"
+          className="absolute left-1/2 top-4 z-20 flex max-w-md -translate-x-1/2 items-start gap-3 rounded-md border border-red-700 bg-red-950/95 px-4 py-2 text-sm text-red-100"
         >
-          {error}
+          <span className="flex-1">{error}</span>
+          <button
+            type="button"
+            onClick={dismissError}
+            aria-label="Dismiss error"
+            className="rounded px-1 text-red-200 hover:bg-red-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+          >
+            Dismiss
+          </button>
         </div>
       )}
       {selectedPlaceId && (
@@ -64,7 +78,28 @@ export default function Home() {
           >
             Close
           </button>
-          {loading && <p className="text-sm text-slate-400">Loading...</p>}
+          {loading && (
+            <div role="status" aria-busy="true" className="space-y-4 pt-1">
+              <span className="sr-only">Loading place indicators</span>
+              <div className="h-6 w-2/3 animate-pulse rounded bg-slate-800" />
+              <div className="h-4 w-1/3 animate-pulse rounded bg-slate-800" />
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded bg-slate-900" />
+              ))}
+            </div>
+          )}
+          {!loading && error && (
+            <div role="alert" className="space-y-3 pt-8 text-sm">
+              <p className="text-red-200">{error}</p>
+              <button
+                type="button"
+                onClick={() => void retry()}
+                className="rounded border border-slate-600 px-3 py-1 text-slate-100 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              >
+                Try again
+              </button>
+            </div>
+          )}
           {!loading && !error && (
             <PlaceCard
               name={place && place.placeId === selectedPlaceId ? place.name : "Loading place..."}
