@@ -32,13 +32,13 @@ export function TwinNotBuilt({ onDismiss }: { onDismiss?: () => void }) {
     <section
       role="alert"
       aria-labelledby="twin-not-built-title"
-      className="absolute left-1/2 top-1/2 z-20 max-h-[calc(100%-6rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950/95 p-5 text-sm text-slate-300 shadow-xl max-sm:top-auto max-sm:bottom-20 max-sm:translate-y-0"
+      className="absolute left-1/2 top-1/2 z-20 max-h-[calc(100%-6rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-700 bg-slate-950/95 p-5 text-sm text-slate-300 shadow-xl max-sm:top-[4.5rem] max-sm:max-h-[calc(100%-15rem)] max-sm:translate-y-0 max-sm:p-4"
     >
       <p className="text-xs font-medium uppercase tracking-wide text-amber-300">Setup needed</p>
       <h2 id="twin-not-built-title" className="mt-1 text-lg font-semibold text-slate-50">
         The map data hasn&apos;t been built yet
       </h2>
-      <p className="mt-2">
+      <p className="mt-2 max-sm:hidden">
         District boundaries and indicators come from government sources that are built locally.
         The backend is running, but it has no built data to serve.
       </p>
@@ -55,7 +55,7 @@ export function TwinNotBuilt({ onDismiss }: { onDismiss?: () => void }) {
               <p className="font-medium text-slate-100">{s.title}</p>
               <p className="mt-0.5 text-slate-400">{s.body}</p>
               {s.code && (
-                <code className="mt-1.5 block overflow-x-auto whitespace-pre rounded bg-slate-900 px-2 py-1.5 font-mono text-xs text-sky-200">
+                <code className="mt-1.5 block whitespace-pre-wrap break-words rounded bg-slate-900 px-2 py-1.5 font-mono text-xs text-sky-200">
                   {s.code}
                 </code>
               )}

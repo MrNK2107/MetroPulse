@@ -79,3 +79,10 @@ To try the agent socket: set `AGENT_WS_TOKEN=...` in `backend/.env` and connect 
 - SETUP: `.env.local` sample uses `/ws/agent`, explains the token lives only in `backend\.env` (never `NEXT_PUBLIC_*`), 3 new troubleshooting rows.
 - `frontend/.env.local.example` (example file, no secrets): `/ws/agent` plus token comments.
 - Not touched: historical plans/specs under `docs/` and IMPLEMENTATION_PLAN.md still mention `/ws/simulate` (historical records).
+
+## Late wave: twin data build and screenshots (02:24-02:35)
+- Did not build: `backend/scripts/twin_build.py build` won't start until all 7 manual files are in `data/twin/manual/`. LGD (captcha), Survey of India (login) and VIIRS (free account) need a browser session, so nothing was downloaded. The exact steps are in `_night_run/2026-10-24/NEEDS_INPUT.md`. No data screenshots were taken and the README is unchanged.
+- `feat(ui)`: a "not built" 503 now shows a setup panel (`components/twin/TwinNotBuilt.tsx`) in place of the red banner. It has 4 steps (check, manual downloads, build with `--boundary-version`, reload) and Reload/Hide buttons. On phones the panel is compact and stays clear of the "Ask the agent" button.
+- The backend 503 message now names `data/twin/manual/README.md` and the required `--boundary-version lgd-YYYYMMDD` flag. Before, it said `run scripts/twin_build.py build`, which fails without that flag.
+- Verified: twin API tests 15/15, jest 37/37, tsc and lint clean. Live run on uvicorn :8012 (with `CORS_ORIGINS=http://localhost:3012` passed via the shell) and next dev :3012. Headless Chrome screenshots at 1440 and 390 px had no horizontal scroll. They are kept in scratch only, not committed. Both servers were stopped.
+- Gotcha: when the frontend runs on a port other than 3000, the backend needs `CORS_ORIGINS` set or every fetch fails with "Failed to fetch".
