@@ -103,7 +103,8 @@ def test_503_when_not_built(tmp_path):
     finally:
         app.dependency_overrides.clear()
     assert r.status_code == 503 and r.json()["success"] is False
-    assert r.json()["error"] == "twin data not built — run scripts/twin_build.py build"
+    assert r.json()["error"].startswith("twin data not built")
+    assert "--boundary-version" in r.json()["error"]
 
 
 def test_resolve_single_digit_state_hint(client):

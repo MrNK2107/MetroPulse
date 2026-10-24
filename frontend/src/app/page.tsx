@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { AgentChat } from "@/components/agent/AgentChat";
 import { PlaceCard } from "@/components/twin/PlaceCard";
 import { PlaceSearch } from "@/components/twin/PlaceSearch";
+import { TwinNotBuilt, isNotBuiltError } from "@/components/twin/TwinNotBuilt";
 import { getPlace } from "@/lib/twinApi";
 import { useTwinStore } from "@/store/twinStore";
 import type { PlaceDetail } from "@/types/twin";
@@ -50,7 +51,8 @@ export default function Home() {
           Click a district or search above to see its indicators
         </p>
       )}
-      {error && !selectedPlaceId && (
+      {error && !selectedPlaceId && isNotBuiltError(error) && <TwinNotBuilt onDismiss={dismissError} />}
+      {error && !selectedPlaceId && !isNotBuiltError(error) && (
         <div
           role="alert"
           className="absolute bottom-6 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-md border border-red-700 bg-red-950/95 px-4 py-2 text-sm text-red-100"

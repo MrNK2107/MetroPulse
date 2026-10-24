@@ -24,7 +24,10 @@ from twin.store.parquet_store import query_observations, read_current
 
 router = APIRouter()
 
-NOT_BUILT = "twin data not built — run scripts/twin_build.py build"
+NOT_BUILT = (
+    "twin data not built — add the manual downloads listed in data/twin/manual/README.md, "
+    "then run `python scripts/twin_build.py build --boundary-version lgd-YYYYMMDD` from backend/"
+)
 BOUNDARY_LEVELS = ("country", "state", "district")
 _SOURCES = {s.id: s for s in SOURCE_REGISTRY}
 

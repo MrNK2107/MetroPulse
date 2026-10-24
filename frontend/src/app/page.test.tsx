@@ -90,4 +90,18 @@ describe("Home place header", () => {
     });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("explains how to build the twin when the data is not built", async () => {
+    render(<Home />);
+    await act(async () =>
+      void useTwinStore.setState({ error: "twin data not built — run scripts/twin_build.py build" })
+    );
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("The map data hasn't been built yet");
+    expect(alert).toHaveTextContent("python scripts/twin_build.py build --boundary-version");
+    await act(async () => {
+      screen.getByRole("button", { name: "Hide" }).click();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });
