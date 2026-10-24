@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { AgentChat } from "@/components/agent/AgentChat";
 import { PlaceCard } from "@/components/twin/PlaceCard";
 import { PlaceSearch } from "@/components/twin/PlaceSearch";
 import { getPlace } from "@/lib/twinApi";
@@ -109,6 +110,7 @@ export default function Home() {
           )}
         </aside>
       )}
+      <AgentChat />
     </main>
   );
 }
