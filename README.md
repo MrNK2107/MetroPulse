@@ -252,7 +252,7 @@ Hex Activity Heatmap:
                          │              FastAPI                  │
                          │                                       │
                          │  ┌─────────────────────────────────┐  │
-                         │  │ /ws/simulate                    │  │
+                         │  │ /ws/agent  (token-gated)        │  │
                          │  │ /api/regions                    │  │
                          │  │ /api/simulations                │  │
                          │  │ /api/case-studies               │  │
@@ -577,7 +577,8 @@ For local-only development, LLM and Supabase integrations can be disabled or moc
 | POST | `/api/simulations` | Create simulation run |
 | GET | `/api/simulations/{id}` | Get simulation results |
 | GET | `/api/case-studies` | List RAG case studies |
-| WS | `/ws/simulate` | Real-time simulation stream |
+| GET | `/api/agent/status` | Agent socket status `{enabled, available, path}` (never returns the token) |
+| WS | `/ws/agent` | Agent chat stream (disabled unless `AGENT_WS_TOKEN` is set) |
 
 ---
 
@@ -598,54 +599,46 @@ For local-only development, LLM and Supabase integrations can be disabled or moc
 
 ## WebSocket Protocol
 
-Connect to:
+The retired `/ws/simulate` stream has been replaced by a single agent socket, `/ws/agent`.
+
+Enable it on the backend by setting a shared secret in `backend/.env`:
+
+```env
+AGENT_WS_TOKEN=<some-long-random-string>
+```
+
+If `AGENT_WS_TOKEN` is empty the endpoint is disabled and `GET /api/agent/status` reports `enabled: false`.
+The token is a server-side secret: never put it in a `NEXT_PUBLIC_*` variable. The frontend's
+"Ask the agent" panel asks for it and keeps it in `sessionStorage` only.
+
+Connect with the token as a query parameter or a bearer header:
 
 ```text
-ws://localhost:8000/ws/simulate
+ws://localhost:8000/ws/agent?token=<AGENT_WS_TOKEN>
+Authorization: Bearer <AGENT_WS_TOKEN>
 ```
+
+A missing or wrong token is closed with code 1008 before accept (browsers see HTTP 403 / close 1006).
+More than `WS_MAX_CONNECTIONS` (default 10) concurrent sessions are closed with 1013.
 
 Send:
 
 ```json
-{
-  "region_id": "nyc_manhattan",
-  "fdi_inputs": {
-    "technology": 0.4,
-    "manufacturing": 0.2,
-    "services": 0.1
-  },
-  "public_works_zones": [
-    {
-      "type": "Polygon",
-      "coordinates": []
-    }
-  ],
-  "horizon_months": 24
-}
+{ "type": "AGENT_START", "message": "What happens to Pune if IT FDI rises 30%?" }
 ```
 
-Receive:
+Receive, in order as the agent works:
 
-```json
-{
-  "type": "frame",
-  "step": 1,
-  "total_steps": 24,
-  "cells": [
-    {
-      "h3": "882a100e3fffff",
-      "delta": 0.12,
-      "economic_activity": 5400
-    }
-  ],
-  "metrics": {
-    "gdp_delta": 0.08,
-    "unemployment": 0.045,
-    "real_estate_index": 1.12,
-    "transit_congestion": 0.67
-  }
-}
+```text
+AGENT_THINK   reasoning step
+AGENT_ACTION  tool call the agent is making
+AGENT_ASK     clarifying question with options -> answer with { "type": "AGENT_REPLY", "message": "..." }
+AGENT_RESULT  final answer
+AGENT_DONE    session finished
+AGENT_ERROR   generic error text (no exception details)
 ```
+
+`{ "type": "PING" }` is answered with `{ "type": "PONG" }`. Useful answers need an LLM provider key on the backend.
 
 ---
 

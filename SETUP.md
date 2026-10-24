@@ -80,9 +80,16 @@ Create `frontend\.env.local`:
 
 ```env
 NEXT_PUBLIC_MAPBOX_TOKEN=pk.ey...
-NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/simulate
+NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/agent
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
+
+`NEXT_PUBLIC_WS_URL` is optional: it defaults to `ws://localhost:8000/ws/agent`, and an old
+`/ws/simulate` value is rewritten to `/ws/agent` automatically.
+
+The agent socket is disabled unless the **backend** has `AGENT_WS_TOKEN` set in `backend\.env`.
+Do not put that token in `frontend\.env.local` (anything `NEXT_PUBLIC_*` is shipped to the browser);
+the "Ask the agent" panel asks for it and keeps it in `sessionStorage` only.
 
 Start the frontend:
 
@@ -127,6 +134,9 @@ npm run type-check
 |---------|-----|
 | Map shows blank/gray | `NEXT_PUBLIC_MAPBOX_TOKEN` is missing or invalid |
 | WebSocket connection refused | Backend not running on port 8000 |
+| Agent panel shows "Disabled" | `AGENT_WS_TOKEN` is empty in `backend\.env`; set it and restart uvicorn |
+| Agent socket closes with 1008 / HTTP 403 | Token typed in the panel does not match `AGENT_WS_TOKEN` |
+| Agent replies with a generic AGENT_ERROR | No LLM provider key configured on the backend |
 | `npm install` peer dep errors | Use `npm install --legacy-peer-deps` |
 | `pip install h3` fails | Install cmake first or use a pre-built wheel |
 | AI Insight shows fallback text | No LLM provider configured. Set `LLM_PROVIDER` + matching API key, or ensure Ollama is running |

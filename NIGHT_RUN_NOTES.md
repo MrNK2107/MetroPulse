@@ -73,3 +73,9 @@ To try the agent socket: set `AGENT_WS_TOKEN=...` in `backend/.env` and connect 
 - Update `.env.local.example`, README and SETUP away from `/ws/simulate`. This was out of scope tonight.
 - Twin data build (`scripts/twin_build.py build`). Without it the map shows "twin data not built".
 - No real-LLM end-to-end run of the chat. It needs an API key.
+
+## Follow-up (late wave, docs only)
+- README: WebSocket Protocol section rewritten for `/ws/agent` (AGENT_WS_TOKEN, `?token=`/Bearer, 1008/1013 closes, AGENT_* message types, PING/PONG); endpoint table adds `/api/agent/status`; architecture box no longer lists `/ws/simulate`.
+- SETUP: `.env.local` sample uses `/ws/agent`, explains the token lives only in `backend\.env` (never `NEXT_PUBLIC_*`), 3 new troubleshooting rows.
+- `frontend/.env.local.example` (example file, no secrets): `/ws/agent` plus token comments.
+- Not touched: historical plans/specs under `docs/` and IMPLEMENTATION_PLAN.md still mention `/ws/simulate` (historical records).
