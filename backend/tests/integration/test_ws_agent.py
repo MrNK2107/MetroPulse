@@ -141,3 +141,21 @@ def test_limiter_never_goes_negative():
     lim.release()
     assert lim.active == 0
     assert lim.try_acquire(0) is False
+
+
+def test_status_reports_disabled_without_token(client, monkeypatch):
+    monkeypatch.setattr(agent_ws.settings, "agent_ws_token", "")
+    body = client.get("/api/agent/status").json()
+    assert body["success"] is True
+    assert body["data"] == {"enabled": False, "available": False, "path": "/ws/agent"}
+
+
+def test_status_reports_enabled_and_capacity_without_leaking_token(client, monkeypatch):
+    res = client.get("/api/agent/status")
+    assert res.status_code == 200
+    assert TOKEN not in res.text
+    assert res.json()["data"]["enabled"] is True
+    assert res.json()["data"]["available"] is True
+    monkeypatch.setattr(agent_ws.settings, "ws_max_connections", 1)
+    monkeypatch.setattr(agent_ws.limiter, "active", 1)
+    assert client.get("/api/agent/status").json()["data"]["available"] is False

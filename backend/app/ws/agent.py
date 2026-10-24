@@ -74,6 +74,27 @@ def is_authorized(websocket: WebSocket) -> bool:
     )
 
 
+@router.get("/api/agent/status")
+async def agent_status():
+    """Lets the UI tell "disabled" apart from "bad token" / "server down".
+
+    A browser cannot read the close code of a socket rejected before accept
+    (it only sees 1006), so the chat client asks here first. Never reveals the
+    token itself.
+    """
+    enabled = bool(settings.agent_ws_token)
+    return {
+        "success": True,
+        "data": {
+            "enabled": enabled,
+            "available": enabled and limiter.active < max(0, settings.ws_max_connections),
+            "path": "/ws/agent",
+        },
+        "error": None,
+        "meta": {},
+    }
+
+
 @router.websocket("/ws/agent")
 async def agent_websocket(websocket: WebSocket):
     if not is_authorized(websocket):
