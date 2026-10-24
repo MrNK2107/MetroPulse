@@ -204,11 +204,11 @@ export function AgentChat() {
   const canSend = !disabled && !offline && !needsToken && !busy && state.status !== "checking";
 
   return (
-    <div className="pointer-events-none absolute bottom-20 right-4 z-30 flex flex-col items-end gap-2 sm:bottom-6">
+    <div className="pointer-events-none absolute bottom-28 right-4 z-30 flex flex-col items-end gap-2 sm:bottom-6">
       {open && (
         <section
           aria-label="Planning agent"
-          className="pointer-events-auto flex h-[min(32rem,calc(100vh-8rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950/95 shadow-xl"
+          className={`pointer-events-auto flex ${disabled || offline ? "" : "h-[min(32rem,calc(100vh-10rem))]"} w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950/95 shadow-xl`}
         >
           <header className="flex items-center gap-2 border-b border-slate-800 px-3 py-2">
             <h2 className="flex-1 text-sm font-semibold text-slate-100">Planning agent</h2>

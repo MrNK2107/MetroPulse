@@ -42,3 +42,34 @@ To try the agent socket: set `AGENT_WS_TOKEN=...` in `backend/.env` and connect 
 - Twin data is not built locally (`data/twin` has only `manual/` and `seed/`). Run `python scripts/twin_build.py build` to see the real map.
 - `next.config.js` still defaults `NEXT_PUBLIC_WS_URL` to the retired `/ws/simulate`.
 - The `docs/LIMITATIONS.md` modelling items (1-8, 11) need real data sources, so they don't fit a night run.
+
+---
+
+# Night run 2026-10-24 (branch `night-run/2026-10-24`, from `night-run/2026-10-20`)
+
+## What changed
+1. `fix(config)`: `next.config.js` now defaults `NEXT_PUBLIC_WS_URL` to `ws://localhost:8000/ws/agent` (was the retired `/ws/simulate`).
+   `frontend/.env.local.example`, README and SETUP still mention `/ws/simulate`. They were left alone because the run brief said not to touch `.env*` files.
+   The client also rewrites a `/ws/simulate` URL to `/ws/agent`, or derives the URL from `NEXT_PUBLIC_API_URL`, so stale envs still work.
+2. `feat(api)`: new `GET /api/agent/status` returning `{enabled, available, path}`. It never returns the token. A browser only sees close code 1006 for a socket rejected before accept, so the UI uses this to tell "disabled" apart from "bad token" and "backend down". 2 new backend tests.
+3. `feat(ui)`: an agent chat panel (`src/components/agent/AgentChat.tsx`, logic in `src/lib/agentChat.ts`), opened with the "Ask the agent" button at the bottom right of the map.
+   - Status pill: Checking, Disabled, Backend offline (with retry), Ready, Connecting, Connected.
+   - The access token is typed in and stored in sessionStorage only. It is never `NEXT_PUBLIC_*`.
+   - Streams AGENT_THINK, AGENT_ACTION and AGENT_RESULT as they arrive. AGENT_ASK renders option buttons and the reply is sent as AGENT_REPLY.
+   - Shows AGENT_ERROR text. A refused or dropped socket gets its own message (1013 busy / 1008 refused / 1006 unreachable).
+   - Stop and Clear buttons. Messages shorter than 4 characters are rejected client-side.
+   - The status check runs only when the panel is opened, so existing page tests are unaffected.
+   - 18 new jest tests: reducer, parser and URL logic, plus component tests with a mock WebSocket.
+
+## Verified
+- Backend 740/740 (738 + 2). Frontend jest 36/36. Type-check and lint are clean.
+- Live check, uvicorn :8010 with `AGENT_WS_TOKEN` passed via the process environment (no .env edits), plus `next dev` :3010, screenshotted with headless playwright-core at desktop and phone widths:
+  - Good token: AGENT_START then AGENT_ERROR "internal error". No LLM key is set locally, so this is expected.
+  - Wrong token: 403, and the UI shows "Could not reach the agent...".
+  - Backend started with an empty token: the panel shows "Disabled".
+
+## Left
+- Per-user auth on `/ws/agent` (spec §4). The shared token is still a stopgap.
+- Update `.env.local.example`, README and SETUP away from `/ws/simulate`. This was out of scope tonight.
+- Twin data build (`scripts/twin_build.py build`). Without it the map shows "twin data not built".
+- No real-LLM end-to-end run of the chat. It needs an API key.
