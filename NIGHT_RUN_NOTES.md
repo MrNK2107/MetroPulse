@@ -86,3 +86,11 @@ To try the agent socket: set `AGENT_WS_TOKEN=...` in `backend/.env` and connect 
 - The backend 503 message now names `data/twin/manual/README.md` and the required `--boundary-version lgd-YYYYMMDD` flag. Before, it said `run scripts/twin_build.py build`, which fails without that flag.
 - Verified: twin API tests 15/15, jest 37/37, tsc and lint clean. Live run on uvicorn :8012 (with `CORS_ORIGINS=http://localhost:3012` passed via the shell) and next dev :3012. Headless Chrome screenshots at 1440 and 390 px had no horizontal scroll. They are kept in scratch only, not committed. Both servers were stopped.
 - Gotcha: when the frontend runs on a port other than 3000, the backend needs `CORS_ORIGINS` set or every fetch fails with "Failed to fetch".
+
+## Late wave: API benchmark (05:51-06:05, after a usage-limit pause)
+- New `scripts/bench_api.py`: benchmarks an already-running backend (starts nothing). Warm-up, then N requests at concurrency 1 and 8 for 7 REST endpoints that need no twin data / LLM key, plus the `/ws/agent` handshake and PING/PONG when `AGENT_WS_TOKEN` is set. Writes `docs/benchmarks.md` with machine info and a load caveat. Options: `--requests`, `--ws-requests`, `--warmup`, `--concurrency`, `--endpoints`, `--server-note`, `--out`.
+- New `backend/tests/unit/test_bench_stats.py` (10 tests): percentile vs hand values and `numpy.percentile`, `summarize`, error cases.
+- Ran it for real: uvicorn :8020 (1 worker, `SUPABASE_URL`/`SUPABASE_KEY` blanked and `AGENT_WS_TOKEN` set via the shell, no .env edits). c=1 p50 0.8-2.6 ms, p99 <= 4.1 ms, 380-1189 req/s; c=8 p99 13-100 ms. All 2xx. Machine was at 67-78% CPU / 86% RAM from other agents, noted in the report. Server stopped by its PID.
+- Backend 750/750.
+- Gotcha: on this machine a uvicorn started via PowerShell `Start-Process` or bash `exec .venv/Scripts/uvicorn.exe` exited immediately; `python -m uvicorn` in a background bash worked.
+- Not measured: twin endpoints with real data (not built), agent runs (need an LLM key), the legacy engine.
