@@ -94,3 +94,26 @@ To try the agent socket: set `AGENT_WS_TOKEN=...` in `backend/.env` and connect 
 - Backend 750/750.
 - Gotcha: on this machine a uvicorn started via PowerShell `Start-Process` or bash `exec .venv/Scripts/uvicorn.exe` exited immediately; `python -m uvicorn` in a background bash worked.
 - Not measured: twin endpoints with real data (not built), agent runs (need an LLM key), the legacy engine.
+
+---
+
+# Night run 2026-10-31 (branch `night-run/2026-10-31`, from `night-run/2026-10-24`)
+
+## What changed
+1. `test(agent-chat)`: `/ws/agent` client now retries a 1013 (busy) refusal before the session starts with 1s/2s/4s backoff (max 3; `backoffDelay`/`shouldRetry` in `lib/agentChat.ts`); Stop/unmount cancel it; 1006/1008 and mid-session drops are not retried. Shared `src/test-utils/mockWebSocket.ts`; new `AgentChat.socket.test.tsx` (connect URL/encoding, frame order, malformed/unknown frames, backoff timing with fake timers, error states, invalid URL, Clear). Jest 37 -> 54. CI runs `npm run test:ci` (`jest --ci --runInBand`).
+2. `fix(ui)`: "Ask the agent" overlapped the place panel's footer on desktop; it now sits left of the panel (`besidePanel` prop, sm+ only).
+3. `docs`: README rewritten to describe what exists (India Twin + agent) with real numbers (16 REST endpoints, 6 indicators, 5 agent tools, 30 city configs, 20 case studies, 750 BE / 54 FE tests, benchmark link). Removed the retired 3-loop simulator, fake metric panels, fake coverage bars, "COMPLETE" deployment roadmap, nonexistent file tree, MIT claim (there is no LICENSE file). AGENTS.md counts updated.
+4. `docs/screenshots/` (4 PNGs, 50-155 KB): agent THINK and ASK steps from real runs against local Ollama gemma4; place panel from the **test-fixture** twin (synthetic squares; captioned as such); fresh-clone "not built" panel. No cascade view exists any more.
+
+## How the screenshots were made
+uvicorn :18110 (`SUPABASE_*` blanked, `AGENT_WS_TOKEN`, `LLM_PROVIDER=ollama`, `LLM_TIMEOUT_MS`, `CORS_ORIGINS`, `TWIN_DATA_DIR` all via the shell, no .env edits) + `next dev` :18111; fixture twin built with `make_fixture_manual_paths` + `twin_build build --boundary-version lgd-fixture` into scratch; playwright-core installed in scratch, system Chrome headless. Servers stopped by recorded PID.
+
+## Verified
+BE 750/750; FE jest 54/54, tsc, lint clean, `next build` OK.
+
+## Left
+- No agent run reached AGENT_RESULT: Ollama was shared with other agents (model swaps), steps took 25-150 s and two runs hit the LLM timeout. A hero shot of a finished answer needs an idle machine or a hosted key.
+- Real twin data build still blocked on manual downloads (LGD/SOI/VIIRS).
+- Unused simulator-era deps in frontend/package.json (@tremor/react, h3-js, katex, react-markdown) could be pruned.
+- docs/ARCHITECTURE.md still describes the simulator in places.
+- No LICENSE file (README previously claimed MIT) - see NEEDS_INPUT.
