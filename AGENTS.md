@@ -6,9 +6,9 @@ AI-Powered Macro-Urban Digital Twin Sandbox. Next.js 14 (frontend) + FastAPI (ba
 ## Commands
 - Backend: `cd backend && uvicorn app.main:app --reload --port 8000`
 - Twin data: `cd backend && python scripts/twin_build.py check|build`
-- Backend tests: `cd backend && pytest tests/unit tests/integration` (738 tests; needs `python -m spacy download en_core_web_sm`)
+- Backend tests: `cd backend && pytest tests/unit tests/integration` (750 tests; needs `python -m spacy download en_core_web_sm`)
 - Frontend: `cd frontend && npm run dev`
-- Frontend tests: `cd frontend && npm run test` (18 tests)
+- Frontend tests: `cd frontend && npm run test` (54 tests; CI uses `npm run test:ci`)
 - Lint/typecheck: `cd frontend && npm run lint && npm run type-check`
 
 ## India Twin
@@ -17,7 +17,7 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 - Backend package: `backend/twin/` (engine-style: never imports from `app/`); API in `backend/app/routes/twin.py` (`/api/twin/*`)
 - Built data: `data/twin/` (produced by `scripts/twin_build.py`)
 - Frontend: `frontend/src/components/twin/`, `store/twinStore.ts`, `lib/twinApi.ts`, `types/twin.ts`
-- Parked for M2 (not wired to the UI): `engine/agent/` (served by the token-gated `/ws/agent`, no frontend client yet), `app/rag/`, `nl_engine/`, `app/realtime*`; legacy city YAMLs in `data/cities/` still back `/api/regions*`
+- Parked for M2 (not wired to the UI): `engine/agent/` (served by the token-gated `/ws/agent`; frontend client: `components/agent/AgentChat.tsx`), `app/rag/`, `nl_engine/`, `app/realtime*`; legacy city YAMLs in `data/cities/` still back `/api/regions*`
 
 ## Security
 

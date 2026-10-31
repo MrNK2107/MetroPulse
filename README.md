@@ -1,888 +1,258 @@
-<div align="center">
-
-```text
-███╗   ███╗███████╗████████╗██████╗  ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
-████╗ ████║██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗██╔══██╗██║   ██║██║     ██╔════╝██╔════╝
-██╔████╔██║█████╗     ██║   ██████╔╝██║   ██║██████╔╝██║   ██║██║     ███████╗█████╗  
-██║╚██╔╝██║██╔══╝     ██║   ██╔══██╗██║   ██║██╔═══╝ ██║   ██║██║     ╚════██║██╔══╝  
-██║ ╚═╝ ██║███████╗   ██║   ██║  ██║╚██████╔╝██║     ╚██████╔╝███████╗███████║███████╗
-╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝
-```
-
 # MetroPulse
 
-### AI-Powered Macro-Urban Digital Twin Sandbox
+### An India district digital twin with a tool-using planning agent
 
-```diff
-+ Simulate cities before governments change them.
-+ Predict economic ripple effects before policies become reality.
-+ Stream urban futures in real time.
-```
+MetroPulse is a FastAPI + Next.js app. It has two parts that work today:
 
-<img src="https://img.shields.io/badge/Next.js-14-black?logo=next.js&style=for-the-badge" />
-<img src="https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi&style=for-the-badge" />
-<img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&style=for-the-badge" />
-<img src="https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&style=for-the-badge" />
-<img src="https://img.shields.io/badge/H3-Hex_Engine-1A73E8?logo=uber&style=for-the-badge" />
-<img src="https://img.shields.io/badge/AI-RAG_+_LLM-ffcc00?style=for-the-badge" />
-<img src="https://img.shields.io/badge/Streaming-WebSocket-0099ff?style=for-the-badge" />
-<img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
+1. **India Twin.** District boundaries keyed to official LGD codes. It answers place-name lookups
+   and serves district indicators from Census 2011 and VIIRS night lights. Every value comes with a
+   provenance receipt (source, licence, dataset version, period) and a trust label.
+2. **Planning agent.** A ReAct-style agent you chat with over a token-gated WebSocket (`/ws/agent`).
+   It streams its reasoning steps, tool calls and clarifying questions to a chat panel on the map.
 
-<br/>
-<br/>
+It produces data-informed estimates for exploration. It does not forecast city outcomes, and its
+answers are not decision-grade policy advice.
 
-> A flight simulator for urban policy.
-
-</div>
+> **Status, October 2026.** An earlier version of this README described a "3-loop" city simulator
+> that streamed H3 hex frames over `/ws/simulate`, with sliders, a timeline scrubber and a metric
+> dashboard. That simulator was retired in commit `87e958a` and replaced by the India Twin. Its
+> engine, socket and UI are gone from the code. This README describes what is in the repo now.
 
 ---
 
-## How MetroPulse Works
+## Screenshots
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│  User: "What if Hyderabad gets a pharma SEZ?"                       │
-└────────────────────────────┬─────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  1. PARSE — IntentRouter (regex → spaCy) extracts city, sectors,    │
-│     policies, horizon, and deltas from natural language             │
-└────────────────────────────┬─────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  2. RETRIEVE — RAG engine scans 15 Indian urban case studies,       │
-│     computes relevance, adjusts sector coefficients within clamps   │
-└────────────────────────────┬─────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  3. OVERLAY — Real-time news signals (Google News RSS, GDELT)       │
-│     converted into per-cell H3 spatial modifiers                    │
-└────────────────────────────┬─────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  4. SIMULATE — Three deterministic loops run per month:             │
-│     Primary: capital + employment shocks (NumPy vectorized)         │
-│     Secondary: real estate, transit, migration cascades             │
-│     Tertiary: evidence synthesis, plain-language translation        │
-└────────────────────────────┬─────────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  5. EXPLAIN — Driver breakdown, confidence scores, ₹ amounts,      │
-│     case studies, and "Why this result?" evidence drawer            │
-└──────────────────────────────────────────────────────────────────────┘
-```
+Captured from a local run on 2026-10-31: uvicorn and `next dev`, headless Chrome at a 1280x760 viewport.
 
-**Key design decisions:**
-
-- **No database writes mid-loop** — simulation runs in-memory, batch-saves only after completion
-- **Confidence decays per month** — primary ×0.90, secondary ×0.80, monsoon ×0.75
-- **Coefficients are clamped** — RAG adjustments bounded to [0.65, 1.10], cannot invent unsupported effects
-- **All parameters are per-city configurable** — no hardcoded values in simulation logic
-- **Real-time data is a proxy** — news sentiment adjusts starting state, not a direct measurement
-
-For full architecture details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
----
-
-## ◉ System Boot
-
-```text
-[ MetroPulse Kernel v0.9.4 ]
-────────────────────────────────────────────────────────────
-
-Initializing spatial grid engine...
-Loading H3 hexagonal city topology...
-Mounting economic sector matrices...
-Loading transit pressure model...
-Loading real estate spillover model...
-Connecting vector memory...
-Starting AI insight subsystem...
-Opening simulation websocket...
-
-STATUS: ONLINE
-```
-
----
-
-## What is MetroPulse?
-
-MetroPulse is a real-time urban simulation platform that models how economic shocks, policy decisions, infrastructure projects, and investment flows spread across a city.
-
-It uses **H3 hexagonal grids**, **agent-inspired simulation loops**, **FastAPI WebSocket streaming**, and **LLM-powered narrative analysis** to show how one decision can create cascading effects across employment, GDP, real estate, transit, migration, and public infrastructure.
-
-```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│                                                                          │
-│   FDI Investment                                                         │
-│       │                                                                  │
-│       ▼                                                                  │
-│   ┌────────────┐     ┌──────────────┐     ┌────────────────────┐         │
-│   │  PRIMARY   │────▶│  SECONDARY   │────▶│     TERTIARY       │         │
-│   │   LOOP     │     │    LOOP      │     │      LOOP          │         │
-│   │  Direct    │     │  Cascading   │     │   AI Insights      │         │
-│   └────────────┘     └──────────────┘     └────────────────────┘         │
-│       │                    │                         │                   │
-│       ▼                    ▼                         ▼                   │
-│   Employment          Real Estate              RAG + LLM                 │
-│   GDP Impact          Transit Flow             Policy Analysis           │
-│   Capital Growth      Congestion               Case Studies              │
-│   Sector Boost        Spillover                Narrative Output          │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-Think of it as:
-
-```text
-SimCity + Digital Twin + Economic Policy Lab + AI Analyst
-```
-
----
-
-## Why MetroPulse Exists
-
-Modern cities are too complex for static spreadsheets.
-
-A single policy decision can:
-
-- increase GDP,
-- overload transport systems,
-- raise housing prices,
-- create employment clusters,
-- displace vulnerable communities,
-- attract further investment,
-- or trigger hidden second-order effects.
-
-Yet most urban decisions are still evaluated using fragmented reports, slow dashboards, and isolated datasets.
-
-MetroPulse turns urban policy into an interactive simulation sandbox.
-
-```text
-Cities are living systems.
-
-Every investment creates movement.
-Every policy creates pressure.
-Every decision creates ripple effects.
-
-MetroPulse simulates those ripples.
-```
-
----
-
-## Core Features
-
-```text
-╔════════════════════════════════════════╦══════════════════════════════════════════╗
-║          SIMULATION ENGINE             ║               FRONTEND                  ║
-╠════════════════════════════════════════╬══════════════════════════════════════════╣
-║                                        ║                                          ║
-║   ◆ 3-Loop Cascade Model              ║   ◆ 3D Hex Map                           ║
-║   ◆ H3 Resolution Grid                ║   ◆ Deck.gl + MapLibre                   ║
-║   ◆ NumPy Vectorized Simulation       ║   ◆ Real-time WebSocket Frames           ║
-║   ◆ Spatial Spillover Model           ║   ◆ Drawing Tools                        ║
-║   ◆ Sector-Based Economic Weights     ║   ◆ FDI Sliders                          ║
-║   ◆ Public Works Zone Boosts          ║   ◆ Timeline Scrubber                    ║
-║   ◆ Transit Pressure Modeling         ║   ◆ Live Metric Dashboard                ║
-║   ◆ Real Estate Ripple Effects        ║   ◆ AI Insight Panel                     ║
-║   ◆ RAG Case Study Search             ║   ◆ Export Simulation Results            ║
-║   ◆ Multi-Provider LLM Support        ║   ◆ Keyboard Shortcuts                   ║
-║                                        ║                                          ║
-╚════════════════════════════════════════╩══════════════════════════════════════════╝
-```
-
----
-
-## Live Simulation Feed
-
-```text
-TIME: 2032-07-14 08:42 UTC
-REGION: Bengaluru Urban Corridor
-EVENT: +40% Technology FDI Injection
-
-┌─────────────────────────────────────────────┐
-│ GDP Growth             ▲ +8.2%              │
-│ Employment             ▲ +5.4%              │
-│ Real Estate Index      ▲ +12.1%             │
-│ Transit Congestion     ▲ +18.7%             │
-│ Informal Migration     ▲ +7.9%              │
-└─────────────────────────────────────────────┘
-
-Hex Activity Heatmap:
-
-░░░░▒▒▒▒▓▓▓████████▓▓▒▒▒░░
-░░▒▒▓▓████████████████▓▒▒░
-▒▒▓█████████████████████▓▒
-▓████████████████████████▓
-▓████████████████████████▓
-▒▓██████████████████████▓▒
-░▒▓████████████████████▓▒░
-░░▒▒▓▓██████████████▓▓▒▒░░
-```
-
----
-
-## System Architecture
-
-```text
-                         ┌───────────────────────────────────────┐
-                         │           FRONTEND                    │
-                         │           Next.js 14                  │
-                         │                                       │
-                         │  ┌───────────┐    ┌───────────────┐   │
-                         │  │ MapLibre  │    │   Zustand     │   │
-                         │  │ + Deck.gl │    │   Store       │   │
-                         │  └─────┬─────┘    └───────┬───────┘   │
-                         │        │                  │           │
-                         │  ┌─────▼──────────────────▼────────┐  │
-                         │  │       React Components           │  │
-                         │  │ MapViewport · MetricPanel        │  │
-                         │  │ ParameterPanel · AIInsight       │  │
-                         │  └──────────────┬──────────────────┘  │
-                         └─────────────────┼─────────────────────┘
-                                           │
-                              WebSocket + REST API
-                                           │
-                         ┌─────────────────▼─────────────────────┐
-                         │              BACKEND                  │
-                         │              FastAPI                  │
-                         │                                       │
-                         │  ┌─────────────────────────────────┐  │
-                         │  │ /ws/agent  (token-gated)        │  │
-                         │  │ /api/regions                    │  │
-                         │  │ /api/simulations                │  │
-                         │  │ /api/case-studies               │  │
-                         │  └──────────────┬──────────────────┘  │
-                         │                 │                     │
-                         │  ┌──────────────▼──────────────────┐  │
-                         │  │       SIMULATION ENGINE          │  │
-                         │  │                                  │  │
-                         │  │  ┌───────────┐   ┌───────────┐   │  │
-                         │  │  │ Primary   │──▶│ Secondary │   │  │
-                         │  │  │ Loop      │   │ Loop      │   │  │
-                         │  │  └───────────┘   └─────┬─────┘   │  │
-                         │  │                        │         │  │
-                         │  │                  ┌─────▼─────┐   │  │
-                         │  │                  │ Tertiary  │   │  │
-                         │  │                  │ AI Loop   │   │  │
-                         │  │                  └───────────┘   │  │
-                         │  │                                  │  │
-                         │  │  ┌───────────┐   ┌───────────┐   │  │
-                         │  │  │ H3 Grid   │   │ Runner    │   │  │
-                         │  │  │ State     │   │ Orchestr. │   │  │
-                         │  │  └───────────┘   └───────────┘   │  │
-                         │  └──────────────────────────────────┘  │
-                         │                                       │
-                         │  ┌──────────────────────────────────┐  │
-                         │  │ Supabase PostgreSQL + pgvector   │  │
-                         │  └──────────────────────────────────┘  │
-                         └───────────────────────────────────────┘
-```
-
----
-
-## Simulation Pipeline
-
-```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                                                                              │
-│  STEP 1 — PRIMARY LOOP                                                        │
-│  Direct economic impact                                                       │
-│                                                                              │
-│    FDI → Capital Formation → Employment → GDP Growth                         │
-│                                                                              │
-│  STEP 2 — SECONDARY LOOP                                                      │
-│  Spatial and economic spillover                                               │
-│                                                                              │
-│    Capital Growth → Real Estate Pressure → Transit Congestion                │
-│                                                                              │
-│  STEP 3 — TERTIARY LOOP                                                       │
-│  AI interpretation and narrative intelligence                                 │
-│                                                                              │
-│    Frame Metrics → Vector Search → Case Studies → LLM Insight                │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Economic Propagation Model
-
-```text
-FDI Injection
-      │
-      ▼
-Capital Formation
-      │
-      ▼
-Employment Expansion
-      │
-      ▼
-Consumer Spending
-      │
-      ▼
-Transit Load Increase
-      │
-      ▼
-Real Estate Pressure
-      │
-      ▼
-Migration Spillover
-      │
-      ▼
-AI Narrative Generation
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
+| Agent: reasoning step (`AGENT_THINK`) | Agent: clarifying question (`AGENT_ASK`) |
 |---|---|
-| Frontend | Next.js 14, React 18, TypeScript |
-| UI | Tailwind CSS, Tremor |
-| Mapping | MapLibre GL JS, Deck.gl |
-| Spatial Indexing | H3 |
-| Backend | FastAPI, Uvicorn |
-| Simulation | Python, NumPy, SciPy |
-| Database | Supabase PostgreSQL |
-| Vector Search | pgvector |
-| AI Layer | OpenAI, Gemini, Ollama |
-| State Management | Zustand |
-| Streaming | WebSockets |
-| Testing | Pytest, Jest, Locust |
-| Deployment | Docker, Fly.io, Vercel |
-| CI/CD | GitHub Actions |
+| <img src="docs/screenshots/agent-think.png" alt="Agent chat panel streaming the agent's first reasoning step" width="380"> | <img src="docs/screenshots/agent-ask.png" alt="Agent chat panel showing a clarifying question with three answer buttons" width="380"> |
+
+| District panel with provenance receipts | Fresh clone, before the twin data is built |
+|---|---|
+| <img src="docs/screenshots/place-card.png" alt="District panel showing Census 2011 and VIIRS indicators with trust labels and an expanded source receipt" width="380"> | <img src="docs/screenshots/twin-not-built.png" alt="The map shows setup steps for building the twin data" width="480"> |
+
+**What the shots show, and what they don't**
+
+- **Agent:** real sessions against a local Ollama model (`LLM_PROVIDER=ollama`, `gemma4`), with no
+  mocks. The two shots come from two separate runs of the same question. A step took 25 to 40 s on
+  this shared machine. Some runs hit the LLM timeout first, and the panel then showed the generic
+  `AGENT_ERROR`. No run reached `AGENT_RESULT` tonight.
+- **District panel:** the twin was built from the **test fixtures** in
+  `backend/tests/fixtures/twin/`. These are synthetic district squares with made-up round
+  numbers. The real build needs 7 source files, and some of them sit behind a login or a captcha
+  (see [Data](#data)). The panel layout, trust labels and receipts are what the real build shows.
+- **Fresh clone:** with no twin data built, the map shows this setup panel.
+- There is no cascade or incident view any more. It belonged to the retired simulator.
 
 ---
 
-## Mission Control Preview
+## What exists, in numbers
+
+| | |
+|---|---|
+| REST endpoints | 16 under `/api/*`, plus one WebSocket, `/ws/agent` (listed [below](#api-reference)) |
+| Twin indicators | 6: total, male and female population, literates and workers (Census 2011), and night-light radiance sum (VIIRS) |
+| Agent tools | 5: `parse_scenario`, `query_case_studies`, `get_city_profile`, `list_cities`, `compare_sectors` |
+| City configs | 30 Indian cities in `data/cities/*.yaml` (+ GeoJSON outlines) |
+| Case studies (RAG) | 20, served by `GET /api/case-studies` |
+| Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
+| LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
+| Backend tests | 750 pytest tests (unit and integration), all passing on 2026-10-31 |
+| Frontend tests | 54 Jest + Testing Library tests, 35 of them cover the agent chat client: reducer, parser and backoff units, plus component tests against a mock WebSocket |
+| API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
+
+---
+
+## Architecture
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ METROPULSE MISSION CONTROL                                                   │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│ REGION             Mumbai Metropolitan Region                                │
-│ SIMULATION MODE    FDI Shock + Public Works Boost                            │
-│ HORIZON            24 Months                                                 │
-│ STATUS             Running                                                   │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│ GDP Delta              ██████████████████░░░░░░░░     +8.2%                 │
-│ Employment Growth      ███████████████░░░░░░░░░░░     +5.4%                 │
-│ Real Estate Pressure   █████████████████████░░░░░     +12.1%                │
-│ Transit Congestion     ███████████████████████░░░     +18.7%                │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ AI INSIGHT                                                                    │
-│                                                                              │
-│ The eastern industrial corridor shows accelerated employment clustering,      │
-│ but rising real estate pressure may create displacement risk after month 18.  │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+ Next.js 14 (App Router)                          FastAPI
+ ┌───────────────────────────────┐   REST    ┌──────────────────────────────────────────┐
+ │ IndiaMap  (deck.gl GeoJson)   │ ────────▶ │ /api/twin/*   places, boundaries,        │
+ │ PlaceSearch / PlaceCard       │           │               observations, indicators   │
+ │ TwinNotBuilt (setup steps)    │           │    └─ Parquet store, atomic publishes,   │
+ │ zustand twinStore             │           │       LGD resolver, Census/VIIRS, H3 link│
+ │                               │           │ /api/regions, /case-studies, /ingest ... │
+ │ AgentChat  (Ask the agent)    │  WS       │ /ws/agent  token-gated, connection limit │
+ │   lib/agentChat (reducer,     │ ◀───────▶ │    └─ UrbanAgent (ReAct) + 5 tools       │
+ │   parser, 1013 retry/backoff) │           │       NL engine: regex → spaCy router    │
+ └───────────────────────────────┘           │       LLM: MiMo / Gemini / OpenAI / Ollama│
+                                             │ Supabase Postgres + pgvector, or an       │
+                                             │ in-memory fallback when unset             │
+                                             └──────────────────────────────────────────┘
 ```
+
+Some design decisions:
+
+- **A missing value is `null`, never 0.** Districts with no Census link return `value: null` with
+  a receipt explaining why.
+- **Trust labels.** A value measured directly for that district is a `Fact`. A value apportioned
+  by area from a parent 2011 district, because the district was created after 2011, is a `Pattern`.
+- **Atomic publishes.** A build writes versioned Parquet and then flips `CURRENT.json`. The API
+  serves from one consistent version.
+- **The agent socket is closed by default.** `AGENT_WS_TOKEN` is checked in constant time and a bad
+  token gets close code 1008 before accept. Clients over `WS_MAX_CONNECTIONS` get 1013. The UI
+  retries a 1013 with backoff (1, 2, then 4 s, at most 3 retries). Error frames carry no exception
+  text.
+
+More detail: [`docs/twin/`](docs/twin), [`docs/RAG_ENGINE.md`](docs/RAG_ENGINE.md),
+[`docs/DATA_CREDIBILITY.md`](docs/DATA_CREDIBILITY.md), [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) predates the simulator retirement in places.
 
 ---
 
-## Project Structure
+## Getting started
 
-```text
-MetroPulse/
-│
-├── backend/
-│   ├── app/
-│   │   ├── routes/
-│   │   │   ├── health.py
-│   │   │   ├── regions.py
-│   │   │   ├── simulations.py
-│   │   │   └── case_studies.py
-│   │   ├── ws/
-│   │   │   └── simulation.py
-│   │   ├── config.py
-│   │   ├── db.py
-│   │   └── main.py
-│   │
-│   ├── engine/
-│   │   ├── grid.py
-│   │   ├── primary_loop.py
-│   │   ├── secondary_loop.py
-│   │   ├── tertiary_loop.py
-│   │   ├── runner.py
-│   │   ├── serializer.py
-│   │   └── models.py
-│   │
-│   ├── tests/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── load/
-│   │
-│   ├── Dockerfile
-│   ├── fly.toml
-│   ├── pyproject.toml
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   └── page.tsx
-│   │   ├── components/
-│   │   │   ├── map/
-│   │   │   ├── controls/
-│   │   │   ├── dashboard/
-│   │   │   └── shared/
-│   │   ├── hooks/
-│   │   │   └── useWebSocket.ts
-│   │   ├── lib/
-│   │   │   ├── ws.ts
-│   │   │   ├── api.ts
-│   │   │   ├── mapConfig.ts
-│   │   │   └── colorScale.ts
-│   │   ├── store/
-│   │   │   └── simulationStore.ts
-│   │   └── types/
-│   │       └── simulation.ts
-│   │
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── scripts/
-│   ├── seed_case_studies.py
-│   └── seed_cities.py
-│
-├── supabase/
-│   └── migrations/
-│
-├── docs/
-│   └── INDIA_OVERHAUL_PLAN.md
-│
-├── .github/
-│   └── workflows/
-│
-├── AGENTS.md
-└── README.md
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-```text
-┌────────────────────────────────────────────────────────────┐
-│ Required                                                   │
-├────────────────────────────────────────────────────────────┤
-│ Python 3.11+                                               │
-│ Node.js 18+                                                │
-│ Git                                                        │
-│ npm or pnpm                                                │
-│                                                            │
-│ Optional                                                   │
-├────────────────────────────────────────────────────────────┤
-│ Supabase account                                           │
-│ OpenAI API key                                             │
-│ Gemini API key                                             │
-│ Ollama local model                                         │
-└────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 1. Clone the Repository
+Prerequisites: Python 3.11+, Node 18+. Supabase and an LLM key are optional.
 
 ```bash
-git clone https://github.com/MrNK2107/MetroPulse.git
-cd MetroPulse
+# Backend
+cd backend
+python -m venv .venv
+.venv\Scripts\activate            # Windows  (source .venv/bin/activate on Linux/macOS)
+python -m pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+cp .env.example .env              # fill in what you have; empty Supabase = in-memory fallback
+python -m uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd frontend
+npm install
+npm run dev                       # http://localhost:3000
 ```
 
----
+If the frontend runs on a port other than 3000, set `CORS_ORIGINS` on the backend. Otherwise every
+fetch fails with "Failed to fetch". [`SETUP.md`](SETUP.md) has more troubleshooting.
 
-### 2. Backend Setup
+### Data
+
+The twin needs 7 source files in `data/twin/manual/`. LGD, Survey of India and VIIRS need a
+browser login or a captcha, so these files are not downloaded automatically.
+[`data/twin/manual/README.md`](data/twin/manual/README.md) lists each one. Then run:
 
 ```bash
 cd backend
-
-python -m venv .venv
-
-# Linux / macOS
-source .venv/bin/activate
-
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-
-pip install -e ".[dev]"
-
-cp .env.example .env
-
-uvicorn app.main:app --reload --port 8000
+python scripts/twin_build.py check
+python scripts/twin_build.py build --boundary-version lgd-YYYYMMDD
 ```
 
-Backend runs at:
+To see the UI without the real data, build the test fixtures into a scratch folder and point the
+API at it with `TWIN_DATA_DIR=<folder>`. The screenshots above were made this way.
 
-```text
-http://localhost:8000
-```
+### Agent
+
+Set `AGENT_WS_TOKEN` in `backend/.env` and an LLM provider. For a fully local setup, use
+`LLM_PROVIDER=ollama` with `LLM_TIMEOUT_MS=150000`, because small local models are slow. In the
+UI, click **Ask the agent** and enter the token. The token is kept in `sessionStorage` and never
+in a `NEXT_PUBLIC_*` variable.
 
 ---
 
-### 3. Frontend Setup
+## API reference
 
-```bash
-cd frontend
-
-npm install
-npm run dev
-```
-
-Frontend runs at:
-
-```text
-http://localhost:3000
-```
-
----
-
-## Environment Variables
-
-Create a `.env` file inside `backend/`.
-
-```env
-SUPABASE_URL=
-SUPABASE_KEY=
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-OLLAMA_BASE_URL=http://localhost:11434
-DATABASE_URL=
-```
-
-For local-only development, LLM and Supabase integrations can be disabled or mocked depending on your implementation.
-
----
-
-## API Reference
-
-### REST Endpoints
+All REST responses use the envelope `{ "success", "data", "error", "meta" }`.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/health` | Health check |
-| GET | `/api/regions` | List available city regions |
-| GET | `/api/regions/{id}` | Get region baseline data |
-| POST | `/api/simulations` | Create simulation run |
-| GET | `/api/simulations/{id}` | Get simulation results |
-| GET | `/api/case-studies` | List RAG case studies |
-| GET | `/api/agent/status` | Agent socket status `{enabled, available, path}` (never returns the token) |
-| WS | `/ws/agent` | Agent chat stream (disabled unless `AGENT_WS_TOKEN` is set) |
+| GET | `/api/health` | Health and DB mode (`connected` / `in_memory_fallback`) |
+| GET | `/api/health/data` | Data-source freshness for a city |
+| GET | `/api/twin/places/resolve?q=&level=` | Name → place id(s), with an ambiguity flag |
+| GET | `/api/twin/places/{place_id}` | District detail (name, state, codes) |
+| GET | `/api/twin/places/{place_id}/observations` | Indicator values, each with a receipt and trust label |
+| GET | `/api/twin/boundaries/{level}` | GeoJSON boundaries (`district`), cached for one day |
+| GET | `/api/twin/indicators` | Indicator catalogue |
+| GET | `/api/regions` | 30 city configs |
+| GET | `/api/regions/{id}/baseline` | City baseline values |
+| GET | `/api/regions/{id}/profile` | City profile |
+| GET | `/api/case-studies` | RAG case studies (filter by city, sector, policy) |
+| GET | `/api/data-sources` | Registered data sources |
+| GET | `/api/snapshots/latest` | Latest realtime snapshot |
+| GET | `/api/snapshots/{id}/quality` | Snapshot quality report |
+| POST | `/api/ingest` | Trigger realtime ingestion |
+| GET | `/api/agent/status` | `{enabled, available, path}`. Never returns the token |
+| WS | `/ws/agent` | Agent chat stream. Disabled unless `AGENT_WS_TOKEN` is set |
 
----
+If the twin data has not been built, `/api/twin/*` returns a 503 that says how to build it.
 
-## Response Envelope
+## WebSocket protocol
 
-```json
-{
-  "success": true,
-  "data": {},
-  "error": null,
-  "meta": {
-    "timestamp": "2026-05-27T00:00:00Z"
-  }
-}
-```
-
----
-
-## WebSocket Protocol
-
-The retired `/ws/simulate` stream has been replaced by a single agent socket, `/ws/agent`.
-
-Enable it on the backend by setting a shared secret in `backend/.env`:
-
-```env
-AGENT_WS_TOKEN=<some-long-random-string>
-```
-
-If `AGENT_WS_TOKEN` is empty the endpoint is disabled and `GET /api/agent/status` reports `enabled: false`.
-The token is a server-side secret: never put it in a `NEXT_PUBLIC_*` variable. The frontend's
-"Ask the agent" panel asks for it and keeps it in `sessionStorage` only.
-
-Connect with the token as a query parameter or a bearer header:
+Connect with the token as `?token=` or `Authorization: Bearer <token>`:
 
 ```text
 ws://localhost:8000/ws/agent?token=<AGENT_WS_TOKEN>
-Authorization: Bearer <AGENT_WS_TOKEN>
 ```
 
-A missing or wrong token is closed with code 1008 before accept (browsers see HTTP 403 / close 1006).
-More than `WS_MAX_CONNECTIONS` (default 10) concurrent sessions are closed with 1013.
+A missing or wrong token gets close code 1008 before accept. A browser sees this as close code 1006.
+More than `WS_MAX_CONNECTIONS` (default 10) concurrent sessions get 1013.
 
-Send:
-
-```json
-{ "type": "AGENT_START", "message": "What happens to Pune if IT FDI rises 30%?" }
-```
-
-Receive, in order as the agent works:
+Send `{ "type": "AGENT_START", "message": "What happens to Pune if IT FDI rises 30%?" }`, then
+receive these as the agent works:
 
 ```text
+AGENT_START   session id
 AGENT_THINK   reasoning step
 AGENT_ACTION  tool call the agent is making
 AGENT_ASK     clarifying question with options -> answer with { "type": "AGENT_REPLY", "message": "..." }
 AGENT_RESULT  final answer
-AGENT_DONE    session finished
+AGENT_DONE    session finished (server then closes with 1000)
 AGENT_ERROR   generic error text (no exception details)
 ```
 
-`{ "type": "PING" }` is answered with `{ "type": "PONG" }`. Useful answers need an LLM provider key on the backend.
-
----
-
-## Sectors Modeled
-
-| Sector | Description | Weight |
-|---|---|---:|
-| Technology | Software, IT services, startups | 0.30 |
-| Manufacturing | Industrial production, logistics | 0.25 |
-| Services | Finance, healthcare, education | 0.20 |
-| Real Estate | Property development, housing | 0.10 |
-| Energy | Power, renewables, utilities | 0.08 |
-| Agriculture | Food processing, rural linkages | 0.07 |
-
----
-
-## Metrics Tracked
-
-```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                                                                              │
-│  GDP Delta              ▲ +8.2%                                               │
-│  Unemployment Rate      ▼  4.5%                                               │
-│  Real Estate Index      ▲  1.12                                               │
-│  Transit Congestion     ▲  0.67                                               │
-│  Employment Growth      ▲ +5.4%                                               │
-│  Capital Formation      ▲ +11.8%                                              │
-│  AI Confidence Score    ◆  0.86                                               │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
+`{ "type": "PING" }` is answered with `{ "type": "PONG" }`. Messages are capped at 4000 characters.
 
 ---
 
 ## Testing
 
 ```bash
-# Backend unit tests
 cd backend
-pytest tests/unit/ -v
+python -m pytest tests -q          # unit + integration
 
-# Backend integration tests
-pytest tests/integration/ -v
-
-# Backend load tests
-locust -f tests/load/locustfile.py --host http://localhost:8000
-
-# Frontend tests
 cd frontend
-npm run test
-
-# Lint and type check
+npm run test                       # jest (npm run test:ci in CI)
 npm run lint
 npm run type-check
+npm run build
 ```
+
+`scripts/bench_api.py` benchmarks a running backend and writes `docs/benchmarks.md`.
+CI (`.github/workflows/ci.yml`) runs the backend tests, then lint, type-check and Jest on the frontend.
+
+## Project structure
 
 ```text
-┌───────────────────────────────────────────────┐
-│ Test Coverage                                 │
-├───────────────────────────────────────────────┤
-│ Unit Tests        ████████████████████░  90%  │
-│ Integration       ███████████████░░░░░  75%  │
-│ Load Tests        ██████████░░░░░░░░░░  50%  │
-│ Frontend          ████████░░░░░░░░░░░░  40%  │
-└───────────────────────────────────────────────┘
+backend/
+  app/
+    routes/        health, regions, case_studies, realtime, twin
+    ws/agent.py    /ws/agent (auth, connection limit, streaming)
+    rag/           retriever, evidence pack, bounded coefficient extractor
+    simulation/    llm.py (provider switch), confidence, explainability
+    realtime.py    6 ingestion connectors
+  engine/
+    agent/         UrbanAgent, tools, prompts, memory
+    nl_engine/     regex + spaCy intent router, conversation state
+  twin/
+    places/        LGD loading, name resolver, boundaries, crosswalk, H3 link
+    pipeline/      census2011, viirs
+    store/         Parquet store, catalog, atomic publish, optional Postgres sync
+  scripts/twin_build.py
+  tests/           unit/, integration/, fixtures/twin/
+frontend/src/
+  app/page.tsx     map page
+  components/twin/ IndiaMap, PlaceSearch, PlaceCard, TwinNotBuilt
+  components/agent/AgentChat.tsx
+  lib/             agentChat.ts (protocol), twinApi.ts
+  store/twinStore.ts
+data/              cities/, sez/, transit/, slums/, flood/, twin/{manual,seed}
+docs/              twin/, benchmarks.md, LIMITATIONS.md, ...
 ```
 
----
+## Known gaps
 
-## Deployment
-
-### Backend — Fly.io
-
-```bash
-cd backend
-fly deploy
-```
-
-### Frontend — Vercel
-
-```bash
-cd frontend
-vercel --prod
-```
-
-### Docker
-
-```bash
-cd backend
-
-docker build -t metropulse-backend .
-docker run -p 8000:8000 metropulse-backend
-```
-
----
-
-## Roadmap
-
-```text
-Phase 00  Scaffold                  ██████████████████████████  COMPLETE
-Phase 01  Simulation Engine          ██████████████████████████  COMPLETE
-Phase 02  Backend API Layer          ██████████████████████████  COMPLETE
-Phase 03  Frontend Map Shell         ██████████████████████████  COMPLETE
-Phase 04  WebSocket Stream           ██████████████████████████  COMPLETE
-Phase 05  Controls and Parameters    ██████████████████████████  COMPLETE
-Phase 06  RAG + AI Insights          ██████████████████████████  COMPLETE
-Phase 07  Loading States             ██████████████████████████  COMPLETE
-Phase 08  Polish and UI              ██████████████████████████  COMPLETE
-Phase 09  Testing                    ██████████████████████████  COMPLETE
-Phase 10  Deployment                 ██████████████████████████  COMPLETE
-
-────────────────────────────────────────────────────────────────────────────
-
-India Overhaul
-
-Phase 00  Data Pipeline              ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
-Phase 01  Engine Rewrite             ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
-Phase 02  Database and API           ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
-Phase 03  Frontend Overhaul          ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
-Phase 04  Performance                ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
-Phase 05  Validation                 ░░░░░░░░░░░░░░░░░░░░░░░░░░  PLANNED
-```
-
----
-
-## Upcoming India Expansion
-
-MetroPulse is planned to expand into a detailed India-first simulation layer.
-
-### Cities
-
-```text
-Bengaluru
-Mumbai
-Delhi NCR
-Chennai
-Hyderabad
-Pune
-Kolkata
-Ahmedabad
-Lucknow
-Jaipur
-Chandigarh
-Bhubaneswar
-```
-
-### India-Specific Model Additions
-
-- IT/ITES sector modeling
-- Manufacturing corridors
-- Informal economy modeling
-- Real estate pressure zones
-- Public transport stress modeling
-- Monsoon and flood risk overlays
-- Smart City Mission impact simulation
-- AMRUT policy layers
-- RERA-linked housing pressure
-- PM Awas Yojana affordability effects
-
----
-
-## Future Vision
-
-```text
-[✓] H3 Spatial Simulation Engine
-[✓] Real-Time WebSocket Streaming
-[✓] RAG + LLM Narrative Layer
-[✓] Interactive Policy Sandbox
-
-[ ] Multi-Agent Economic Actors
-[ ] Climate Disaster Simulation
-[ ] Satellite Data Integration
-[ ] Traffic Graph Neural Networks
-[ ] Reinforcement Learning Policies
-[ ] National Scale Simulation
-[ ] Autonomous Urban Planning Agents
-```
-
----
-
-## Contributing
-
-Contributions are welcome.
-
-```text
-Fork → Branch → Build → Test → Pull Request
-```
-
-### Steps
-
-```bash
-git checkout -b feat/amazing-feature
-git commit -m "feat(scope): add amazing feature"
-git push origin feat/amazing-feature
-```
-
-Then open a Pull Request.
-
----
-
-## Commit Convention
-
-| Prefix | Usage |
-|---|---|
-| `feat()` | New feature |
-| `fix()` | Bug fix |
-| `refactor()` | Code refactor |
-| `test()` | Tests |
-| `docs()` | Documentation |
-| `chore()` | Maintenance |
-
----
-
-## License
-
-This project is licensed under the MIT License.
-
-See the `LICENSE` file for details.
-
----
-
-<div align="center">
-
-```text
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                                                                              ║
-║                       METROPULSE                                             ║
-║                                                                              ║
-║              Where data meets geography,                                     ║
-║              where policy meets prediction,                                  ║
-║              and where cities become simulatable.                            ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
-
-### Built with 💛 for urban futures.
-
-```text
-github.com/MrNK2107/MetroPulse
-```
-
-</div>
-# MetroPulse
-
-MetroPulse is an interactive urban scenario sandbox that combines real-time signals, estimated city baselines, historical evidence retrieval, and transparent simulation models to explore possible consequences of economic and infrastructure interventions.
-
-MetroPulse produces data-informed scenario estimates. It does not predict city outcomes, forecast the future, or provide decision-grade policy recommendations.
+- `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
+- No real-data twin build has been published yet. See [Data](#data).
+- Frontend `package.json` still lists dependencies the retired simulator used (`@tremor/react`,
+  `h3-js`, `katex`, `react-markdown`, ...). They are unused now.
+- The modelling limitations are listed in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
+- There is no `LICENSE` file yet.
