@@ -136,4 +136,11 @@ describe("AgentChat", () => {
     expect(ws.readyState).toBe(MockSocket.CLOSED);
     expect(within(panel()).getByRole("button", { name: "Send" })).toBeInTheDocument();
   });
+
+  it("moves left of the place panel on wide screens when besidePanel is set", () => {
+    const { rerender } = render(<AgentChat />);
+    expect(screen.getByTestId("agent-chat").className).not.toMatch(/sm:right-\[25rem\]/);
+    rerender(<AgentChat besidePanel />);
+    expect(screen.getByTestId("agent-chat").className).toMatch(/sm:right-\[25rem\]/);
+  });
 });

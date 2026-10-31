@@ -111,7 +111,11 @@ function Item({ item, onOption, canReply }: { item: ChatItem; onOption: (o: stri
   }
 }
 
-export function AgentChat() {
+/**
+ * @param besidePanel true while the right-hand place panel (w-96) is open: on
+ *   sm+ screens the widget moves left of it so it doesn't cover the panel.
+ */
+export function AgentChat({ besidePanel = false }: { besidePanel?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [token, setToken] = useState("");
@@ -244,7 +248,12 @@ export function AgentChat() {
   const canSend = !disabled && !offline && !needsToken && !busy && state.status !== "checking";
 
   return (
-    <div className="pointer-events-none absolute bottom-28 right-4 z-30 flex flex-col items-end gap-2 sm:bottom-6">
+    <div
+      data-testid="agent-chat"
+      className={`pointer-events-none absolute bottom-28 right-4 z-30 flex flex-col items-end gap-2 sm:bottom-6 ${
+        besidePanel ? "sm:right-[25rem]" : ""
+      }`}
+    >
       {open && (
         <section
           aria-label="Planning agent"

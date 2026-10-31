@@ -112,7 +112,7 @@ export default function Home() {
           )}
         </aside>
       )}
-      <AgentChat />
+      <AgentChat besidePanel={!!selectedPlaceId} />
     </main>
   );
 }
