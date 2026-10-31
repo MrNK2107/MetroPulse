@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import {
   agentWsUrl,
+  backoffDelay,
   chatReducer,
   getAgentStatus,
   initialChatState,
   parseServerEvent,
+  shouldRetry,
   type ChatItem,
   type ConnectionStatus,
 } from "@/lib/agentChat";
@@ -20,6 +22,7 @@ const STATUS_LABEL: Record<ConnectionStatus, string> = {
   offline: "Backend offline",
   idle: "Ready",
   connecting: "Connecting...",
+  retrying: "Busy, retrying...",
   open: "Connected",
   closed: "Ready",
 };
@@ -31,6 +34,7 @@ const STATUS_DOT: Record<ConnectionStatus, string> = {
   offline: "bg-red-500",
   idle: "bg-sky-400",
   connecting: "bg-amber-400 animate-pulse",
+  retrying: "bg-amber-400 animate-pulse",
   open: "bg-emerald-400",
   closed: "bg-sky-400",
 };
@@ -113,6 +117,8 @@ export function AgentChat() {
   const [token, setToken] = useState("");
   const [draft, setDraft] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [retryInMs, setRetryInMs] = useState<number | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
 
   const checkStatus = useCallback(async () => {
@@ -140,19 +146,39 @@ export function AgentChat() {
 
   // Closing our own socket: detach first so its onclose is ignored (a client
   // close reports code 1005, which would otherwise read as a failure).
+  const cancelRetry = () => {
+    const pending = retryTimerRef.current != null;
+    if (retryTimerRef.current != null) clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = null;
+    setRetryInMs(null);
+    return pending;
+  };
+
   const detach = () => {
+    const hadRetry = cancelRetry();
     const ws = socketRef.current;
     socketRef.current = null;
     ws?.close();
-    return ws != null;
+    return hadRetry || ws != null;
   };
 
-  useEffect(() => () => void detach(), []);
+  // On unmount: cancel a pending retry and close the socket (refs only, no state updates).
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current != null) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+      const ws = socketRef.current;
+      socketRef.current = null;
+      ws?.close();
+    },
+    []
+  );
 
-  const startSession = (message: string) => {
+  const startSession = (message: string, retries = 0) => {
     detach();
-    dispatch({ type: "user", text: message });
+    if (retries === 0) dispatch({ type: "user", text: message });
     dispatch({ type: "status", status: "connecting" });
+    let sessionStarted = false;
     let ws: WebSocket;
     try {
       ws = new WebSocket(agentWsUrl(token));
@@ -168,11 +194,24 @@ export function AgentChat() {
     };
     ws.onmessage = (e) => {
       const ev = parseServerEvent(e.data);
-      if (ev) dispatch({ type: "server", event: ev });
+      if (!ev) return;
+      sessionStarted = true;
+      dispatch({ type: "server", event: ev });
     };
     ws.onclose = (e) => {
       if (socketRef.current !== ws) return; // superseded by a newer session
       socketRef.current = null;
+      if (shouldRetry(e.code, retries, sessionStarted)) {
+        const delay = backoffDelay(retries + 1);
+        dispatch({ type: "status", status: "retrying" });
+        setRetryInMs(delay);
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
+          setRetryInMs(null);
+          startSession(message, retries + 1);
+        }, delay);
+        return;
+      }
       dispatch({ type: "closed", clean: e.wasClean && e.code === 1000, code: e.code });
     };
   };
@@ -199,7 +238,8 @@ export function AgentChat() {
 
   const disabled = state.status === "disabled";
   const offline = state.status === "offline";
-  const busy = state.status === "connecting" || (state.running && !state.awaitingReply);
+  const busy =
+    state.status === "connecting" || state.status === "retrying" || (state.running && !state.awaitingReply);
   const needsToken = !disabled && !offline && !token;
   const canSend = !disabled && !offline && !needsToken && !busy && state.status !== "checking";
 
@@ -306,7 +346,9 @@ export function AgentChat() {
                 ))}
                 {busy && (
                   <li className="text-xs text-slate-500" aria-label="Agent is working">
-                    Working...
+                    {state.status === "retrying" && retryInMs != null
+                      ? `The agent is busy. Retrying in ${Math.round(retryInMs / 1000)}s...`
+                      : "Working..."}
                   </li>
                 )}
               </ol>

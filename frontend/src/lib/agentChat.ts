@@ -19,6 +19,7 @@ export type ConnectionStatus =
   | "offline" // backend unreachable
   | "idle" // enabled, no socket open
   | "connecting"
+  | "retrying" // server said busy (1013); waiting before the next attempt
   | "open"
   | "closed";
 
@@ -126,6 +127,27 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     default:
       return state;
   }
+}
+
+/** How many times a "busy" (1013) refusal is retried before giving up. */
+export const MAX_BUSY_RETRIES = 3;
+
+/**
+ * Exponential backoff for retry `attempt` (1-based): base, 2*base, 4*base ...
+ * capped at `max`. Deterministic so the UI can show the countdown.
+ */
+export function backoffDelay(attempt: number, base = 1000, max = 8000): number {
+  if (!Number.isFinite(attempt) || attempt < 1) return base;
+  return Math.min(max, base * 2 ** (attempt - 1));
+}
+
+/**
+ * Only a "busy" refusal (1013) that arrives before the server started a session
+ * is retried automatically. A refused token (1008/1006) will not get better by
+ * retrying, and a session that already started cannot be resumed on a new socket.
+ */
+export function shouldRetry(code: number | undefined, retriesSoFar: number, sessionStarted: boolean): boolean {
+  return code === 1013 && !sessionStarted && retriesSoFar < MAX_BUSY_RETRIES;
 }
 
 const KNOWN = new Set([

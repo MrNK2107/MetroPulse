@@ -2,6 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AgentChat } from "./AgentChat";
 import * as lib from "@/lib/agentChat";
+import { MockSocket, installMockWebSocket } from "@/test-utils/mockWebSocket";
 
 jest.mock("@/lib/agentChat", () => {
   const actual = jest.requireActual("@/lib/agentChat");
@@ -9,50 +10,10 @@ jest.mock("@/lib/agentChat", () => {
 });
 const mockedStatus = lib.getAgentStatus as jest.MockedFunction<typeof lib.getAgentStatus>;
 
-class MockSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-  static instances: MockSocket[] = [];
-  readyState = MockSocket.CONNECTING;
-  sent: unknown[] = [];
-  onopen: (() => void) | null = null;
-  onmessage: ((e: { data: string }) => void) | null = null;
-  onclose: ((e: { code: number; wasClean: boolean }) => void) | null = null;
-  constructor(public url: string) {
-    MockSocket.instances.push(this);
-  }
-  send(data: string) {
-    this.sent.push(JSON.parse(data));
-  }
-  close() {
-    this.serverClose(1000, true);
-  }
-  // test helpers
-  open() {
-    this.readyState = MockSocket.OPEN;
-    this.onopen?.();
-  }
-  emit(ev: object) {
-    this.onmessage?.({ data: JSON.stringify(ev) });
-  }
-  serverClose(code = 1000, wasClean = true) {
-    if (this.readyState === MockSocket.CLOSED) return;
-    this.readyState = MockSocket.CLOSED;
-    this.onclose?.({ code, wasClean });
-  }
-}
-
-const realWs = global.WebSocket;
+installMockWebSocket();
 beforeEach(() => {
-  MockSocket.instances = [];
-  (global as unknown as { WebSocket: unknown }).WebSocket = MockSocket;
   window.sessionStorage.clear();
   mockedStatus.mockReset();
-});
-afterAll(() => {
-  (global as unknown as { WebSocket: unknown }).WebSocket = realWs;
 });
 
 async function openPanel() {

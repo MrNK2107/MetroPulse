@@ -1,5 +1,8 @@
 import {
   agentWsUrl,
+  backoffDelay,
+  MAX_BUSY_RETRIES,
+  shouldRetry,
   chatReducer,
   closeMessage,
   initialChatState,
@@ -114,5 +117,22 @@ describe("agentWsUrl", () => {
     expect(agentWsUrl("t")).toBe("wss://api.example.com/ws/agent?token=t");
     process.env.NEXT_PUBLIC_WS_URL = "wss://api.example.com";
     expect(agentWsUrl("t")).toBe("wss://api.example.com/ws/agent?token=t");
+  });
+});
+
+describe("backoffDelay / shouldRetry", () => {
+  it("doubles from the base and caps at max", () => {
+    expect([1, 2, 3, 4, 5].map((n) => backoffDelay(n))).toEqual([1000, 2000, 4000, 8000, 8000]);
+    expect(backoffDelay(3, 250, 10_000)).toBe(1000);
+    expect(backoffDelay(0)).toBe(1000);
+    expect(backoffDelay(Number.NaN)).toBe(1000);
+  });
+
+  it("retries only a busy refusal before the session started, up to the limit", () => {
+    expect(shouldRetry(1013, 0, false)).toBe(true);
+    expect(shouldRetry(1013, MAX_BUSY_RETRIES - 1, false)).toBe(true);
+    expect(shouldRetry(1013, MAX_BUSY_RETRIES, false)).toBe(false);
+    expect(shouldRetry(1013, 0, true)).toBe(false);
+    for (const code of [1000, 1006, 1008, 1011, undefined]) expect(shouldRetry(code, 0, false)).toBe(false);
   });
 });
