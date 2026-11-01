@@ -221,6 +221,8 @@ npm run build
 The backend suite is hermetic: `tests/conftest.py` ignores the Supabase and LLM settings in
 `backend/.env` and fails any test that opens a non-loopback connection. Mock HTTP with
 `httpx.MockTransport`; mark a deliberate live test with `@pytest.mark.allow_network`.
+The frontend has the same rule: `jest.setup.js` replaces `fetch`, `WebSocket` and `XMLHttpRequest`
+with stand-ins that fail the test unless the test installs its own mock.
 
 `scripts/bench_api.py` benchmarks a running backend and writes `docs/benchmarks.md`.
 CI (`.github/workflows/ci.yml`) runs the backend tests, then lint, type-check and Jest on the frontend.
