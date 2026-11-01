@@ -12,9 +12,13 @@ Opt out for a deliberate live test with ``@pytest.mark.allow_network``.
 """
 from __future__ import annotations
 
+import asyncio
+import asyncio.proactor_events
+import asyncio.selector_events
 import ipaddress
 import os
 import socket
+import sys
 
 import pytest
 
@@ -41,6 +45,14 @@ os.environ.update(_HERMETIC_ENV)
 _real_getaddrinfo = socket.getaddrinfo
 _real_connect = socket.socket.connect
 _real_connect_ex = socket.socket.connect_ex
+
+# asyncio connects through loop.sock_connect. On Windows the Proactor loop uses ConnectEx
+# there and skips socket.connect, and an IP-literal host skips getaddrinfo too, so the
+# event-loop classes are guarded as well.
+_LOOP_CLASSES = [asyncio.selector_events.BaseSelectorEventLoop]
+if sys.platform == "win32":
+    _LOOP_CLASSES.append(asyncio.proactor_events.BaseProactorEventLoop)
+_real_sock_connect = {cls: cls.sock_connect for cls in _LOOP_CLASSES}
 
 
 class NetworkBlocked(OSError):
@@ -102,6 +114,17 @@ def _block_network(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
             raise NetworkBlocked(f"network access blocked in tests: connect to {address!r}")
         return _real_connect_ex(sock, address)
 
+    def make_guarded_sock_connect(real):
+        async def guarded_sock_connect(loop, sock, address):
+            if not _is_local_address(address):
+                attempts.append(f"sock_connect({address!r})")
+                raise NetworkBlocked(f"network access blocked in tests: connect to {address!r}")
+            return await real(loop, sock, address)
+
+        return guarded_sock_connect
+
+    for cls, real in _real_sock_connect.items():
+        monkeypatch.setattr(cls, "sock_connect", make_guarded_sock_connect(real))
     monkeypatch.setattr(socket, "getaddrinfo", guarded_getaddrinfo)
     monkeypatch.setattr(socket.socket, "connect", guarded_connect)
     monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)

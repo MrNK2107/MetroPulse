@@ -1,6 +1,7 @@
 """The suite-wide network guard in tests/conftest.py."""
 from __future__ import annotations
 
+import asyncio
 import socket
 import subprocess
 import sys
@@ -81,6 +82,43 @@ def test_swallows():
     assert result.returncode != 0, result.stdout
     assert "tried to reach the real network" in result.stdout
     assert "example.com" in result.stdout
+
+
+def test_asyncio_connect_to_an_ip_literal_is_blocked(tmp_path):
+    # 203.0.113.1 is TEST-NET-3 (never routed). An IP literal skips getaddrinfo, and on
+    # Windows the Proactor loop skips socket.connect, so this exercises the loop guard.
+    inner = '''
+import asyncio
+
+def test_ip_literal():
+    async def go():
+        try:
+            await asyncio.wait_for(asyncio.open_connection("203.0.113.1", 80), timeout=5)
+        except (OSError, asyncio.TimeoutError):
+            pass
+    asyncio.run(go())
+'''
+    result = _run_inner(tmp_path, inner)
+    assert result.returncode != 0, result.stdout
+    assert "sock_connect(('203.0.113.1', 80))" in result.stdout
+
+
+@pytest.mark.asyncio
+async def test_asyncio_loopback_connection_still_works():
+    async def handle(reader, writer):
+        writer.write(b"ok")
+        await writer.drain()
+        writer.close()
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    try:
+        reader, writer = await asyncio.open_connection("127.0.0.1", port)
+        assert await reader.read(2) == b"ok"
+        writer.close()
+    finally:
+        server.close()
+        await server.wait_closed()
 
 
 def test_allow_network_marker_opts_out(tmp_path):
