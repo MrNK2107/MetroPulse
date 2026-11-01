@@ -3,7 +3,6 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   content: [
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
-    "./node_modules/@tremor/react/dist/esm/**/*.mjs",
   ],
   theme: {
     extend: {
