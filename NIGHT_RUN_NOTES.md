@@ -142,3 +142,26 @@ BE 801/801 (memcap 2 GB, peak 0.45 GB); import smoke of all 69 app/engine/twin m
 - Existing `test_ingestion_cycle_*` in `test_realtime.py` still hit the real network with soft asserts.
 - Dormant simulator-era modules (`app/rag`, `engine/translator.py`, ...) could be deleted with their tests; not done (product decision).
 - Earlier items still open: per-user agent auth, real twin build (manual downloads), no LICENSE.
+
+## Second wave (02:20-, same branch)
+
+### What changed
+1. **Hermetic backend suite.** New `backend/tests/conftest.py`:
+   - Sets `SUPABASE_URL/KEY`, LLM keys, `LLM_PROVIDER/MODEL`, `EMBEDDING_*`, `INGEST_TOKEN` to empty/defaults and `OLLAMA_BASE_URL=http://127.0.0.1:9` before any app import (env beats `.env`). **Finding:** before this, the suite used the developer's `backend/.env`, so `DatabaseClient` tests (e.g. the ingestion-cycle tests' `save_city_snapshot`, `/api/data-sources`) read and upserted the live Supabase project.
+   - Autouse guard: `socket.getaddrinfo`, `socket.socket.connect/connect_ex` and asyncio `sock_connect` (selector + Windows proactor loops, which skip `socket.connect` for IP literals) allow loopback/unix only. Blocked attempts raise `NetworkBlocked(OSError)` and are recorded; the test fails at teardown even if the code swallowed the error (the connectors catch everything). Opt-out marker `@pytest.mark.allow_network`.
+   - First run with the guard caught exactly: the 3 `test_ingestion_cycle_*` + 2 `*_fetch_handles_network_error` tests (real Google News/GDELT) and the Supabase call above. Nothing else.
+2. `test_realtime.py`: connectors and ingestion cycles run on `httpx.MockTransport` serving hand-written fixtures (`tests/fixtures/realtime/google_news_rss.xml`, `gdelt_artlist.json`; shape-faithful, synthetic titles, not recorded from the live feeds). Soft asserts replaced with exact ones (fresh 5/5; Google News down -> GDELT fallback 2/5 degraded; unknown city + feeds down -> None; retry count 3). Suite time 66 s -> 16 s (no real retries/back-off).
+3. `test_network_guard.py` (19): host classification, loopback still works (sync + asyncio), and subprocess runs proving a swallowed lookup and an asyncio IP-literal connect fail the inner test, and the opt-out marker works.
+4. **Opt-in `INGEST_TOKEN`** for `POST /api/ingest` (`require_ingest_token` in `app/routes/realtime.py`): empty (default) = open as before; set = needs `Authorization: Bearer <t>` or `X-Ingest-Token: <t>` (hmac.compare_digest), else 401 + `WWW-Authenticate: Bearer`, and no fetch happens. Added `X-Ingest-Token` to the CORS allow-list. Documented in README (endpoint table + known gaps), SETUP, ARCHITECTURE, AGENTS.md, `.env.example`. 13 tests in `test_api_routes.py`. Policy (turn it on in deploys? default-on?) left to the user - NEEDS_INPUT updated.
+5. `test_agent_tools.py` (21): the live `AgentTools` (parse_scenario / case studies / city profile / list / compare_sectors) and `AgentMemory`. **Bug fixed:** `city_configs or {}` replaced a caller's empty dict (what `/ws/agent` passes), so the per-session cache was never filled -> `is not None`.
+6. `test_app_lifespan.py` (10): startup pass + round-robin rotation of `_ingestion_loop`, failures don't stall rotation, no-city case, lifespan starts/cancels the task and closes the shared HTTP client, seeding failure doesn't block startup, CORS preflight.
+7. **Frontend Jest guard** in `jest.setup.js`: `fetch`, `WebSocket`, `XMLHttpRequest.send` replaced by stand-ins that throw and fail the test in `afterEach`; tests' own mocks override them. All 68 pass (no test was reaching out); verified with a throwaway test that swallowed fetch/WebSocket errors -> 2 failures.
+8. README: test count 867, hermetic-suite rule in Testing.
+
+### Verified
+Backend 867/867 (memcap 2 GB, peak 0.53 GB, 16.8 s). Frontend jest 68/68 with `--maxWorkers=2` (peak 0.84 GB; default workers on 16 cores OOM'd the 2 GB cap - use `--maxWorkers=2` locally under memcap), `next lint` clean.
+
+### Left
+- Whether to enable `INGEST_TOKEN` in deployments (user decision).
+- `_ingestion_loop`'s except-branch indexes `cities[...]` again; harmless today (the try only raises when cities is non-empty) but fragile.
+- `status.md` is a 2026-10-20 snapshot (738 tests); README/NIGHT_RUN_NOTES hold current numbers.
