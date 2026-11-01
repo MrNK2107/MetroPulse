@@ -85,8 +85,9 @@ Captured from a local run on 2026-10-31: uvicorn and `next dev`, headless Chrome
 
 Some design decisions:
 
-- **A missing value is `null`, never 0.** Districts with no Census link return `value: null` with
-  a receipt explaining why.
+- **A missing value is `null`, never 0.** Districts with no Census link return `value: null`. The
+  receipt still names the source, and the build's `report.json` lists those districts under
+  `districts_without_value`.
 - **Trust labels.** A value measured directly for that district is a `Fact`. A value apportioned
   by area from a parent 2011 district, because the district was created after 2011, is a `Pattern`.
 - **Atomic publishes.** A build writes versioned Parquet and then flips `CURRENT.json`. The API
@@ -98,7 +99,8 @@ Some design decisions:
 
 More detail: [`docs/twin/`](docs/twin), [`docs/RAG_ENGINE.md`](docs/RAG_ENGINE.md),
 [`docs/DATA_CREDIBILITY.md`](docs/DATA_CREDIBILITY.md), [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) predates the simulator retirement in places.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) covers components, data flow, the agent pipeline,
+storage, external services and known limits, with mermaid diagrams.
 
 ---
 
@@ -151,16 +153,16 @@ in a `NEXT_PUBLIC_*` variable.
 
 ## API reference
 
-All REST responses use the envelope `{ "success", "data", "error", "meta" }`.
+All REST responses except GeoJSON boundaries use the envelope `{ "success", "data", "error", "meta" }`.
 
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/health` | Health and DB mode (`connected` / `in_memory_fallback`) |
 | GET | `/api/health/data` | Data-source freshness for a city |
-| GET | `/api/twin/places/resolve?q=&level=` | Name → place id(s), with an ambiguity flag |
-| GET | `/api/twin/places/{place_id}` | District detail (name, state, codes) |
+| GET | `/api/twin/places/resolve?q=&level=&state=` | Name → place id(s), with an ambiguity flag |
+| GET | `/api/twin/places/{place_id}` | Place detail: id, name, level, parent and state |
 | GET | `/api/twin/places/{place_id}/observations` | Indicator values, each with a receipt and trust label |
-| GET | `/api/twin/boundaries/{level}` | GeoJSON boundaries (`district`), cached for one day |
+| GET | `/api/twin/boundaries/{level}` | GeoJSON boundaries (`country`, `state` or `district`), cached for one day. Plain GeoJSON, not the envelope |
 | GET | `/api/twin/indicators` | Indicator catalogue |
 | GET | `/api/regions` | 30 city configs |
 | GET | `/api/regions/{id}/baseline` | City baseline values |
@@ -252,7 +254,8 @@ docs/              twin/, benchmarks.md, LIMITATIONS.md, ...
 
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
 - No real-data twin build has been published yet. See [Data](#data).
-- Frontend `package.json` still lists dependencies the retired simulator used (`@tremor/react`,
-  `h3-js`, `katex`, `react-markdown`, ...). They are unused now.
+- `POST /api/ingest` has no auth. Anyone who can reach the API can trigger outbound news fetches.
+- The agent's ReAct prompt grows with each step and is resent in full. On slow local models, no
+  run has reached `AGENT_RESULT` yet.
 - The modelling limitations are listed in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 - There is no `LICENSE` file yet.
