@@ -228,7 +228,7 @@ backend/
   app/
     routes/        health, regions, case_studies, realtime, twin
     ws/agent.py    /ws/agent (auth, connection limit, streaming)
-    rag/           retriever, evidence pack, bounded coefficient extractor
+    rag/           retriever, evidence pack, coefficient extractor (not wired into the running app)
     simulation/    llm.py (provider switch), confidence, explainability
     realtime.py    6 ingestion connectors
   engine/

@@ -529,7 +529,9 @@ async def run_ingestion_cycle(db: Any, city: str) -> SnapshotData | None:
     merged_cells: dict[str, dict[str, float]] = {}
     source_manifest: dict[str, SourceStatus] = {}
     domains_ok = 0
-    domains_total = 0
+    # Quality is measured per domain, not per connector: a fallback connector for a
+    # domain (GDELT after Google News) must not count as an extra domain.
+    domains_total = len({c.domain for c in CONNECTORS})
 
     # Track which domains we've already filled (first connector wins per domain)
     filled_domains: set[str] = set()
@@ -539,7 +541,6 @@ async def run_ingestion_cycle(db: Any, city: str) -> SnapshotData | None:
         if domain in filled_domains:
             continue  # already got data for this domain from a prior connector
 
-        domains_total += 1
         cadence = source_cadence_seconds(domain)
         freshness: str = "fresh"
         if connector.source_name == "City YAML Census Data":
