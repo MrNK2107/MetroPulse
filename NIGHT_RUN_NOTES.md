@@ -117,3 +117,28 @@ BE 750/750; FE jest 54/54, tsc, lint clean, `next build` OK.
 - Unused simulator-era deps in frontend/package.json (@tremor/react, h3-js, katex, react-markdown) could be pruned.
 - docs/ARCHITECTURE.md still describes the simulator in places.
 - No LICENSE file (README previously claimed MIT) - see NEEDS_INPUT.
+
+---
+
+# Night run 2026-11-02 (branch `night-run/2026-11-01`, from `night-run/2026-10-31`)
+
+## What changed
+1. `chore(deps)` frontend: removed `@tremor/react`, `katex`, `react-markdown`, `remark-gfm`, `h3-js`, `date-fns`, `@deck.gl/extensions`, `@deck.gl/mapbox`, `ts-jest` (141 packages out of node_modules). Proof: no import/require/dynamic import anywhere in `src/` or configs; jest uses `next/jest` (SWC), not ts-jest. Dropped the tremor glob from `tailwind.config.ts`. Kept `deck.gl`: `IndiaMap` imports `@deck.gl/react` and `@deck.gl/core`, which only arrive through it (replacing it with explicit `@deck.gl/core`+`react`+`widgets` is a possible follow-up).
+2. `chore(deps)` backend: removed `scipy`, `python-multipart`, `pytest-benchmark` from requirements.txt and pyproject. Proof: zero imports; no `Form`/`File`/`UploadFile` in source (python-multipart was not even installed in .venv); no `benchmark` fixture. Uninstalled scipy + pytest-benchmark from `.venv` and reran everything. Kept `uvicorn` (Dockerfile CMD), `python-dotenv` (pydantic-settings env_file), `websockets` (uvicorn WS + bench script), `pyarrow` (pandas parquet engine), `locust` (tests/load).
+3. `docs/ARCHITECTURE.md` rewritten from the code: components, live vs dormant modules (found by importing `app.main` and listing `sys.modules`), twin read/build flow, agent pipeline (sequence diagram), storage, external services, config, known limits, mermaid diagrams.
+4. README: endpoint params/payloads corrected (resolve takes `state`, boundaries serve country/state/district as plain GeoJSON, place detail fields), null-value claim corrected, known gaps refreshed, test counts. SETUP.md rewritten (it still described the simulator, a Mapbox token and sliders).
+5. Bugs fixed (each with a failing test first):
+   - `GET /api/regions/{bad-name}/profile|baseline` returned 500 (CityConfig's ValueError) -> now 404.
+   - `call_llm(provider=X)` sent the configured provider's model to X -> per-provider default unless X is the configured provider.
+   - Realtime snapshot quality counted connector attempts, so a GDELT fallback after a Google News failure lowered quality (5/6) -> now counted per domain.
+   - Agent prompts no longer claim "powered by Gemma".
+6. Tests: backend 750 -> 801 (`test_agent_loop.py` 21, `test_llm_call.py` 8, `test_api_routes.py` 17, `test_ingestion_cycle.py` 5). Frontend 54 -> 68 (`twinApi.test.ts`, `TwinNotBuilt.test.tsx`).
+
+## Verified
+BE 801/801 (memcap 2 GB, peak 0.45 GB); import smoke of all 69 app/engine/twin modules OK with scipy removed; `twin_build.py --help`, `bench_api.py --help` OK. FE jest 68/68, tsc and lint clean, `next build` OK (peak 1.27 GB under a 2 GB cap, heavy lock held).
+
+## Left
+- `POST /api/ingest` is unauthenticated (anyone can trigger outbound fetches) - needs a decision (admin token?).
+- Existing `test_ingestion_cycle_*` in `test_realtime.py` still hit the real network with soft asserts.
+- Dormant simulator-era modules (`app/rag`, `engine/translator.py`, ...) could be deleted with their tests; not done (product decision).
+- Earlier items still open: per-user agent auth, real twin build (manual downloads), no LICENSE.
