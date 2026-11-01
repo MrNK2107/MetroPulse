@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written fixture in the shape of a Google News RSS search response
+     (news.google.com/rss/search). Titles are synthetic; no network was used. -->
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>"City" - Google News</title>
+    <link>https://news.google.com/search?q=City</link>
+    <language>en-IN</language>
+    <item>
+      <title>Metro line expansion boosts hiring across the city - Example Times</title>
+      <link>https://news.google.com/rss/articles/example-1</link>
+      <pubDate>Sun, 01 Nov 2026 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>New investment brings growth to the tech corridor - Example Herald</title>
+      <link>https://news.google.com/rss/articles/example-2</link>
+      <pubDate>Sun, 01 Nov 2026 09:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Traffic congestion worsens on the ring road after flood damage - Example Post</title>
+      <link>https://news.google.com/rss/articles/example-3</link>
+      <pubDate>Sat, 31 Oct 2026 18:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Housing prices hold steady this quarter - Example Daily</title>
+      <link>https://news.google.com/rss/articles/example-4</link>
+      <pubDate>Sat, 31 Oct 2026 12:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

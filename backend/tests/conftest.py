@@ -1,0 +1,114 @@
+"""Suite-wide guard: tests must not touch the real network.
+
+Every test runs with ``socket.getaddrinfo`` and ``socket.socket.connect``/``connect_ex``
+patched so that only loopback hosts (``localhost``, 127.0.0.0/8, ``::1``) and
+unix sockets are allowed. Any other lookup or connect raises ``NetworkBlocked``
+(an ``OSError``, so code under test sees an ordinary network failure) and is
+recorded; the test then fails at teardown even if the code under test swallowed
+the error. This matters here because the realtime connectors catch every
+exception and return ``None``.
+
+Opt out for a deliberate live test with ``@pytest.mark.allow_network``.
+"""
+from __future__ import annotations
+
+import ipaddress
+import os
+import socket
+
+import pytest
+
+# Hermetic settings: environment variables beat backend/.env in pydantic-settings, so
+# setting them here (before any app module is imported) stops the suite from using a
+# developer's real Supabase project or LLM keys. Without this, tests that touch
+# DatabaseClient read and wrote the live Supabase tables named in .env.
+_HERMETIC_ENV = {
+    "SUPABASE_URL": "",
+    "SUPABASE_KEY": "",
+    "OPENAI_API_KEY": "",
+    "GEMINI_API_KEY": "",
+    "MIMO_API_KEY": "",
+    "LLM_PROVIDER": "mimo",
+    "LLM_MODEL": "",
+    "EMBEDDING_PROVIDER": "",
+    "EMBEDDING_MODEL": "",
+    # Port 9 (discard) on loopback: refused at once, so a local Ollama never answers tests.
+    "OLLAMA_BASE_URL": "http://127.0.0.1:9",
+    "INGEST_TOKEN": "",
+}
+os.environ.update(_HERMETIC_ENV)
+
+_real_getaddrinfo = socket.getaddrinfo
+_real_connect = socket.socket.connect
+_real_connect_ex = socket.socket.connect_ex
+
+
+class NetworkBlocked(OSError):
+    """Raised when a test tries to reach a non-loopback host."""
+
+
+def _is_local_host(host: object) -> bool:
+    if host is None:
+        return True
+    if isinstance(host, bytes):
+        host = host.decode("ascii", "ignore")
+    if not isinstance(host, str):
+        return False
+    host = host.strip("[]").lower()
+    if host in ("", "localhost", "localhost.localdomain"):
+        return True
+    try:
+        return ipaddress.ip_address(host.split("%", 1)[0]).is_loopback
+    except ValueError:
+        return False
+
+
+def _is_local_address(address: object) -> bool:
+    # AF_UNIX addresses are str/bytes paths; AF_INET/AF_INET6 are tuples.
+    if isinstance(address, tuple) and address:
+        return _is_local_host(address[0])
+    return isinstance(address, (str, bytes))
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers", "allow_network: let this test open real (non-loopback) network connections"
+    )
+
+
+@pytest.fixture(autouse=True)
+def _block_network(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
+    if request.node.get_closest_marker("allow_network"):
+        yield
+        return
+
+    attempts: list[str] = []
+
+    def guarded_getaddrinfo(host, *args, **kwargs):
+        if not _is_local_host(host):
+            attempts.append(f"getaddrinfo({host!r})")
+            raise NetworkBlocked(f"network access blocked in tests: lookup of {host!r}")
+        return _real_getaddrinfo(host, *args, **kwargs)
+
+    def guarded_connect(sock, address):
+        if not _is_local_address(address):
+            attempts.append(f"connect({address!r})")
+            raise NetworkBlocked(f"network access blocked in tests: connect to {address!r}")
+        return _real_connect(sock, address)
+
+    def guarded_connect_ex(sock, address):
+        if not _is_local_address(address):
+            attempts.append(f"connect_ex({address!r})")
+            raise NetworkBlocked(f"network access blocked in tests: connect to {address!r}")
+        return _real_connect_ex(sock, address)
+
+    monkeypatch.setattr(socket, "getaddrinfo", guarded_getaddrinfo)
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+    monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex)
+    yield
+    if attempts:
+        pytest.fail(
+            "test tried to reach the real network (mock the HTTP client instead): "
+            + ", ".join(sorted(set(attempts))),
+            pytrace=False,
+        )
