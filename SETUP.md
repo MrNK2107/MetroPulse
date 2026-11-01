@@ -37,6 +37,8 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 # Agent socket: disabled while empty
 AGENT_WS_TOKEN=pick-a-long-random-string
+# Optional: require a token for POST /api/ingest (empty = open, the default)
+INGEST_TOKEN=
 WS_MAX_CONNECTIONS=10
 
 # Supabase: empty = in-memory fallback

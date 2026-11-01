@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+import hmac
 
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+
+from app.config import settings
 from app.db import DatabaseClient, get_db
 from app.realtime import run_ingestion_cycle, snapshot_quality
 
@@ -48,7 +51,33 @@ async def latest_snapshot(
     }
 
 
-@router.post("/ingest")
+def require_ingest_token(
+    authorization: str = Header(default=""),
+    x_ingest_token: str = Header(default=""),
+) -> None:
+    """Gate POST /api/ingest behind INGEST_TOKEN when it is set.
+
+    Off by default: with INGEST_TOKEN empty the endpoint stays open (the original
+    behaviour). When set, the caller must send ``Authorization: Bearer <token>`` or
+    ``X-Ingest-Token: <token>``; anything else gets 401.
+    """
+    expected = settings.ingest_token
+    if not expected:
+        return
+    presented = x_ingest_token.strip()
+    if not presented and authorization.lower().startswith("bearer "):
+        presented = authorization[7:].strip()
+    if not presented or not hmac.compare_digest(
+        presented.encode("utf-8"), expected.encode("utf-8")
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing ingest token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+@router.post("/ingest", dependencies=[Depends(require_ingest_token)])
 async def trigger_ingestion(
     city: str = Query(..., description="City ID (e.g. bengaluru, mumbai, delhi_ncr)"),
     db: DatabaseClient = Depends(get_db),

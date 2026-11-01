@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     ws_max_connections: int = Field(default=10, alias="WS_MAX_CONNECTIONS")
     # Shared secret for /ws/agent. Empty = endpoint disabled (secure default).
     agent_ws_token: str = Field(default="", alias="AGENT_WS_TOKEN")
+    # Opt-in shared secret for POST /api/ingest. Empty (default) keeps the endpoint open,
+    # as before; set it to require "Authorization: Bearer <token>" or "X-Ingest-Token".
+    ingest_token: str = Field(default="", alias="INGEST_TOKEN")
     sim_timeout_ms: int = Field(default=60000, alias="SIM_TIMEOUT_MS")
     llm_timeout_ms: int = Field(default=25000, alias="LLM_TIMEOUT_MS")
     upload_max_bytes: int = Field(default=10_485_760, alias="UPLOAD_MAX_BYTES")

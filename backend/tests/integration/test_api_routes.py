@@ -126,3 +126,89 @@ async def test_realtime_routes_require_city(client):
         r = await client.get(path)
         assert r.status_code == 422, path
     assert (await client.post("/api/ingest")).status_code == 422
+
+
+# ── Opt-in INGEST_TOKEN on POST /api/ingest ─────────────────────────────────
+
+
+@pytest.fixture
+def ingest_calls(monkeypatch):
+    calls = []
+
+    async def fake_cycle(db, city):
+        calls.append(city)
+        return types.SimpleNamespace(id="snap-1", status="fresh", quality_score=1.0)
+
+    monkeypatch.setattr(realtime_routes, "run_ingestion_cycle", fake_cycle)
+    return calls
+
+
+@pytest.fixture
+def ingest_token(monkeypatch):
+    monkeypatch.setattr(realtime_routes.settings, "ingest_token", "s3cret-token")
+    return "s3cret-token"
+
+
+@pytest.mark.asyncio
+async def test_ingest_is_open_when_no_token_is_configured(client, ingest_calls, monkeypatch):
+    monkeypatch.setattr(realtime_routes.settings, "ingest_token", "")
+    r = await client.post("/api/ingest?city=pune")
+    assert r.status_code == 200
+    assert ingest_calls == ["pune"]
+    # A stray header is ignored while the check is off.
+    r = await client.post("/api/ingest?city=pune", headers={"Authorization": "Bearer whatever"})
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {},
+        {"Authorization": "Bearer wrong"},
+        {"Authorization": "s3cret-token"},  # missing "Bearer "
+        {"Authorization": "Basic czNjcmV0LXRva2Vu"},
+        {"X-Ingest-Token": "wrong"},
+        {"X-Ingest-Token": ""},
+        {"Authorization": "Bearer "},
+    ],
+)
+async def test_ingest_rejects_missing_or_wrong_token(client, ingest_calls, ingest_token, headers):
+    r = await client.post("/api/ingest?city=pune", headers=headers)
+    assert r.status_code == 401
+    assert r.headers["www-authenticate"] == "Bearer"
+    assert r.json() == {"detail": "Invalid or missing ingest token"}
+    assert ingest_calls == []  # nothing fetched
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Authorization": "Bearer s3cret-token"},
+        {"Authorization": "bearer s3cret-token"},
+        {"X-Ingest-Token": "s3cret-token"},
+        {"X-Ingest-Token": "s3cret-token", "Authorization": "Bearer wrong"},
+    ],
+)
+async def test_ingest_accepts_the_configured_token(client, ingest_calls, ingest_token, headers):
+    r = await client.post("/api/ingest?city=pune", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["snapshot_id"] == "snap-1"
+    assert ingest_calls == ["pune"]
+
+
+@pytest.mark.asyncio
+async def test_ingest_token_does_not_gate_read_endpoints(client, ingest_token):
+    _with_sources("fresh")
+    r = await client.get("/api/data-sources?city=pune")
+    assert r.status_code == 200
+
+
+def test_ingest_token_setting_reads_env(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.setenv("INGEST_TOKEN", "from-env")
+    assert Settings(_env_file=None).ingest_token == "from-env"
+    monkeypatch.delenv("INGEST_TOKEN")
+    assert Settings(_env_file=None).ingest_token == ""

@@ -271,7 +271,7 @@ Details that matter when changing it:
 ## Configuration
 
 Read by `app/config.py` from the environment or `backend/.env`. The settings that change
-behaviour most are `AGENT_WS_TOKEN`, `WS_MAX_CONNECTIONS`, `LLM_PROVIDER`, `LLM_MODEL`,
+behaviour most are `AGENT_WS_TOKEN`, `INGEST_TOKEN`, `WS_MAX_CONNECTIONS`, `LLM_PROVIDER`, `LLM_MODEL`,
 `LLM_TIMEOUT_MS`, the provider keys, `SUPABASE_URL`/`SUPABASE_KEY`, `CORS_ORIGINS`,
 `TWIN_DATA_DIR`, `NEWS_REFRESH_SECONDS` and `SEED_CASE_STUDIES_ON_STARTUP`. The frontend reads
 `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL`.
@@ -291,8 +291,9 @@ are used, but only by the build CLI.
 - **No twin data in a fresh clone.** The build needs 7 manual downloads, and 3 of them need a
   browser login or captcha. Until they are present, the map shows the setup panel.
 - **Shared-token auth.** `/ws/agent` uses one shared `AGENT_WS_TOKEN`. There are no per-user
-  accounts or quotas. `POST /api/ingest` has no auth at all, so anyone who can reach the API can
-  trigger outbound fetches.
+  accounts or quotas. `POST /api/ingest` is open unless `INGEST_TOKEN` is set (opt-in; then it needs
+  `Authorization: Bearer <token>` or `X-Ingest-Token` and answers 401 otherwise), so by default
+  anyone who can reach the API can trigger outbound fetches.
 - **Per-process state.** The connection limiter, the twin context cache and the in-memory DB
   live in one process. Running several uvicorn workers multiplies the connection cap and splits
   the state.

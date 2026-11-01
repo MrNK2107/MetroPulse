@@ -27,6 +27,12 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 ### WebSocket Auth and Connection Limit
 `/ws/agent` is the only WebSocket endpoint (`app/ws/agent.py`, mounted in `app/main.py`). It is **disabled unless `AGENT_WS_TOKEN` is set**; clients send the token as `?token=` or `Authorization: Bearer`, compared with `hmac.compare_digest`. Bad/missing token closes with 1008 before accept. At most `WS_MAX_CONNECTIONS` (default 10) concurrent sessions; extras close with 1013. Client-facing errors are generic (no exception text). Tests: `tests/integration/test_ws_agent.py`. Supabase-Auth-based per-user auth (spec §4) is still to do; the shared token is the interim gate.
 
+### Ingest Token
+`POST /api/ingest` is open by default. If `INGEST_TOKEN` is set it requires `Authorization: Bearer <token>` or `X-Ingest-Token: <token>` (constant-time compare, 401 otherwise); see `require_ingest_token` in `app/routes/realtime.py`. Tests: `tests/integration/test_api_routes.py`.
+
+### Tests Never Touch the Network
+`backend/tests/conftest.py` blanks Supabase/LLM settings (env beats `.env`) and patches `socket.getaddrinfo`/`connect` to loopback only; any other attempt fails the test at teardown, even if the code swallowed the error. Mock HTTP with `httpx.MockTransport` (see `tests/unit/test_realtime.py`). Mark a deliberate live test with `@pytest.mark.allow_network`.
+
 ## Conventions
 - Python: Use NumPy vectorized ops where arrays are involved
 - TypeScript: strict mode, camelCase props, PascalCase components

@@ -171,7 +171,7 @@ All REST responses except GeoJSON boundaries use the envelope `{ "success", "dat
 | GET | `/api/data-sources` | Registered data sources |
 | GET | `/api/snapshots/latest` | Latest realtime snapshot |
 | GET | `/api/snapshots/{id}/quality` | Snapshot quality report |
-| POST | `/api/ingest` | Trigger realtime ingestion |
+| POST | `/api/ingest` | Trigger realtime ingestion. Open unless `INGEST_TOKEN` is set (then `Authorization: Bearer <token>` or `X-Ingest-Token`, else 401) |
 | GET | `/api/agent/status` | `{enabled, available, path}`. Never returns the token |
 | WS | `/ws/agent` | Agent chat stream. Disabled unless `AGENT_WS_TOKEN` is set |
 
@@ -254,7 +254,9 @@ docs/              twin/, benchmarks.md, LIMITATIONS.md, ...
 
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
 - No real-data twin build has been published yet. See [Data](#data).
-- `POST /api/ingest` has no auth. Anyone who can reach the API can trigger outbound news fetches.
+- `POST /api/ingest` is open by default: anyone who can reach the API can trigger outbound news
+  fetches. Set `INGEST_TOKEN` in `backend/.env` to require a token (off by default so nothing
+  changes for existing setups).
 - The agent's ReAct prompt grows with each step and is resent in full. On slow local models, no
   run has reached `AGENT_RESULT` yet.
 - The modelling limitations are listed in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
