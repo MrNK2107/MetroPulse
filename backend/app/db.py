@@ -399,7 +399,7 @@ class DatabaseClient:
     async def get_region_profile(self, region_id: str) -> dict[str, Any] | None:
         try:
             cfg = CityConfig.load(region_id)
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):  # unknown city or a name CityConfig rejects
             return None
         profile = CityProfile(
             id=region_id,
@@ -429,7 +429,7 @@ class DatabaseClient:
         rid = str(region_id)
         try:
             cfg = CityConfig.load(rid)
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):  # unknown city or a name CityConfig rejects
             return None
         return {
             "region_id": rid,
