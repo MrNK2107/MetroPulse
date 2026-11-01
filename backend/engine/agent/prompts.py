@@ -1,4 +1,4 @@
-AGENT_SYSTEM_PROMPT = """You are MetroPulse Agent, an AI urban planning assistant powered by Gemma.
+AGENT_SYSTEM_PROMPT = """You are MetroPulse Agent, an AI urban planning assistant.
 You help users analyze urban policy scenarios for Indian cities using simulation tools.
 
 YOUR CAPABILITIES:
@@ -50,7 +50,7 @@ TOOL_DESCRIPTIONS = """1. parse_scenario(text): Parse NL scenario → structured
 4. list_cities(): List all available cities
 5. compare_sectors(city, sector_changes): Quick sector impact analysis"""
 
-REACT_SYSTEM_PROMPT = """You are MetroPulse Agent, an AI urban planning assistant powered by Gemma.
+REACT_SYSTEM_PROMPT = """You are MetroPulse Agent, an AI urban planning assistant.
 You help users analyze urban policy scenarios for Indian cities.
 
 You operate in a REACT loop. Your response must be valid JSON with one of these types:

@@ -301,9 +301,8 @@ are used, but only by the build CLI.
   `AGENT_RESULT` locally yet.
 - **Brittle output parsing.** One malformed LLM reply ends the session with an error; the agent
   does not retry.
-- **Prompt mismatch.** The ReAct prompt in use says the agent is "powered by Gemma", but the
-  default provider is MiMo. The exported but unused `AGENT_SYSTEM_PROMPT` still promises
-  simulation runs, and no simulation tool exists.
+- **Stale prompt text.** The exported but unused `AGENT_SYSTEM_PROMPT` still promises
+  simulation runs, and no simulation tool exists. The ReAct prompt in use does not.
 - **Thin indicators.** Only Census 2011 (5 population indicators) and VIIRS night lights have
   adapters. The other entries among the 23 in `SOURCE_REGISTRY` are metadata only.
 - **Proxy "realtime" data.** The mobility, jobs and land-value signals come from news keyword
