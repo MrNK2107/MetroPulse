@@ -10,6 +10,20 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_MODELS = {
+    "openai": "gpt-4o-mini",
+    "gemini": "gemini-2.0-flash",
+    "mimo": "mimo-v2.5-pro",
+    "ollama": "gemma4:latest",
+}
+
+
+def _model(provider: str) -> str:
+    """LLM_MODEL applies to the configured provider; an explicit other provider gets its default."""
+    if provider == settings.llm_provider.lower():
+        return settings.resolved_llm_model
+    return _DEFAULT_MODELS[provider]
+
 
 async def call_llm(prompt: str, provider: str | None = None, timeout_ms: int | None = None) -> str:
     """Unified LLM caller — injected into the engine via the ``llm_fn`` callback."""
@@ -35,7 +49,7 @@ async def _call_gemini(prompt: str, timeout_ms: int) -> str:
     response = await asyncio.wait_for(
         asyncio.to_thread(
             client.models.generate_content,
-            model=settings.resolved_llm_model or "gemini-2.0-flash",
+            model=_model("gemini"),
             contents=prompt,
         ),
         timeout=timeout_ms / 1000.0,
@@ -47,7 +61,7 @@ async def _call_openai(prompt: str, timeout_ms: int) -> str:
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     response = await asyncio.wait_for(
         client.chat.completions.create(
-            model=settings.resolved_llm_model or "gpt-4o-mini",
+            model=_model("openai"),
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
         ),
@@ -63,7 +77,7 @@ async def _call_mimo(prompt: str, timeout_ms: int) -> str:
         "Accept-Encoding": "identity",
     }
     body = {
-        "model": settings.resolved_llm_model or "mimo-v2.5-pro",
+        "model": _model("mimo"),
         "messages": [
             {"role": "system", "content": "You are a JSON-only API. Respond with valid JSON only, no markdown fences."},
             {"role": "user", "content": prompt},
@@ -83,7 +97,7 @@ async def _call_mimo(prompt: str, timeout_ms: int) -> str:
 async def _call_ollama(prompt: str, timeout_ms: int) -> str:
     headers = {"Content-Type": "application/json"}
     body = {
-        "model": settings.resolved_llm_model or "gemma4:latest",
+        "model": _model("ollama"),
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
     }
