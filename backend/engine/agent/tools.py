@@ -37,7 +37,8 @@ class AgentTools:
     ) -> None:
         self._router = intent_router or IntentRouter()
         self._db = db
-        self._city_configs = city_configs or {}
+        # "is None", not "or": an empty dict passed in must be the one that gets filled.
+        self._city_configs = city_configs if city_configs is not None else {}
 
     async def parse_scenario(self, text: str) -> ToolResult:
         try:
