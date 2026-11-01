@@ -58,7 +58,7 @@ Captured from a local run on 2026-10-31: uvicorn and `next dev`, headless Chrome
 | Case studies (RAG) | 20, served by `GET /api/case-studies` |
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
-| Backend tests | 801 pytest tests (unit and integration), all passing on 2026-11-02 |
+| Backend tests | 834 pytest tests (unit and integration), all passing on 2026-11-02, no network access |
 | Frontend tests | 68 Jest + Testing Library tests, 35 of them cover the agent chat client: reducer, parser and backoff units, plus component tests against a mock WebSocket |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
@@ -217,6 +217,10 @@ npm run lint
 npm run type-check
 npm run build
 ```
+
+The backend suite is hermetic: `tests/conftest.py` ignores the Supabase and LLM settings in
+`backend/.env` and fails any test that opens a non-loopback connection. Mock HTTP with
+`httpx.MockTransport`; mark a deliberate live test with `@pytest.mark.allow_network`.
 
 `scripts/bench_api.py` benchmarks a running backend and writes `docs/benchmarks.md`.
 CI (`.github/workflows/ci.yml`) runs the backend tests, then lint, type-check and Jest on the frontend.
