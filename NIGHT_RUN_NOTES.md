@@ -163,5 +163,5 @@ Backend 867/867 (memcap 2 GB, peak 0.53 GB, 16.8 s). Frontend jest 68/68 with `-
 
 ### Left
 - Whether to enable `INGEST_TOKEN` in deployments (user decision).
-- `_ingestion_loop`'s except-branch indexes `cities[...]` again; harmless today (the try only raises when cities is non-empty) but fragile.
+- (done) `_ingestion_loop` now picks the city before the try, so the except branch no longer re-indexes `cities`.
 - `status.md` is a 2026-10-20 snapshot (738 tests); README/NIGHT_RUN_NOTES hold current numbers.
