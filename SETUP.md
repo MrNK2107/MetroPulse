@@ -1,95 +1,113 @@
-# MetroPulse — Local Setup Guide
+# MetroPulse: Local Setup Guide
 
 ## Prerequisites
 
-- **Python 3.11+** — https://python.org
-- **Node.js 20+** — https://nodejs.org
-- **LLM provider** (optional) — one of: OpenAI key, Google Gemini key, or [Ollama](https://ollama.com) running locally. Fallback works without any.
-- **No map API key needed** — uses MapLibre GL JS with free CARTO tiles (no credit card required)
+- **Python 3.11+**: https://python.org
+- **Node.js 18.17+** (CI uses Node 20): https://nodejs.org
+- **LLM provider** (optional, only needed for the agent). One of: a MiMo gateway key (the
+  default provider), an OpenAI key, a Google Gemini key, or [Ollama](https://ollama.com) running
+  locally. Without one, the map still works, but agent sessions end with a generic `AGENT_ERROR`.
+- **No map API key is needed.** The map draws GeoJSON boundaries served by the backend with deck.gl.
+  There is no basemap.
 
 ---
 
-## 1. Backend Setup
+## 1. Backend setup
 
 ```powershell
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+copy .env.example .env
 ```
 
-Create `backend\.env`:
+Edit `backend\.env`. Every value is optional. The ones that matter most:
 
 ```env
-# LLM Provider: "openai", "gemini", or "ollama"
-LLM_PROVIDER=openai
-LLM_MODEL=
-
-# OpenAI (used when LLM_PROVIDER=openai)
-OPENAI_API_KEY=sk-your-key
-
-# Google Gemini (used when LLM_PROVIDER=gemini)
-GEMINI_API_KEY=your-gemini-key
-
-# Ollama (used when LLM_PROVIDER=ollama)
+# LLM provider: "mimo" (default), "openai", "gemini" or "ollama"
+LLM_PROVIDER=ollama
+LLM_MODEL=                      # empty = provider default
+LLM_TIMEOUT_MS=150000           # small local models are slow; the default is 25000
+MIMO_API_KEY=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
 OLLAMA_BASE_URL=http://localhost:11434
 
-# Embedding provider (defaults to LLM_PROVIDER)
-EMBEDDING_PROVIDER=
-EMBEDDING_MODEL=
+# Agent socket: disabled while empty
+AGENT_WS_TOKEN=pick-a-long-random-string
+WS_MAX_CONNECTIONS=10
 
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-service-role-key
+# Supabase: empty = in-memory fallback
+SUPABASE_URL=
+SUPABASE_KEY=
 
 # App
-ENVIRONMENT=development
-LOG_LEVEL=INFO
 CORS_ORIGINS=http://localhost:3000
-WS_MAX_CONNECTIONS=10
-SIM_TIMEOUT_MS=3000
-LLM_TIMEOUT_MS=10000
+TWIN_DATA_DIR=                  # empty = data/twin in the repo
 ```
+
+`backend\.env.example` lists the rest (embedding provider, realtime refresh intervals).
 
 Start the backend:
 
 ```powershell
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Verify: http://localhost:8000/api/health  
-API docs: http://localhost:8000/docs  
+Check http://localhost:8000/api/health. The API docs are at http://localhost:8000/docs.
 
-Run tests:
+At startup the backend fetches Google News RSS and GDELT once for each of the 30 cities, 2 s
+apart, then one city every `NEWS_REFRESH_SECONDS`. Offline, these fetches fail and are logged as
+warnings. Nothing else depends on them.
+
+Run the tests:
 
 ```powershell
-pytest tests/ --tb=short -v
+python -m pytest tests/unit tests/integration -q
 ```
 
 ---
 
-## 2. Frontend Setup
+## 2. Build the twin data (optional)
+
+The map needs a built twin. Without it, the page shows a setup panel listing these same steps.
+
+```powershell
+cd backend
+python scripts/twin_build.py check
+```
+
+Put the 7 files it lists into `data\twin\manual\`. `data\twin\manual\README.md` says where each
+one comes from. LGD, Survey of India and VIIRS need a browser login or a captcha. Then run:
+
+```powershell
+python scripts/twin_build.py build --boundary-version lgd-YYYYMMDD
+```
+
+The running API picks up the new build without a restart.
+
+---
+
+## 3. Frontend setup
 
 ```powershell
 cd frontend
 npm install
-npm install --legacy-peer-deps    # if peer dep errors
 ```
 
-Create `frontend\.env.local`:
+`frontend\.env.local` is optional. `frontend\.env.local.example` shows these defaults:
 
 ```env
-NEXT_PUBLIC_MAPBOX_TOKEN=pk.ey...
-NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/agent
 NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/agent
 ```
 
-`NEXT_PUBLIC_WS_URL` is optional: it defaults to `ws://localhost:8000/ws/agent`, and an old
-`/ws/simulate` value is rewritten to `/ws/agent` automatically.
+An old `/ws/simulate` value is rewritten to `/ws/agent` automatically.
 
-The agent socket is disabled unless the **backend** has `AGENT_WS_TOKEN` set in `backend\.env`.
-Do not put that token in `frontend\.env.local` (anything `NEXT_PUBLIC_*` is shipped to the browser);
-the "Ask the agent" panel asks for it and keeps it in `sessionStorage` only.
+Do not put `AGENT_WS_TOKEN` in `frontend\.env.local`, because anything `NEXT_PUBLIC_*` is shipped to
+the browser. The "Ask the agent" panel asks for the token and keeps it in `sessionStorage` only.
 
 Start the frontend:
 
@@ -99,63 +117,43 @@ npm run dev
 
 Open http://localhost:3000.
 
-Run checks:
+Run the checks:
 
 ```powershell
+npm run test
 npm run lint
 npm run type-check
 ```
 
 ---
 
-## 3. Running Full Stack (two terminals)
+## 4. Full stack (two terminals)
 
 | Terminal | Command | URL |
 |----------|---------|-----|
-| 1 (Backend) | `cd backend && .venv\Scripts\Activate.ps1 && uvicorn app.main:app --reload --port 8000` | http://localhost:8000 |
+| 1 (Backend) | `cd backend && .venv\Scripts\Activate.ps1 && python -m uvicorn app.main:app --reload --port 8000` | http://localhost:8000 |
 | 2 (Frontend) | `cd frontend && npm run dev` | http://localhost:3000 |
 
----
+## 5. Try it
 
-## 4. Running a Simulation
-
-1. Move **Technology FDI** slider to **+30%**
-2. Select **12m** horizon
-3. Click **"Run Simulation"**
-4. Hex grid appears with green/amber/red coloring
-5. Metric charts populate in real-time
-6. AI Insight panel shows analysis (or fallback text)
+1. Click a district on the map, or search for one at the top left. The panel lists its
+   indicators. Each one has a trust label and a source receipt.
+2. Click **Ask the agent** (bottom right), enter the `AGENT_WS_TOKEN` value, and ask something
+   like "What happens to Pune if IT FDI rises 30%?". The panel streams the agent's steps
+   (`AGENT_THINK`, `AGENT_ACTION`). When the agent asks a question (`AGENT_ASK`), it shows
+   buttons for the answers.
 
 ---
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Map shows blank/gray | `NEXT_PUBLIC_MAPBOX_TOKEN` is missing or invalid |
-| WebSocket connection refused | Backend not running on port 8000 |
-| Agent panel shows "Disabled" | `AGENT_WS_TOKEN` is empty in `backend\.env`; set it and restart uvicorn |
-| Agent socket closes with 1008 / HTTP 403 | Token typed in the panel does not match `AGENT_WS_TOKEN` |
-| Agent replies with a generic AGENT_ERROR | No LLM provider key configured on the backend |
-| `npm install` peer dep errors | Use `npm install --legacy-peer-deps` |
+| Map shows the "hasn't been built yet" panel | The twin data is not built. Follow section 2, or point `TWIN_DATA_DIR` at a built folder |
+| Every request fails with "Failed to fetch" | The backend is not running, or the frontend's origin is not in `CORS_ORIGINS` (needed when the frontend is not on port 3000) |
+| Agent panel shows "Disabled" | `AGENT_WS_TOKEN` is empty in `backend\.env`. Set it and restart uvicorn |
+| Agent socket closes with 1008 / HTTP 403 | The token typed in the panel does not match `AGENT_WS_TOKEN` |
+| Agent replies with a generic AGENT_ERROR | No working LLM provider, or the LLM call hit `LLM_TIMEOUT_MS`. The backend log has the details |
+| `/api/health` shows `in_memory_fallback` | Expected without `SUPABASE_URL`/`SUPABASE_KEY` |
 | `pip install h3` fails | Install cmake first or use a pre-built wheel |
-| AI Insight shows fallback text | No LLM provider configured. Set `LLM_PROVIDER` + matching API key, or ensure Ollama is running |
-| CORS errors | Ensure `CORS_ORIGINS=http://localhost:3000` in backend `.env` |
-
----
-
-## 6. Quick-Start Script
-
-Save as `start.ps1` in project root:
-
-```powershell
-$backend = Start-Process powershell -ArgumentList "-NoExit -Command cd backend; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --port 8000" -PassThru
-$frontend = Start-Process powershell -ArgumentList "-NoExit -Command cd frontend; npm run dev" -PassThru
-
-Write-Host "Backend: http://localhost:8000"
-Write-Host "Frontend: http://localhost:3000"
-Write-Host "Press any key to stop both..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-$backend.Kill()
-$frontend.Kill()
-```
+| spaCy model missing warnings | Run `python -m spacy download en_core_web_sm` in the backend venv |
