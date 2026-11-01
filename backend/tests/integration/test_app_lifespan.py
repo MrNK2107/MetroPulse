@@ -47,12 +47,17 @@ async def test_ingestion_loop_runs_every_city_then_rotates(loop_env):
 
 
 @pytest.mark.asyncio
-async def test_ingestion_loop_survives_failing_cities(loop_env):
+async def test_ingestion_loop_survives_failing_cities(loop_env, caplog):
     loop_env["fail_for"] = {"a"}
     with pytest.raises(StopLoop):
         await main._ingestion_loop(db=object())
     # A failure neither stops the loop nor stalls the rotation on the failing city.
     assert loop_env["ingested"] == ["a", "b", "a", "b", "a"]
+    messages = [r.getMessage() for r in caplog.records]
+    assert messages.count("Initial ingestion failed for a: a feed down") == 1
+    # The log names the city that failed (scheduled runs 1 and 3 are "a").
+    assert messages.count("Scheduled ingestion failed for a: a feed down") == 2
+    assert not any("failed for b" in m for m in messages)
 
 
 @pytest.mark.asyncio

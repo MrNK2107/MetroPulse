@@ -42,18 +42,17 @@ async def _ingestion_loop(db: object) -> None:
     city_idx = 0
     while True:
         await asyncio.sleep(settings.news_refresh_seconds)
+        if not cities:
+            await asyncio.sleep(900)
+            continue
+        city = cities[city_idx % len(cities)]
+        city_idx += 1
         try:
-            if not cities:
-                await asyncio.sleep(900)
-                continue
-            city = cities[city_idx % len(cities)]
             await run_ingestion_cycle(db, city)
-            city_idx += 1
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            logger.warning("Scheduled ingestion failed for %s: %s", cities[city_idx % len(cities)], e)
-            city_idx += 1
+            logger.warning("Scheduled ingestion failed for %s: %s", city, e)
 
 
 @asynccontextmanager
