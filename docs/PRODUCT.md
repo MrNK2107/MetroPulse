@@ -55,7 +55,7 @@ document (the DPR) where MetroPulse's numbers end up.
 
 ## What MetroPulse does (the four headline features)
 
-1. **Pulse: a 168-hour city playback.** Every H3 hexagon (resolution 8, about 0.74 km²) in the
+1. **Pulse: a 168-hour city playback.** Every hexagon (sized like H3 resolution 8, about 0.74 km²) in the
    city has a weekday and a weekend demand profile. Press play to watch a week: the morning
    inbound wave, the evening release, the quiet Sunday. Alerts are pinned on the timeline.
 2. **Alerts that explain themselves.** A robust detector compares this week with a trailing
@@ -70,8 +70,8 @@ document (the DPR) where MetroPulse's numbers end up.
    runs a greedy search over every hexagon and proposes the three best locations, each one
    accounting for the coverage of the ones before it.
 4. **City briefings.** One click produces an editorial, print-ready briefing for the city:
-   headline numbers, the busiest demand cores, transit-desert share, the week's incidents and
-   the recommended sites, with methodology and data provenance at the end. Browsers save it as
+   headline numbers, the busiest demand cores, walk-band coverage today and with the
+   recommended sites, the week's incidents and the recommended sites, with methodology and data provenance at the end. Browsers save it as
    a PDF, so it can go straight into a WhatsApp group or a board pack.
 
 ### Why these four
@@ -92,15 +92,17 @@ works offline, deterministically and for free.
   it in an appraisal meeting.
 - **Built for Indian planning artefacts.** DPR alternatives analysis, CMP catchments, the
   NTOD 500–800 m walk band, and briefings sized for how decisions are actually circulated.
-- **Runs on a laptop.** FastAPI, numpy and H3. No GPU, no LLM, no map-tile subscription for the
-  core loop.
+- **Runs in the browser.** The core loop (model, detector, siting, briefing) is plain TypeScript
+  that runs client-side in under a second per city. No GPU, no LLM, no server, no map-tile
+  subscription.
 
 ## Honesty about data (today)
 
 The Pulse, Alerts, Siting and Briefing features currently run on the **MetroPulse sample city
 model**: a deterministic, seeded, synthetic demand field built from each city's real-world
 anchor points (CBDs, job hubs, transport hubs and residential centres from
-`data/cities/*.yaml`), its published population and procedural city boundaries. The sample week
+`data/cities/*.yaml`), its published population and a sample city outline drawn around those anchors (cut at the
+coast for coastal cities; not the administrative boundary). The sample week
 contains scripted incidents so the detector has something to find. Every screen and every
 briefing labels this. **The algorithms are real. The numbers are illustrative until a city's
 own data is connected.**
@@ -121,8 +123,8 @@ price-per-study variant (₹1.5 lakh per study) for one-off DPRs.
 
 | Horizon | What | Why |
 |---|---|---|
-| **Now (shipped)** | Pulse playback, explained alerts, station siting with greedy suggestions, print-ready briefings, sample model for 30 cities, India Twin (Census and VIIRS receipts), policy agent | The core loop, demonstrable offline |
-| **Next (0–3 months)** | Data connectors: GTFS static (stations and routes replace the config hubs), survey traffic-analysis zones, AFC CSV import. Ward boundaries. Multi-station network scenarios ("a line, not a stop"). Shareable briefing links | Turn illustrative numbers into a city's own numbers |
+| **Now (shipped)** | Pulse playback, explained alerts, station siting with area-weighted catchments and greedy suggestions, print-ready briefings, shareable deep links to any desk view, sample model for 30 cities, India Twin (Census and VIIRS receipts), policy agent | The core loop, demonstrable offline |
+| **Next (0–3 months)** | Data connectors: GTFS static (stations and routes replace the config hubs), survey traffic-analysis zones, AFC CSV import. Ward boundaries. Multi-station network scenarios ("a line, not a stop"). Saved scenarios | Turn illustrative numbers into a city's own numbers |
 | **Later (3–9 months)** | Calibration against observed counts with error bars on ridership. GTFS-RT and ICCC live feeds. Alert routing (email, WhatsApp Business). Per-user auth and org workspaces. Offline "ask the city" answers grounded in the model | Move from planning tool to weekly operating tool |
 | **Vision** | A city's mobility system of record: every proposal, every alert and every briefing versioned and comparable over years | The DPR becomes a living document |
 
