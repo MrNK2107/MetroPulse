@@ -1,6 +1,6 @@
 import { getCity } from "./geo";
 import { buildCityModel } from "./model";
-import { MODES, scoreSite, suggestSites, existingCoverage, transitDesertShare, walkCoverage } from "./siting";
+import { catchment, MODES, scoreSite, suggestSites, existingCoverage, transitDesertShare, walkCoverage } from "./siting";
 
 const model = buildCityModel(getCity("chennai")!);
 
@@ -42,12 +42,10 @@ describe("station siting", () => {
     const r = scoreSite(model, p, "metro", covered);
     const uncovered = scoreSite(model, p, "metro");
     expect(uncovered.newShare).toBe(1);
-    // the whole walk band is already served, so at least that share is cannibalised
-    const walkShare =
-      r.walkCells.reduce((a, c) => a + model.dailyTrips[c] * MODES.metro.walkCapture, 0) / r.dailyBoardings;
-    expect(walkShare).toBeGreaterThan(0.3);
-    expect(r.newShare).toBeLessThanOrEqual(1 - walkShare + 1e-6);
-    expect(r.newShare).toBeLessThan(0.6);
+    // a station on top of the hub: its whole walk band is already served
+    expect(r.newShare).toBeLessThan(0.7);
+    expect(r.newBoardings).toBeLessThan(uncovered.newBoardings);
+    expect(r.dailyBoardings).toBeCloseTo(uncovered.dailyBoardings, 6);
   });
 
   it("suggests three distinct sites whose coverage does not overlap much", () => {
@@ -73,7 +71,7 @@ describe("transit-desert share", () => {
     expect(share).toBeLessThan(1);
     const covered = existingCoverage(model);
     let inside = 0;
-    covered.forEach((c) => (inside += model.residents[c]));
+    covered.forEach((w, c) => (inside += w * model.residents[c]));
     expect(share).toBeCloseTo(1 - inside / model.city.population, 3);
   });
 });
@@ -88,5 +86,36 @@ describe("walk-band coverage", () => {
     // adding the same sites again changes nothing (no double counting)
     expect(walkCoverage(model, [...picks, ...picks].map((p) => p.result))).toBeCloseTo(after, 9);
     expect(after).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("catchment geometry", () => {
+  it("does not depend on where inside a hexagon the pin lands", () => {
+    // Before area weighting, a pin on a cell centre got a 1-hexagon walk band
+    // (neighbours are 0.92 km away, outside 0.8 km) while a pin between cells got 3.
+    const c = model.grid.cells[model.rankCellsByDailyTrips()[10]];
+    const centre = scoreSite(model, c, "metro").dailyBoardings;
+    const offset = scoreSite(model, { x: c.x + model.grid.edgeKm * 0.5, y: c.y + model.grid.edgeKm * 0.3 }, "metro").dailyBoardings;
+    expect(offset / centre).toBeGreaterThan(0.85);
+    expect(offset / centre).toBeLessThan(1.15);
+  });
+
+  it("weights each hexagon by the share of its area inside the circle", () => {
+    const c = model.grid.cells[Math.floor(model.grid.cells.length / 2)];
+    const big = catchment(model.grid, c, 0.01);
+    expect(big.cells).toEqual([c.index]);
+    expect(big.weights[0]).toBeLessThan(0.2);
+    // the most interior hexagon, so a 5 km circle is not clipped by the boundary
+    const g = model.grid;
+    const inner = g.cells.reduce((b, x) => (g.within(x.x, x.y, 6).length > g.within(b.x, b.y, 6).length ? x : b));
+    const all = catchment(g, inner, 5);
+    const area = all.weights.reduce((a, w) => a + w, 0) * g.cellAreaKm2;
+    // pi * 25 = 78.5 km2, to within sampling error
+    expect(area).toBeGreaterThan(78.5 * 0.9);
+    expect(area).toBeLessThan(78.5 * 1.1);
+    const walk = catchment(model.grid, c, MODES.metro.walkKm);
+    const walkArea = walk.weights.reduce((a, w) => a + w, 0) * model.grid.cellAreaKm2;
+    expect(walkArea).toBeGreaterThan(Math.PI * 0.64 * 0.8);
+    expect(walkArea).toBeLessThan(Math.PI * 0.64 * 1.2);
   });
 });

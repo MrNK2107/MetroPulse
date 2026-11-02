@@ -1,20 +1,21 @@
 /**
  * Station siting: "what if a station opens here?"
  *
- * A site's catchment is every hexagon whose centre is inside the walk band
- * (captured at the walk rate) or the feeder band (captured at the lower feeder
- * rate). Boardings are average weekday trips in those hexagons times the
- * capture rate. Trips in hexagons already inside an existing hub's walk band
- * count as cannibalised, not new.
+ * A site's catchment is two circles: the walk band (captured at the walk rate)
+ * and the feeder band (captured at the lower feeder rate). Each hexagon counts
+ * by the share of its area inside a circle, so a pin's score does not jump
+ * depending on where inside a hexagon it lands. Boardings are average weekday
+ * trips times the capture rate. Trips in hexagons already served by an
+ * existing hub's walk band count as cannibalised, not new.
  *
  *   score = 60 x min(1, boardings / reference) + 40 x new share
  *
  * "Suggest sites" is a greedy search: score every hexagon by the new
- * boardings it would add, take the best, mark its catchment as covered, and
- * repeat, so each pick accounts for the ones before it (a pick covers its
+ * boardings it would add, take the best, mark its catchment as served, and
+ * repeat, so each pick accounts for the ones before it (a pick serves its
  * whole feeder band, which spreads picks out into a network).
  */
-import type { Point } from "./geo";
+import type { HexGrid, Point } from "./geo";
 import { CityModel, HOURS_PER_WEEK } from "./model";
 
 export type ModeId = "metro" | "brt" | "feeder";
@@ -59,21 +60,81 @@ export const MODES: Record<ModeId, Mode> = {
   },
 };
 
-/** Existing hubs: the city's transport anchors, with a metro walk band. */
-export function existingCoverage(model: CityModel): Set<number> {
-  const covered = new Set<number>();
+/** Sample points spread evenly over one hexagon, relative to its centre. */
+const samplesCache = new Map<number, Point[]>();
+function hexSamples(edgeKm: number): Point[] {
+  const hit = samplesCache.get(edgeKm);
+  if (hit) return hit;
+  const step = edgeKm / 3;
+  const half = (Math.sqrt(3) / 2) * edgeKm;
+  const out: Point[] = [];
+  // a triangular lattice clipped to the pointy-top hexagon
+  for (let j = -6; j <= 6; j++) {
+    const y = (j * step * Math.sqrt(3)) / 2;
+    for (let i = -6; i <= 6; i++) {
+      const x = (i + (j & 1 ? 0.5 : 0)) * step;
+      if (Math.abs(x) <= half + 1e-9 && Math.abs(y) <= edgeKm - Math.abs(x) / Math.sqrt(3) + 1e-9) out.push({ x, y });
+    }
+  }
+  samplesCache.set(edgeKm, out);
+  return out;
+}
+
+export interface Catchment {
+  cells: number[];
+  /** Share (0-1] of each cell's area inside the circle, aligned with cells. */
+  weights: number[];
+}
+
+/** Hexagons overlapping a circle, each weighted by the share of its area inside it. */
+export function catchment(grid: HexGrid, centre: Point, radiusKm: number): Catchment {
+  const samples = hexSamples(grid.edgeKm);
+  const r2 = radiusKm * radiusKm;
+  const cells: number[] = [];
+  const weights: number[] = [];
+  for (const c of grid.within(centre.x, centre.y, radiusKm + grid.edgeKm)) {
+    const cx = grid.cells[c].x - centre.x;
+    const cy = grid.cells[c].y - centre.y;
+    let inside = 0;
+    for (const s of samples) {
+      const dx = cx + s.x;
+      const dy = cy + s.y;
+      if (dx * dx + dy * dy <= r2) inside++;
+    }
+    if (inside > 0) {
+      cells.push(c);
+      weights.push(inside / samples.length);
+    }
+  }
+  return { cells, weights };
+}
+
+/** Per hexagon, the share (0-1) already within walking distance of something. */
+export type Coverage = Float32Array;
+
+function serve(cover: Coverage, c: Catchment) {
+  for (let k = 0; k < c.cells.length; k++) if (c.weights[k] > cover[c.cells[k]]) cover[c.cells[k]] = c.weights[k];
+}
+
+/** Existing hubs: the city's transport anchors, each with a metro walk band. */
+export function existingCoverage(model: CityModel): Coverage {
+  const cover = new Float32Array(model.grid.cells.length);
   for (const a of model.city.anchors) {
     if (a.type !== "transport") continue;
-    const p = model.grid.project(a.lat, a.lng);
-    for (const c of model.grid.within(p.x, p.y, MODES.metro.walkKm)) covered.add(c);
+    serve(cover, catchment(model.grid, model.grid.project(a.lat, a.lng), MODES.metro.walkKm));
   }
-  return covered;
+  return cover;
 }
+
+/** Hexagons drawn as part of a band: at least a quarter of their area inside it. */
+const DRAW_SHARE = 0.25;
 
 export interface SiteResult {
   mode: ModeId;
   site: Point;
+  /** Hexagons to draw as the walk band (at least 25% of their area inside it). */
   walkCells: number[];
+  /** Hexagons to draw as the feeder band. */
   feederCells: number[];
   residents: number;
   jobs: number;
@@ -86,35 +147,41 @@ export interface SiteResult {
   formula: string;
 }
 
-export function scoreSite(
-  model: CityModel,
-  site: Point,
-  modeId: ModeId,
-  covered: Set<number> = new Set()
-): SiteResult {
+/** Capture rate per feeder-band hexagon: walk share at the walk rate, the rest of the feeder share at the feeder rate. */
+function captureRates(walk: Catchment, feeder: Catchment, mode: Mode): number[] {
+  const w = new Map<number, number>();
+  walk.cells.forEach((c, k) => w.set(c, walk.weights[k]));
+  // the walk circle sits inside the feeder circle, so feeder-only area = feeder share - walk share
+  return feeder.cells.map((c, k) => {
+    const ww = w.get(c) ?? 0;
+    return ww * mode.walkCapture + Math.max(0, feeder.weights[k] - ww) * mode.feederCapture;
+  });
+}
+
+export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered?: Coverage): SiteResult {
   const mode = MODES[modeId];
-  const { grid } = model;
-  const walkCells = grid.within(site.x, site.y, mode.walkKm);
-  const walkSet = new Set(walkCells);
-  const feederCells = grid.within(site.x, site.y, mode.feederKm);
+  const walk = catchment(model.grid, site, mode.walkKm);
+  const feeder = catchment(model.grid, site, mode.feederKm);
+  const rates = captureRates(walk, feeder, mode);
 
   let residents = 0;
   let jobs = 0;
+  walk.cells.forEach((c, k) => {
+    residents += model.residents[c] * walk.weights[k];
+    jobs += model.jobs[c] * walk.weights[k];
+  });
+
   let boardings = 0;
   let fresh = 0;
   const hourly = new Array<number>(24).fill(0);
-  for (const c of feederCells) {
-    const rate = walkSet.has(c) ? mode.walkCapture : mode.feederCapture;
+  feeder.cells.forEach((c, k) => {
+    const rate = rates[k];
     const b = model.dailyTrips[c] * rate;
     boardings += b;
-    if (!covered.has(c)) fresh += b;
-    if (walkSet.has(c)) {
-      residents += model.residents[c];
-      jobs += model.jobs[c];
-    }
+    fresh += b * (1 - (covered ? covered[c] : 0));
     // weekday hourly shape (Mon-Fri average)
     for (let h = 0; h < 120; h++) hourly[h % 24] += (model.baselineMean[c * HOURS_PER_WEEK + h] * rate) / 5;
-  }
+  });
   let peakHour = 0;
   for (let h = 1; h < 24; h++) if (hourly[h] > hourly[peakHour]) peakHour = h;
   const newShare = boardings > 0 ? fresh / boardings : 0;
@@ -123,8 +190,8 @@ export function scoreSite(
   return {
     mode: modeId,
     site,
-    walkCells,
-    feederCells,
+    walkCells: walk.cells.filter((_, k) => walk.weights[k] >= DRAW_SHARE),
+    feederCells: feeder.cells.filter((_, k) => feeder.weights[k] >= DRAW_SHARE),
     residents,
     jobs,
     dailyBoardings: boardings,
@@ -148,25 +215,27 @@ export function suggestSites(
   model: CityModel,
   modeId: ModeId,
   k = 3,
-  start: Set<number> = existingCoverage(model)
+  start: Coverage = existingCoverage(model)
 ): Suggestion[] {
   const mode = MODES[modeId];
   const { grid } = model;
-  const covered = new Set(start);
+  const covered = new Float32Array(start);
   const picks: Suggestion[] = [];
-  // Precompute catchments once.
-  const walk = grid.cells.map((c) => grid.within(c.x, c.y, mode.walkKm));
-  const feeder = grid.cells.map((c) => grid.within(c.x, c.y, mode.feederKm));
+  // Precompute every hexagon's catchment and capture rates once.
+  const bands = grid.cells.map((c) => {
+    const feeder = catchment(grid, c, mode.feederKm);
+    return { feeder, rates: captureRates(catchment(grid, c, mode.walkKm), feeder, mode) };
+  });
   for (let round = 0; round < k; round++) {
     let best = -1;
     let bestValue = -1;
     for (const c of grid.cells) {
-      if (covered.has(c.index)) continue;
-      const w = new Set(walk[c.index]);
+      if (covered[c.index] >= 0.5) continue;
+      const { feeder, rates } = bands[c.index];
       let v = 0;
-      for (const f of feeder[c.index]) {
-        if (covered.has(f)) continue;
-        v += model.dailyTrips[f] * (w.has(f) ? mode.walkCapture : mode.feederCapture);
+      for (let j = 0; j < feeder.cells.length; j++) {
+        const f = feeder.cells[j];
+        v += model.dailyTrips[f] * rates[j] * (1 - covered[f]);
       }
       if (v > bestValue) {
         bestValue = v;
@@ -174,37 +243,34 @@ export function suggestSites(
       }
     }
     if (best < 0) break;
-    const cell = grid.cells[best];
-    picks.push({ cell: best, result: scoreSite(model, cell, modeId, covered) });
+    picks.push({ cell: best, result: scoreSite(model, grid.cells[best], modeId, covered) });
     // the new station now serves its whole catchment
-    for (const f of feeder[best]) covered.add(f);
+    serve(covered, bands[best].feeder);
   }
   return picks;
 }
 
-/** Share of residents living outside every existing hub's walk band. */
-export function transitDesertShare(model: CityModel, covered: Set<number> = existingCoverage(model)): number {
+function residentShare(model: CityModel, cover: Coverage): number {
   let total = 0;
   let inside = 0;
   for (let c = 0; c < model.residents.length; c++) {
     total += model.residents[c];
-    if (covered.has(c)) inside += model.residents[c];
+    inside += model.residents[c] * cover[c];
   }
-  return total > 0 ? 1 - inside / total : 0;
+  return total > 0 ? inside / total : 0;
+}
+
+/** Share of residents living outside every existing hub's walk band. */
+export function transitDesertShare(model: CityModel, covered: Coverage = existingCoverage(model)): number {
+  return 1 - residentShare(model, covered);
 }
 
 /**
  * Share of residents within walking distance (the metro walk band) of an
- * existing hub or of any of the given sites. Each hexagon counts once.
+ * existing hub or of any of the given sites. Overlaps count once.
  */
 export function walkCoverage(model: CityModel, sites: SiteResult[] = []): number {
-  const cells = existingCoverage(model);
-  for (const s of sites) for (const c of s.walkCells) cells.add(c);
-  let total = 0;
-  let inside = 0;
-  for (let c = 0; c < model.residents.length; c++) {
-    total += model.residents[c];
-    if (cells.has(c)) inside += model.residents[c];
-  }
-  return total > 0 ? inside / total : 0;
+  const cover = existingCoverage(model);
+  for (const s of sites) serve(cover, catchment(model.grid, s.site, MODES.metro.walkKm));
+  return residentShare(model, cover);
 }
