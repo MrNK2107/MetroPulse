@@ -81,9 +81,30 @@ body {
   }
 }
 
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
 @media print {
   .no-print {
     display: none !important;
+  }
+  /* Keep the hexagon map's demand ramp and the signal/supply colours on paper and in the PDF. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  figure,
+  table,
+  li,
+  .print-keep {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
   }
   body {
     background: #fff;

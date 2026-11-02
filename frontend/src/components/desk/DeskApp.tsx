@@ -11,8 +11,13 @@ import { Timeline } from "./Timeline";
 import { AlertFeed } from "./AlertFeed";
 import { SitingPanel, fmtInt } from "./SitingPanel";
 import { Wordmark } from "./Wordmark";
+import { Sparkline } from "./Sparkline";
+import { ShortcutsHelp } from "./ShortcutsHelp";
+import { useDeskShortcuts } from "./useDeskShortcuts";
+import { cellDay, downloadText, incidentsToCsv } from "@/lib/pulse/export";
 
 type Tab = "pulse" | "alerts" | "siting";
+const TAB_ORDER: Tab[] = ["pulse", "alerts", "siting"];
 const TABS: { id: Tab; label: string; verb: string }[] = [
   { id: "pulse", label: "Pulse", verb: "See" },
   { id: "alerts", label: "Alerts", verb: "Notice" },
@@ -87,6 +92,8 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
   const [pin, setPin] = useState<Point | null>(init.pin);
   const [suggestions, setSuggestions] = useState<Suggestion[]>(init.suggestions);
   const lastCity = useRef(startCity);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const city = getCity(cityId)!;
   const model = useMemo(() => getCityModel(city), [city]);
@@ -142,6 +149,59 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     setHour(i.peakHour);
   }, []);
 
+  const flash = useCallback((text: string) => {
+    setNotice(text);
+    setTimeout(() => setNotice((cur) => (cur === text ? "" : cur)), 2600);
+  }, []);
+
+  const copyLink = useCallback(() => {
+    const url = window.location.origin + href;
+    const clip = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
+    if (!clip?.writeText) {
+      flash("Copy is not available here: use the address bar");
+      return;
+    }
+    clip.writeText(url).then(
+      () => flash("Link to this view copied"),
+      () => flash("Copy failed: use the address bar")
+    );
+  }, [href, flash]);
+
+  const exportCsv = useCallback(() => {
+    downloadText(`metropulse-${cityId}-incidents.csv`, incidentsToCsv(incidents));
+    flash(`${incidents.length} incident${incidents.length === 1 ? "" : "s"} saved as CSV`);
+  }, [cityId, incidents, flash]);
+
+  useDeskShortcuts(
+    {
+      togglePlay: () => setPlaying((p) => !p),
+      step: (d) => {
+        setPlaying(false);
+        setHour((h) => (((h + d) % HOURS_PER_WEEK) + HOURS_PER_WEEK) % HOURS_PER_WEEK);
+      },
+      tab: (k) => setTab(TAB_ORDER[k]),
+      incident: (dir) => {
+        if (incidents.length === 0) return;
+        const cur = selected ? incidents.findIndex((i) => i.id === selected.id) : -1;
+        const next = cur < 0 ? (dir > 0 ? 0 : incidents.length - 1) : (cur + dir + incidents.length) % incidents.length;
+        setTab("alerts");
+        setSelected(incidents[next]);
+        setPlaying(false);
+        setHour(incidents[next].peakHour);
+      },
+      copyLink,
+      exportCsv,
+      openBriefing: () => window.location.assign(`/brief?city=${cityId}`),
+      escape: () => {
+        if (selected) setSelected(null);
+        else if (pin) setPin(null);
+        else setPlaying(false);
+      },
+      toggleHelp: () => setHelpOpen((o) => !o),
+    },
+    !helpOpen
+  );
+
   const markers: Marker[] = useMemo(() => {
     const out: Marker[] = [];
     if (tab === "alerts")
@@ -158,8 +218,17 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
 
   const busiest = useMemo(() => {
     const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => values[b] - values[a]);
-    return order.slice(0, 5).map((c) => ({ c, name: placeName(model, model.grid.cells[c]), v: values[c] }));
-  }, [values, model, n]);
+    return order.slice(0, 5).map((c) => {
+      const base = model.baselineMean[c * HOURS_PER_WEEK + hour];
+      return {
+        c,
+        name: placeName(model, model.grid.cells[c]),
+        v: values[c],
+        trend: base > 0 ? values[c] / base - 1 : 0,
+        day: cellDay(model.thisWeek, model.baselineMean, c, hour),
+      };
+    });
+  }, [values, model, n, hour]);
 
   const delta = cityBase[hour] ? cityNow[hour] / cityBase[hour] - 1 : 0;
 
@@ -211,7 +280,37 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
             Briefing
           </Link>
         </nav>
+        <div className="no-print flex items-center gap-2">
+          <button
+            type="button"
+            onClick={copyLink}
+            className="border border-ink px-2.5 py-1 text-sm hover:bg-paper-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          >
+            Copy link
+          </button>
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+            className="h-8 w-8 border border-ink font-mono text-sm hover:bg-paper-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          >
+            ?
+          </button>
+        </div>
       </header>
+      <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <div role="status" aria-live="polite" className="sr-only">
+        {notice}
+      </div>
+      {notice && (
+        <div
+          aria-hidden
+          className="no-print pointer-events-none fixed bottom-24 left-1/2 z-40 -translate-x-1/2 border border-ink bg-ink px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-paper"
+        >
+          {notice}
+        </div>
+      )}
 
       <p className="border-b border-ink/30 bg-signal/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
         Sample city model: a seeded synthetic demand field built from {city.name}&rsquo;s real anchor points and published
@@ -261,12 +360,27 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               </div>
               <div>
                 <h2 className="rule-double pt-2 font-display text-lg font-semibold">Busiest hexagons now</h2>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">
+                  Today&rsquo;s 24 hours · trips this hour · against baseline
+                </p>
                 <ol className="mt-1 divide-y divide-ink/15">
                   {busiest.map((b, k) => (
-                    <li key={b.c} className="flex items-baseline gap-3 py-1.5 text-sm">
+                    <li key={b.c} className="flex items-center gap-3 py-1.5 text-sm">
                       <span className="w-4 font-mono text-ink-faint">{k + 1}</span>
-                      <span className="flex-1">{b.name}</span>
-                      <span className="font-mono tabular">{fmtInt(b.v)}</span>
+                      <span className="min-w-0 flex-1">{b.name}</span>
+                      <Sparkline
+                        now={b.day.now}
+                        base={b.day.base}
+                        at={b.day.at}
+                        label={`${b.name}: today's 24 hours against the baseline`}
+                      />
+                      <span className="w-12 text-right font-mono tabular">{fmtInt(b.v)}</span>
+                      <span
+                        className={`w-14 text-right font-mono text-[11px] tabular ${b.trend >= 0 ? "text-signal-deep" : "text-supply"}`}
+                        title="Against the same hour in the four-week baseline"
+                      >
+                        {b.trend >= 0 ? "▲" : "▼"} {Math.abs(b.trend * 100).toFixed(0)}%
+                      </span>
                     </li>
                   ))}
                 </ol>
@@ -287,14 +401,24 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               </dl>
               <p className="text-xs leading-relaxed text-ink-soft">
                 Press play to watch the week: the weekday morning wave into the job hubs, the evening release, the quieter
-                weekend. Diamonds on the timeline are this week&rsquo;s incidents.
+                weekend. Diamonds on the timeline are this week&rsquo;s incidents. Press{" "}
+                <kbd className="border border-ink/50 px-1 font-mono text-[10px]">?</kbd> for keyboard shortcuts.
               </p>
             </div>
           )}
           {tab === "alerts" && (
             <div className="space-y-3">
               <div>
-                <h2 className="font-display text-lg font-semibold">This week&rsquo;s incidents</h2>
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="font-display text-lg font-semibold">This week&rsquo;s incidents</h2>
+                  <button
+                    type="button"
+                    onClick={exportCsv}
+                    className="no-print shrink-0 border border-ink px-2 py-0.5 font-mono text-[11px] uppercase tracking-widest hover:bg-paper-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                  >
+                    Download CSV
+                  </button>
+                </div>
                 <p className="text-xs text-ink-soft">
                   Each hex-hour is compared with the same hour in the four previous weeks (median and MAD). Flagged hex-hours that
                   touch in space or time become one incident, explained by a fixed rule trace.
