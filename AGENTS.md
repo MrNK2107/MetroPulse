@@ -42,8 +42,8 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 ## Request Middleware (`backend/app/middleware.py`)
 - REST routes stay under `/api` (the June `/api/v1` prefix was not adopted; every desk, twin and agent client uses `/api`).
 - `CorrelationIdMiddleware`: every response carries `X-Request-ID` (a well-formed client value is echoed, otherwise a UUID).
-- `RequestLoggingMiddleware`: one JSON log line per request (`method`, `path`, `status`, `response_time_ms`, `request_id`); health checks are skipped and bodies are never logged.
-- `RateLimitMiddleware`: `RATE_LIMIT_PER_MINUTE` per IP (default 240, `0` disables; tests run with 0). `POST /api/ingest` also has its own 3/min limit on top of `INGEST_TOKEN`.
+- `RequestLoggingMiddleware`: one JSON log line per request (`method`, `path`, `status`, `response_time_ms`, `request_id`); health checks (`/api/health`, `/api/health/data`, `/api/health/llm`) are skipped and bodies are never logged. `app/logging_setup.py` gives the `app` logger a JSON stderr handler at `LOG_LEVEL` and redacts `token=` (and `q=` on the access log) from `uvicorn.error`/`uvicorn.access`.
+- `RateLimitMiddleware`: `RATE_LIMIT_PER_MINUTE` per IP, keyed on `Fly-Client-IP` when present (default 240, `0` disables; tests and `scripts/bench_api.py` runs need 0). `POST /api/ingest` also has its own 3/min limit on top of `INGEST_TOKEN`.
 - `GET /api/health/llm` says which LLM providers have credentials set, without calling them or echoing keys.
 
 ## Conventions

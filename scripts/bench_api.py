@@ -3,6 +3,7 @@
 This script starts nothing. Point it at a backend you started yourself, e.g.:
 
     cd backend
+    $env:RATE_LIMIT_PER_MINUTE = "0"   # PowerShell; bash: export RATE_LIMIT_PER_MINUTE=0
     .venv\\Scripts\\uvicorn app.main:app --port 8020 --no-access-log --log-level warning
     .venv\\Scripts\\python ..\\scripts\\bench_api.py --base-url http://127.0.0.1:8020
 
@@ -14,6 +15,11 @@ the /ws/agent handshake (connect + accept) and a PING/PONG round trip.
 Results are written as Markdown (default docs/benchmarks.md) together with
 machine info and a load snapshot, because numbers from a busy shared machine
 are only an upper bound on latency.
+
+Start the server with RATE_LIMIT_PER_MINUTE=0 (as above). The default per-IP
+limit (240 requests/minute) is far below what a benchmark sends from one
+client, so a run against it would mostly time 429 responses. If any request
+gets a 429 the script stops with exit status 2 and writes no report.
 """
 from __future__ import annotations
 
@@ -86,6 +92,15 @@ def summarize(latencies_ms: Sequence[float], wall_seconds: float) -> dict[str, f
 
 # --------------------------------------------------------------------------- runner
 
+class RateLimited(Exception):
+    """The server answered 429: the run would measure the rate limiter, not the API."""
+
+    def __init__(self, target: str, retry_after: str | None = None):
+        self.target = target
+        self.retry_after = retry_after
+        super().__init__(f"{target} returned 429 Too Many Requests")
+
+
 @dataclass
 class RunResult:
     target: str
@@ -111,6 +126,8 @@ async def _drive(
             t0 = time.perf_counter()
             try:
                 label = await op()
+            except RateLimited:
+                raise
             except Exception as exc:  # network error, refused socket, ...
                 label = type(exc).__name__
                 errors += 1
@@ -132,6 +149,8 @@ async def bench_http(base_url: str, path: str, n: int, warmup: int, concurrency:
         async def op() -> str:
             r = await client.get(path)
             await r.aread()
+            if r.status_code == 429:
+                raise RateLimited(f"GET {path}", r.headers.get("Retry-After"))
             return str(r.status_code)
 
         await _drive(op, warmup, concurrency)
@@ -285,7 +304,17 @@ def main(argv: list[str] | None = None) -> int:
     info = machine_info()
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    results = asyncio.run(amain(args))
+    try:
+        results = asyncio.run(amain(args))
+    except RateLimited as exc:
+        wait = f" (Retry-After: {exc.retry_after}s)" if exc.retry_after else ""
+        print(
+            f"error: {exc}{wait}. The server's per-IP rate limit is on, so the numbers\n"
+            "would be meaningless. Restart the backend with RATE_LIMIT_PER_MINUTE=0 and\n"
+            "run again. No report was written.",
+            file=sys.stderr,
+        )
+        return 2
     load_after = info.get("cpu_percent_at_start", "n/a")
     try:
         import psutil

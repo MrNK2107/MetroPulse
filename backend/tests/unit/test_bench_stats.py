@@ -53,3 +53,46 @@ def test_summarize():
         bench.summarize([], 1.0)
     with pytest.raises(ValueError):
         bench.summarize([1.0], 0.0)
+
+
+# ── 429 handling ────────────────────────────────────────────────────────
+
+
+def test_drive_propagates_rate_limited():
+    import asyncio
+
+    async def op():
+        raise bench.RateLimited("GET /x", "7")
+
+    with pytest.raises(bench.RateLimited):
+        asyncio.run(bench._drive(op, 3, 1))
+
+
+def test_bench_http_aborts_on_429(monkeypatch):
+    import asyncio
+
+    import httpx
+
+    real_client = httpx.AsyncClient
+
+    def fake_client(*args, **kwargs):
+        kwargs["transport"] = httpx.MockTransport(lambda req: httpx.Response(429, headers={"Retry-After": "12"}))
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", fake_client)
+    with pytest.raises(bench.RateLimited) as exc:
+        asyncio.run(bench.bench_http("http://127.0.0.1:9", "/api/health", n=5, warmup=2, concurrency=1))
+    assert exc.value.retry_after == "12"
+
+
+def test_main_prints_clear_message_on_429(monkeypatch, capsys, tmp_path):
+    async def fake_amain(args):
+        raise bench.RateLimited("GET /api/regions", "30")
+
+    monkeypatch.setattr(bench, "amain", fake_amain)
+    monkeypatch.setattr(bench, "machine_info", lambda: {})
+    out = tmp_path / "bench.md"
+    assert bench.main(["--out", str(out)]) == 2
+    err = capsys.readouterr().err
+    assert "429" in err and "RATE_LIMIT_PER_MINUTE=0" in err
+    assert not out.exists(), "no report should be written from a rate-limited run"

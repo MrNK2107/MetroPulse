@@ -525,7 +525,7 @@ Map style: Switch to **CartoDB Dark Matter (global)** or **Mapbox India-specific
 | 5.1 | Unit tests: spatial_init, climate, policy loops | `tests/unit/` | 1.2-1.4 |
 | 5.2 | Integration tests: full India sim cycle | `tests/integration/` | 2.3 |
 | 5.3 | Calibration tests: compare output vs real India data | `tests/validation/` **NEW** | 0.9, 1.9 |
-| 5.4 | 10-city load test | `tests/load/locustfile.py` update | 4.1-4.3 |
+| 5.4 | 10-city load test | `tests/load/locustfile.py` update (done: now `/ws/agent` PING/PONG) | 4.1-4.3 |
 | 5.5 | E2E: frontend India workflow | `tests/e2e/` | 3.7 |
 
 ---

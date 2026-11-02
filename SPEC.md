@@ -707,7 +707,7 @@ Charts update in real-time as frames arrive via WebSocket.
 
 ### Performance Tests
 
-- Locust load test: 10 concurrent WebSocket simulation clients, 24-month horizon each. Assert p95 completion < 1,500ms.
+- Locust load test (`backend/tests/load/locustfile.py`): token-gated `/ws/agent` PING/PONG sessions (set `AGENT_WS_TOKEN`). The original 10-client `/ws/simulate` run was retired with the simulator.
 - Deck.gl FPS test: Playwright + `stats.js` injected to assert > 45 FPS during programmatic camera orbit.
 
 ### End-to-End Tests

@@ -326,7 +326,11 @@ The backend suite is hermetic: `tests/conftest.py` ignores the Supabase and LLM 
 The frontend has the same rule: `jest.setup.js` replaces `fetch`, `WebSocket` and `XMLHttpRequest`
 with stand-ins that fail the test unless the test installs its own mock.
 
-`scripts/bench_api.py` benchmarks a running backend and writes `docs/benchmarks.md`.
+`scripts/bench_api.py` benchmarks a running backend and writes `docs/benchmarks.md`. Start that
+backend with `RATE_LIMIT_PER_MINUTE=0`: the default limit of 240 requests per minute per IP is far
+below a benchmark's request rate, and the script stops with exit status 2 on the first 429.
+`backend/tests/load/locustfile.py` load-tests `/ws/agent` (PING/PONG, no LLM calls): set
+`AGENT_WS_TOKEN` and run `locust -f tests/load/locustfile.py --host=http://localhost:8000` from `backend/`.
 CI (`.github/workflows/ci.yml`) runs the backend tests, then lint, type-check and Jest on the frontend.
 
 ## Project structure

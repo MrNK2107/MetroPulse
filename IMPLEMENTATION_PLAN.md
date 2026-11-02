@@ -427,7 +427,7 @@
 ### 9.4 Performance Tests
 - `tests/performance/test_sim_duration.py`: 24-month horizon < 1,500ms
 - `tests/performance/test_concurrent_sims.py`: 10 concurrent users
-- Locust load test script in `/tests/load/locustfile.py`
+- Locust load test script in `/tests/load/locustfile.py` (now drives `/ws/agent` PING/PONG; `/ws/simulate` is retired)
 
 ### 9.5 End-to-End Tests
 - Playwright script in `tests/e2e/simulation.spec.ts`:
@@ -463,8 +463,8 @@
 - Configure deployment previews for PRs
 
 ### 10.5 Load Testing
-- Run Locust test against production/staging
-- Verify 10 concurrent simulations complete within spec
+- Run Locust test against production/staging (`AGENT_WS_TOKEN` set; users <= `WS_MAX_CONNECTIONS`)
+- Verify concurrent `/ws/agent` sessions connect and answer PING within spec
 - Verify REST endpoints respond < 200ms p95
 
 ---
