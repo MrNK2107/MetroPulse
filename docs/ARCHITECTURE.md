@@ -302,8 +302,11 @@ are used, but only by the build CLI.
   `AGENT_RESULT` locally yet.
 - **Brittle output parsing.** One malformed LLM reply ends the session with an error; the agent
   does not retry.
-- **Stale prompt text.** The exported but unused `AGENT_SYSTEM_PROMPT` still promises
-  simulation runs, and no simulation tool exists. The ReAct prompt in use does not.
+- **No forecasting.** There is no simulation tool. `compare_sectors` multiplies each requested
+  sector change by that sector's weight in the city config and ranks the products; it is a
+  static estimate, and the tool descriptions sent to the LLM say so. A unit test fails if any
+  prompt text (`REACT_SYSTEM_PROMPT`, the tool descriptions, or the exported but unused
+  `AGENT_SYSTEM_PROMPT`/`PLAN_PROMPT`/`TOOL_DESCRIPTIONS`) mentions simulation again.
 - **Thin indicators.** Only Census 2011 (5 population indicators) and VIIRS night lights have
   adapters. The other entries among the 23 in `SOURCE_REGISTRY` are metadata only.
 - **Proxy "realtime" data.** The mobility, jobs and land-value signals come from news keyword
