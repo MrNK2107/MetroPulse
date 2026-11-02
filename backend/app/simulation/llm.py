@@ -101,6 +101,8 @@ async def _call_ollama(prompt: str, timeout_ms: int) -> str:
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
     }
+    if settings.ollama_num_ctx > 0:
+        body["options"] = {"num_ctx": settings.ollama_num_ctx}
     async with _httpx.AsyncClient(timeout=timeout_ms / 1000.0) as client:
         resp = await client.post(
             f"{settings.ollama_base_url}/api/chat",

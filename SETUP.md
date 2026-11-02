@@ -34,6 +34,7 @@ MIMO_API_KEY=
 OPENAI_API_KEY=
 GEMINI_API_KEY=
 OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_NUM_CTX=8192             # context per call; 0 = server default (can be huge)
 
 # Agent socket: disabled while empty
 AGENT_WS_TOKEN=pick-a-long-random-string

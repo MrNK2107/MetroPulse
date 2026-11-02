@@ -72,8 +72,33 @@ async def test_ollama_request_shape_and_model_override(cfg, transport, monkeypat
     req = transport.seen[0]
     assert str(req.url) == "http://ollama.test:11434/api/chat"
     body = json.loads(req.content)
-    assert body == {"model": "llama3.2:3b", "messages": [{"role": "user", "content": "ping"}], "stream": False}
+    assert body == {
+        "model": "llama3.2:3b",
+        "messages": [{"role": "user", "content": "ping"}],
+        "stream": False,
+        "options": {"num_ctx": 8192},
+    }
     assert transport.timeouts == [1.5]
+
+
+@pytest.mark.asyncio
+async def test_ollama_num_ctx_is_configurable(cfg, transport, monkeypatch):
+    # Without an explicit num_ctx a server configured with a huge default context
+    # allocates its KV cache for that (it used 18 GB on a 16 GB laptop).
+    monkeypatch.setattr(cfg, "llm_provider", "ollama")
+    monkeypatch.setattr(cfg, "ollama_num_ctx", 4096)
+    transport.set(lambda r: httpx.Response(200, json={"message": {"content": "pong"}}))
+    await llm.call_llm("ping")
+    assert json.loads(transport.seen[0].content)["options"] == {"num_ctx": 4096}
+
+
+@pytest.mark.asyncio
+async def test_ollama_num_ctx_zero_leaves_the_server_default(cfg, transport, monkeypatch):
+    monkeypatch.setattr(cfg, "llm_provider", "ollama")
+    monkeypatch.setattr(cfg, "ollama_num_ctx", 0)
+    transport.set(lambda r: httpx.Response(200, json={"message": {"content": "pong"}}))
+    await llm.call_llm("ping")
+    assert "options" not in json.loads(transport.seen[0].content)
 
 
 @pytest.mark.asyncio

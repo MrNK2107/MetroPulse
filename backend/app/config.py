@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     mimo_base_url: str = Field(default="https://opengateway.gitlawb.com/v1", alias="MIMO_BASE_URL")
 
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
+    # Context window sent with every Ollama chat call. 0 = use the server's default,
+    # which can be very large (and allocate a matching KV cache).
+    ollama_num_ctx: int = Field(default=8192, ge=0, alias="OLLAMA_NUM_CTX")
     llm_provider: str = Field(default="mimo", alias="LLM_PROVIDER")
     llm_model: str = Field(default="", alias="LLM_MODEL")
     embedding_provider: str = Field(default="", alias="EMBEDDING_PROVIDER")

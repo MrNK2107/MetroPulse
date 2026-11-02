@@ -242,7 +242,8 @@ Details that matter when changing it:
   - `get_city_profile`, `compare_sectors`, `list_cities`: read `data/cities/*.yaml`.
 - **LLM call** (`app/simulation/llm.py`): `LLM_PROVIDER` picks the backend. Each call has an
   `LLM_TIMEOUT_MS` limit (default 25 s). OpenAI uses JSON mode. MiMo gets a "JSON only"
-  system message. Ollama uses `/api/chat` with `stream: false` and does not set `num_ctx`.
+  system message. Ollama uses `/api/chat` with `stream: false` and sends `options.num_ctx` from
+  `OLLAMA_NUM_CTX` (default 8192; 0 leaves the server default, which can be very large).
 - **Memory**: `AgentMemory` keeps at most 40 entries and formats about 2000 tokens (8000
   characters) of history. A new `UrbanAgent` is created for each connection, so nothing
   persists between sessions.

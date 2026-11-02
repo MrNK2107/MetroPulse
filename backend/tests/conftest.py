@@ -38,6 +38,7 @@ _HERMETIC_ENV = {
     "EMBEDDING_MODEL": "",
     # Port 9 (discard) on loopback: refused at once, so a local Ollama never answers tests.
     "OLLAMA_BASE_URL": "http://127.0.0.1:9",
+    "OLLAMA_NUM_CTX": "8192",
     "INGEST_TOKEN": "",
 }
 os.environ.update(_HERMETIC_ENV)
