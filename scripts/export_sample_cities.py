@@ -36,7 +36,7 @@ SMOOTH_DEG = 12
 # Sea side of the coastline near the city: (lat, lng) of a point on the shore and
 # the compass bearing (degrees clockwise from north) pointing out to sea.
 COASTS: dict[str, tuple[float, float, float]] = {
-    "chennai": (13.08, 80.287, 90),
+    "chennai": (13.08, 80.3, 90),
     "mumbai": (19.0, 72.815, 270),
     "kochi": (9.96, 76.24, 270),
     "visakhapatnam": (17.714, 83.323, 135),
