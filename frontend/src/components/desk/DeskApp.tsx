@@ -30,6 +30,11 @@ export function placeName(model: CityModel, p: Point): string {
   return `${km.toFixed(1)} km ${dir} of ${anchor.name}`;
 }
 
+/** "near T Nagar", but "0.8 km N of Chennai Central" (that is already a position). */
+export function nearPlace(name: string): string {
+  return /^\d/.test(name) ? name : `near ${name}`;
+}
+
 export interface DeskAppProps {
   initialCity: string;
   initialTab?: Tab;

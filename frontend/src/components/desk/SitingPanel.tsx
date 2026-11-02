@@ -63,7 +63,7 @@ export function SitingPanel({ mode, onMode, result, placeName, suggestions, sugg
         <section aria-label="Site score" className="space-y-3">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">{m.label} near</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">Proposed {m.label.toLowerCase()}</div>
               <div className="font-display text-xl font-semibold leading-tight">{placeName}</div>
             </div>
             <div className="text-right">

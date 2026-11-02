@@ -8,7 +8,12 @@ describe("Briefing", () => {
   it("prints a city briefing with numbers, incidents, sites and methodology", () => {
     render(<Briefing cityId="chennai" />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/chennai/i);
-    expect(screen.getByText(/transit-desert share/i)).toBeInTheDocument();
+    expect(screen.getByText(/walk-band coverage/i)).toBeInTheDocument();
+    // never "near 0.8 km N of ..."
+    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toMatch(/near \d/);
+    // coverage today -> with the three sites, and it must go up
+    const m = screen.getByText(/% → /).textContent!.match(/([\d.]+)% → ([\d.]+)%/)!;
+    expect(Number(m[2])).toBeGreaterThan(Number(m[1]));
     const incidents = screen.getByRole("region", { name: /this week's incidents/i });
     expect(within(incidents).getAllByRole("article").length).toBeGreaterThanOrEqual(3);
     const sites = screen.getByRole("region", { name: /recommended sites/i });

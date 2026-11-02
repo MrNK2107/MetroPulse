@@ -28,7 +28,7 @@ const LOOP = [
     verb: "Persuade",
     name: "Briefing",
     title: "a briefing a commissioner reads on a phone",
-    body: "One click turns the week into an editorial, print-ready briefing: headline numbers, demand cores, transit-desert share, incidents and recommended sites, with methodology at the end. Save it as a PDF for the board pack.",
+    body: "One click turns the week into an editorial, print-ready briefing: headline numbers, demand cores, walk-band coverage today and with the recommended sites, incidents and recommended sites, with methodology at the end. Save it as a PDF for the board pack.",
   },
 ];
 

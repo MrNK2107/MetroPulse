@@ -192,3 +192,19 @@ export function transitDesertShare(model: CityModel, covered: Set<number> = exis
   }
   return total > 0 ? 1 - inside / total : 0;
 }
+
+/**
+ * Share of residents within walking distance (the metro walk band) of an
+ * existing hub or of any of the given sites. Each hexagon counts once.
+ */
+export function walkCoverage(model: CityModel, sites: SiteResult[] = []): number {
+  const cells = existingCoverage(model);
+  for (const s of sites) for (const c of s.walkCells) cells.add(c);
+  let total = 0;
+  let inside = 0;
+  for (let c = 0; c < model.residents.length; c++) {
+    total += model.residents[c];
+    if (cells.has(c)) inside += model.residents[c];
+  }
+  return total > 0 ? inside / total : 0;
+}

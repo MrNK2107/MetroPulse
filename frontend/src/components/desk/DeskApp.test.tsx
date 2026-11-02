@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DeskApp, deskHref } from "./DeskApp";
+import { DeskApp, deskHref, nearPlace } from "./DeskApp";
 
 jest.setTimeout(20000);
 
@@ -101,5 +101,12 @@ describe("deskHref", () => {
     expect(deskHref("pune", "alerts", 2)).toBe("/desk?city=pune&tab=alerts&incident=2");
     expect(deskHref("pune", "siting", 2, true)).toBe("/desk?city=pune&tab=siting&suggest=1");
     expect(deskHref("pune", "pulse", 2, true)).toBe("/desk?city=pune");
+  });
+});
+
+describe("nearPlace", () => {
+  it("adds 'near' to a name but not to a relative position", () => {
+    expect(nearPlace("T Nagar")).toBe("near T Nagar");
+    expect(nearPlace("0.8 km N of Chennai Central")).toBe("0.8 km N of Chennai Central");
   });
 });

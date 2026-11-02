@@ -5,9 +5,9 @@ import { useMemo } from "react";
 import { getCity } from "@/lib/pulse/geo";
 import { getCityModel, HOURS_PER_WEEK, dayHourLabel, hourLabel } from "@/lib/pulse/model";
 import { detectIncidents } from "@/lib/pulse/alerts";
-import { existingCoverage, MODES, suggestSites, transitDesertShare } from "@/lib/pulse/siting";
+import { existingCoverage, MODES, suggestSites, walkCoverage } from "@/lib/pulse/siting";
 import { HexMap } from "@/components/desk/HexMap";
-import { placeName } from "@/components/desk/DeskApp";
+import { nearPlace, placeName } from "@/components/desk/DeskApp";
 import { fmtInt } from "@/components/desk/SitingPanel";
 import { Wordmark } from "@/components/desk/Wordmark";
 
@@ -21,6 +21,12 @@ function Figure({ label, value, note }: { label: string; value: string; note: st
   );
 }
 
+/** Percent with one decimal below 10%, where whole numbers would hide the change. */
+function pct(x: number): string {
+  const v = x * 100;
+  return `${v < 10 ? v.toFixed(1) : Math.round(v)}%`;
+}
+
 export function Briefing({ cityId }: { cityId: string }) {
   const city = getCity(cityId) ?? getCity("chennai")!;
   const model = getCityModel(city);
@@ -28,7 +34,9 @@ export function Briefing({ cityId }: { cityId: string }) {
     const covered = existingCoverage(model);
     const incidents = detectIncidents(model);
     const sites = suggestSites(model, "metro", 3, covered);
-    const desert = transitDesertShare(model, covered);
+    const coverNow = walkCoverage(model);
+    const coverAfter = walkCoverage(model, sites.map((s) => s.result));
+    const hubs = city.anchors.filter((a) => a.type === "transport").map((a) => a.name);
     const hourly = model.cityHourly(model.baselineMean);
     let peak = 0;
     for (let h = 0; h < 24; h++) if (hourly[24 + h] > hourly[24 + peak]) peak = h;
@@ -41,8 +49,8 @@ export function Briefing({ cityId }: { cityId: string }) {
     for (let c = 0; c < values.length; c++) values[c] = model.dailyTrips[c];
     let max = 0;
     values.forEach((v) => (max = Math.max(max, v)));
-    return { incidents, sites, desert, peak, dailyTrips, cores, values, max };
-  }, [model]);
+    return { incidents, sites, coverNow, coverAfter, hubs, peak, dailyTrips, cores, values, max };
+  }, [model, city]);
 
   const surge = data.incidents.filter((i) => i.kind === "surge").length;
   const drop = data.incidents.length - surge;
@@ -70,12 +78,13 @@ export function Briefing({ cityId }: { cityId: string }) {
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">City briefing · sample week</span>
           </div>
           <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] sm:text-5xl">
-            {city.name}: {data.incidents.length} incidents this week, and the next station belongs near {best ? placeName(model, model.grid.cells[best.cell]) : "the core"}
+            {city.name}: {data.incidents.length} incidents this week, and the next station belongs {best ? nearPlace(placeName(model, model.grid.cells[best.cell])) : "near the core"}
           </h1>
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
             {city.name}&rsquo;s {fmtInt(city.population)} residents make about {fmtInt(data.dailyTrips / 2)} trips on an average
-            weekday, peaking at {hourLabel(data.peak)}. {Math.round(data.desert * 100)}% of residents live more than{" "}
-            {MODES.metro.walkKm * 1000} m from an existing transport hub. This week the detector found {surge} surge
+            weekday, peaking at {hourLabel(data.peak)}. Only {pct(data.coverNow)} of them live within {MODES.metro.walkKm * 1000} m
+            of a mapped interchange ({data.hubs.join(", ")}); the three recommended metro sites below would raise that to{" "}
+            {pct(data.coverAfter)}. This week the detector found {surge} surge
             {surge === 1 ? "" : "s"} and {drop} drop{drop === 1 ? "" : "s"} against the four-week baseline.
           </p>
         </header>
@@ -83,7 +92,11 @@ export function Briefing({ cityId }: { cityId: string }) {
         <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
           <Figure label="Residents" value={`${(city.population / 1e6).toFixed(1)}M`} note="published city population" />
           <Figure label="Weekday trips" value={`${(data.dailyTrips / 2 / 1e6).toFixed(1)}M`} note={`peak hour ${hourLabel(data.peak)}`} />
-          <Figure label="Transit-desert share" value={`${Math.round(data.desert * 100)}%`} note={`residents beyond ${MODES.metro.walkKm} km of a hub`} />
+          <Figure
+            label="Walk-band coverage"
+            value={`${pct(data.coverNow)} → ${pct(data.coverAfter)}`}
+            note={`residents within ${MODES.metro.walkKm} km: today → with the 3 sites`}
+          />
           <Figure label="Incidents" value={String(data.incidents.length)} note={`${surge} surges · ${drop} drops`} />
         </div>
 
@@ -207,7 +220,8 @@ export function Briefing({ cityId }: { cityId: string }) {
               <p>
                 <span className="font-semibold">Data.</span> Sample city model: a seeded synthetic demand field built from{" "}
                 {city.name}&rsquo;s configured anchor points ({city.anchors.map((a) => a.name).join(", ")}), its published
-                population and a procedural boundary. The week contains scripted incidents.
+                population and a procedural boundary. The week contains scripted incidents. Existing coverage counts only the
+                mapped interchange{data.hubs.length === 1 ? "" : "s"} ({data.hubs.join(", ")}), not every station on the network.
               </p>
               <p className="border border-signal bg-signal/10 p-2 text-ink">
                 The algorithms are real. The numbers are illustrative until {city.name}&rsquo;s own data (AFC taps, GTFS, survey

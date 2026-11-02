@@ -1,6 +1,6 @@
 import { getCity } from "./geo";
 import { buildCityModel } from "./model";
-import { MODES, scoreSite, suggestSites, existingCoverage, transitDesertShare } from "./siting";
+import { MODES, scoreSite, suggestSites, existingCoverage, transitDesertShare, walkCoverage } from "./siting";
 
 const model = buildCityModel(getCity("chennai")!);
 
@@ -75,5 +75,18 @@ describe("transit-desert share", () => {
     let inside = 0;
     covered.forEach((c) => (inside += model.residents[c]));
     expect(share).toBeCloseTo(1 - inside / model.city.population, 3);
+  });
+});
+
+describe("walk-band coverage", () => {
+  it("is the residents' share within walking distance of hubs, and grows with the suggested sites", () => {
+    const today = walkCoverage(model);
+    expect(today).toBeCloseTo(1 - transitDesertShare(model), 6);
+    const picks = suggestSites(model, "metro", 3);
+    const after = walkCoverage(model, picks.map((p) => p.result));
+    expect(after).toBeGreaterThan(today);
+    // adding the same sites again changes nothing (no double counting)
+    expect(walkCoverage(model, [...picks, ...picks].map((p) => p.result))).toBeCloseTo(after, 9);
+    expect(after).toBeLessThanOrEqual(1);
   });
 });
