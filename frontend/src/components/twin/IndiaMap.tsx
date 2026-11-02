@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import DeckGL from "@deck.gl/react";
 import { WebMercatorViewport, type PickingInfo } from "@deck.gl/core";
 import { GeoJsonLayer } from "@deck.gl/layers";
-import { boundariesUrl } from "@/lib/twinApi";
+import { getBoundaries } from "@/lib/twinApi";
 import { useTwinStore } from "@/store/twinStore";
 import type { BoundaryLevel } from "@/types/twin";
 
@@ -18,14 +18,7 @@ function useBoundary(level: BoundaryLevel): { data: FC | null; failed: boolean }
   const setError = (m: string) => useTwinStore.setState({ error: m });
   useEffect(() => {
     let live = true;
-    fetch(boundariesUrl(level))
-      .then(async (r) => {
-        if (!r.ok) {
-          const body = await r.json().catch(() => null);
-          throw new Error(body?.error || `Boundaries unavailable (${r.status})`);
-        }
-        return r.json();
-      })
+    getBoundaries(level)
       .then((d) => live && setData(d))
       .catch((e) => {
         if (!live) return;

@@ -1,11 +1,12 @@
 import type * as TwinApi from "./twinApi";
 
-type Reply = { ok?: boolean; status?: number; body?: unknown; badJson?: boolean };
+type Reply = { ok?: boolean; status?: number; body?: unknown; badJson?: boolean; headers?: Record<string, string> };
 
-function reply({ ok = true, status = 200, body, badJson }: Reply) {
+function reply({ ok = true, status = 200, body, badJson, headers = {} }: Reply) {
   return {
     ok,
     status,
+    headers: { get: (k: string) => headers[k.toLowerCase()] ?? null },
     json: badJson ? () => Promise.reject(new SyntaxError("bad json")) : () => Promise.resolve(body),
   };
 }
@@ -174,9 +175,58 @@ describe("getStateNames", () => {
 
   it("does not cache a failure", async () => {
     fetchMock.mockResolvedValueOnce(reply({ ok: false, status: 503, body: {} }));
-    await expect(api.getStateNames()).rejects.toThrow("Request failed (503)");
+    await expect(api.getStateNames()).rejects.toThrow("Boundaries unavailable (503)");
     fetchMock.mockResolvedValueOnce(reply({ body: states }));
     await expect(api.getStateNames()).resolves.toHaveProperty("27", "Maharashtra");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("getBoundaries", () => {
+  const fc = { type: "FeatureCollection", features: [{ properties: { place_id: "state:27", name: "Maharashtra" } }] };
+
+  afterEach(() => jest.useRealTimers());
+
+  it("shares one request per level, including with getStateNames", async () => {
+    fetchMock.mockResolvedValue(reply({ body: fc }));
+    const [a, b] = await Promise.all([api.getBoundaries("state"), api.getBoundaries("state")]);
+    expect(a).toBe(b);
+    await api.getStateNames();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await api.getBoundaries("district");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenLastCalledWith("http://localhost:8000/api/twin/boundaries/district");
+  });
+
+  it("retries once on 429 after Retry-After seconds", async () => {
+    jest.useFakeTimers();
+    fetchMock
+      .mockResolvedValueOnce(reply({ ok: false, status: 429, body: {}, headers: { "retry-after": "2" } }))
+      .mockResolvedValueOnce(reply({ body: fc }));
+    const p = api.getBoundaries("state");
+    await jest.advanceTimersByTimeAsync(1900);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(200);
+    await expect(p).resolves.toEqual(fc);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after the second 429 and does not cache the failure", async () => {
+    jest.useFakeTimers();
+    const limited = reply({ ok: false, status: 429, body: { error: "Rate limit exceeded." }, headers: { "retry-after": "1" } });
+    fetchMock.mockResolvedValueOnce(limited).mockResolvedValueOnce(limited);
+    const p = api.getBoundaries("country");
+    const settled = expect(p).rejects.toThrow("Rate limit exceeded.");
+    await jest.advanceTimersByTimeAsync(1000);
+    await settled;
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockResolvedValueOnce(reply({ body: fc }));
+    await expect(api.getBoundaries("country")).resolves.toEqual(fc);
+  });
+
+  it("does not retry other errors", async () => {
+    fetchMock.mockResolvedValueOnce(reply({ ok: false, status: 503, body: { error: "Twin not built" } }));
+    await expect(api.getBoundaries("district")).rejects.toThrow("Twin not built");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
