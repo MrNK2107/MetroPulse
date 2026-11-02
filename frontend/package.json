@@ -12,8 +12,13 @@
     "test:ci": "jest --ci --runInBand"
   },
   "dependencies": {
-    "@deck.gl/layers": "^9.0.0",
-    "deck.gl": "^9.0.0",
+    "@deck.gl/core": "^9.3.2",
+    "@deck.gl/layers": "^9.3.2",
+    "@deck.gl/react": "^9.3.2",
+    "@deck.gl/widgets": "^9.3.2",
+    "@loaders.gl/core": "^4.4.2",
+    "@luma.gl/core": "^9.3.3",
+    "@luma.gl/engine": "^9.3.3",
     "next": "^14.2.35",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
