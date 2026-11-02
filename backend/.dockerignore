@@ -1,0 +1,15 @@
+# Keep secrets and local environments out of the image.
+# Set runtime config with `environment:`/`env_file:` (compose) or `fly secrets set` (Fly).
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+data/

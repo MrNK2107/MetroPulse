@@ -1,5 +1,6 @@
-# Slum Boundary Data
+# Informal settlement data
 
-This directory is a placeholder for informal settlement boundary GeoJSON files. The simulation engine uses probabilistic distance-based slum flags when real boundaries are unavailable.
+Reserved for informal settlement boundary GeoJSON files. Nothing in MetroPulse reads this folder yet: the desk runs on the sample city
+model and the India Twin reads `data/twin/`.
 
-To use real data, place GeoJSON boundary files here and run `scripts/preprocess/slum_boundaries.py --city <name>`.
+These would refine where residents sit in a city's demand field and which proposed stations reach them.

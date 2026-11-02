@@ -1,77 +1,68 @@
-// MetroPulse Service Worker — Offline Caching for Static Assets
-const CACHE_NAME = 'metropulse-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
-  '/favicon.svg',
-];
+// MetroPulse service worker. Registered only in production builds (see ServiceWorker.tsx).
+// The desk computes its city models in the browser, so once its pages and hashed
+// assets are cached it keeps working offline. API, socket and cross-origin requests
+// are never cached.
+const CACHE = "metropulse-desk-v1";
+const PAGES = ["/", "/desk", "/brief", "/favicon.svg"];
 
-// Install: pre-cache static assets
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(PAGES))
+      .catch(() => undefined)
   );
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
+    caches
+      .keys()
+      .then((names) => Promise.all(names.filter((n) => n !== CACHE).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch: network-first for navigation/API, cache-first for static assets
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
+  if (request.method !== "GET") return;
   const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/ws")) return;
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
-
-  // Skip API and WebSocket requests
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws')) return;
-
-  // For static assets (JS, CSS, images, fonts): cache-first
-  if (
-    url.pathname.startsWith('/_next/static/') ||
-    url.pathname.startsWith('/static/') ||
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot)$/)
-  ) {
+  // Content-hashed build assets never change: cache first.
+  if (url.pathname.startsWith("/_next/static/") || /\.(svg|png|woff2?)$/.test(url.pathname)) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
-      })
+      caches.match(request).then(
+        (hit) =>
+          hit ||
+          fetch(request).then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(request, copy));
+            }
+            return res;
+          })
+      )
     );
     return;
   }
 
-  // For navigation and other requests: network-first with cache fallback
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok && url.pathname === '/') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      })
-      .catch(() => caches.match(request))
-  );
+  // Pages: network first, so a new deploy shows at once; the cached copy is the offline fallback.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches.match(request).then((hit) => hit || caches.match(url.pathname)).then((hit) => hit || caches.match("/desk"))
+        )
+    );
+  }
 });

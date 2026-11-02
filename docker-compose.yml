@@ -9,6 +9,10 @@ services:
       - ./backend/.env
     environment:
       - ENVIRONMENT=development
+    volumes:
+      # City configs and the published twin live in the repo-level data/ folder,
+      # which is outside the backend build context. The code resolves it to /data.
+      - ./data:/data:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
@@ -19,14 +23,16 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
     env_file:
       - ./frontend/.env.local
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
-      - NEXT_PUBLIC_WS_URL=ws://backend:8000/ws/simulate
+      # These URLs are used by the browser on the host, so they point at the
+      # published backend port, not the compose service name.
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/agent
     depends_on:
       - backend
     restart: unless-stopped

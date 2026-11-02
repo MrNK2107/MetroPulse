@@ -1,0 +1,10 @@
+# The image runs `npm ci` itself; host node_modules (Windows/macOS binaries) must not
+# overwrite it. .env.local reaches the container through compose's env_file instead.
+node_modules/
+.next/
+out/
+coverage/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo

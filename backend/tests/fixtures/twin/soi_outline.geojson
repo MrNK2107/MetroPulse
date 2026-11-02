@@ -1,0 +1,38 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "outline"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       70,
+       10
+      ],
+      [
+       80,
+       10
+      ],
+      [
+       80,
+       20
+      ],
+      [
+       70,
+       20
+      ],
+      [
+       70,
+       10
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

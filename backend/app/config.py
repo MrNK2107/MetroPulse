@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     mimo_base_url: str = Field(default="https://opengateway.gitlawb.com/v1", alias="MIMO_BASE_URL")
 
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
+    # Context window sent with every Ollama chat call. 0 = use the server's default,
+    # which can be very large (and allocate a matching KV cache).
+    ollama_num_ctx: int = Field(default=8192, ge=0, alias="OLLAMA_NUM_CTX")
     llm_provider: str = Field(default="mimo", alias="LLM_PROVIDER")
     llm_model: str = Field(default="", alias="LLM_MODEL")
     embedding_provider: str = Field(default="", alias="EMBEDDING_PROVIDER")
@@ -34,8 +37,18 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     ws_max_connections: int = Field(default=10, alias="WS_MAX_CONNECTIONS")
+    # Shared secret for /ws/agent. Empty = endpoint disabled (secure default).
+    agent_ws_token: str = Field(default="", alias="AGENT_WS_TOKEN")
+    # Opt-in shared secret for POST /api/ingest. Empty (default) keeps the endpoint open,
+    # as before; set it to require "Authorization: Bearer <token>" or "X-Ingest-Token".
+    ingest_token: str = Field(default="", alias="INGEST_TOKEN")
+    # Global per-IP REST limit (requests per minute). 0 disables it. Health checks are exempt.
+    rate_limit_per_minute: int = Field(default=240, ge=0, alias="RATE_LIMIT_PER_MINUTE")
     sim_timeout_ms: int = Field(default=60000, alias="SIM_TIMEOUT_MS")
     llm_timeout_ms: int = Field(default=25000, alias="LLM_TIMEOUT_MS")
+    upload_max_bytes: int = Field(default=10_485_760, alias="UPLOAD_MAX_BYTES")
+    source_url_max_bytes: int = Field(default=2_097_152, alias="SOURCE_URL_MAX_BYTES")
+    twin_data_dir: str = Field(default="", alias="TWIN_DATA_DIR")
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -49,7 +62,7 @@ class Settings(BaseSettings):
             "openai": "gpt-4o-mini",
             "gemini": "gemini-2.0-flash",
             "mimo": "mimo-v2.5-pro",
-            "ollama": "llama3.2:4b",
+            "ollama": "gemma4:latest",
         }
         return defaults.get(self.llm_provider, "mimo-v2.5-pro")
 

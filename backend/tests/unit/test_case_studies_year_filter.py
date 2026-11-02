@@ -39,7 +39,7 @@ async def test_year_from_filter():
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/case-studies", params={"year_from": 2020})
+        response = await client.get("/api/case-studies", params={"year_from": 2020})
 
     assert response.status_code == 200
     data = response.json()
@@ -56,7 +56,7 @@ async def test_year_to_filter():
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/case-studies", params={"year_to": 2020})
+        response = await client.get("/api/case-studies", params={"year_to": 2020})
 
     assert response.status_code == 200
     data = response.json()
@@ -74,7 +74,7 @@ async def test_year_range_filter():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get(
-            "/api/v1/case-studies",
+            "/api/case-studies",
             params={"year_from": 2019, "year_to": 2022},
         )
 
@@ -96,7 +96,7 @@ async def test_year_filter_with_other_filters():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get(
-            "/api/v1/case-studies",
+            "/api/case-studies",
             params={"year_from": 2020, "city": "Mumbai"},
         )
 

@@ -8,7 +8,7 @@ from app.main import app
 async def test_health_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/health")
+        response = await client.get("/api/health")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -19,7 +19,7 @@ async def test_health_endpoint():
 async def test_list_regions():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/regions")
+        response = await client.get("/api/regions")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -31,7 +31,7 @@ async def test_list_regions():
 async def test_region_profile():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/regions/hyderabad/profile")
+        response = await client.get("/api/regions/hyderabad/profile")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -42,7 +42,7 @@ async def test_region_profile():
 async def test_case_studies_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/case-studies?city=hyderabad&sector=manufacturing")
+        response = await client.get("/api/case-studies?city=hyderabad&sector=manufacturing")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -50,20 +50,10 @@ async def test_case_studies_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_list_simulations():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/simulations")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-
-
-@pytest.mark.asyncio
 async def test_realtime_data_sources_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/data-sources?city=bengaluru")
+        response = await client.get("/api/data-sources?city=bengaluru")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -80,8 +70,22 @@ async def test_realtime_data_sources_endpoint():
 async def test_latest_snapshot_endpoint_returns_quality_meta():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/v1/snapshots/latest?city=bengaluru")
+        response = await client.get("/api/snapshots/latest?city=bengaluru")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["meta"]["quality"]["status"] in {"unavailable", "demo", "degraded", "fresh"}
+
+
+@pytest.mark.asyncio
+async def test_llm_health_reports_providers_without_keys():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/health/llm")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["active_provider"] == "mimo"
+    assert set(data["providers"]) >= {"gemini", "openai", "mimo", "ollama"}
+    # Hermetic env: no keys, so the active provider is not ready, and no key value is echoed.
+    assert data["status"] == "no_providers_configured"
+    assert all(set(p) <= {"configured", "model"} for p in data["providers"].values())

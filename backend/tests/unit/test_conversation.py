@@ -1,5 +1,9 @@
 import pytest
-from engine.nl_engine.conversation import ConversationManager, ConversationMode
+from engine.nl_engine.conversation import (
+    ConversationManager,
+    ConversationMode,
+    ConversationState,
+)
 from engine.models import ParsedScenario
 
 
@@ -61,3 +65,27 @@ def test_followup_options_for_severity():
     )
     question = mgr.get_followup(parsed)
     assert question is not None
+
+
+def test_advance_walks_linear_flow_and_stops_at_done():
+    mgr = ConversationManager()
+    states = [mgr.advance() for _ in range(5)]
+    assert states == [
+        ConversationState.PARSING,
+        ConversationState.CONFIRMED,
+        ConversationState.SIMULATING,
+        ConversationState.DONE,
+        ConversationState.DONE,
+    ]
+    assert mgr.turn_count == 5
+
+
+def test_advance_from_needs_input_reenters_parsing_and_reset_clears():
+    mgr = ConversationManager()
+    mgr.state = ConversationState.NEEDS_INPUT
+    assert mgr.advance() == ConversationState.PARSING
+    mgr.mode = ConversationMode.DEEP
+    mgr.reset()
+    assert mgr.state == ConversationState.IDLE
+    assert mgr.mode == ConversationMode.QUICK
+    assert mgr.turn_count == 0
