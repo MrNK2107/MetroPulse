@@ -100,7 +100,7 @@ cd frontend
 npm install
 ```
 
-`frontend\.env.local` is optional. `frontend\.env.local.example` shows these defaults:
+`frontend\.env.local` is optional. `frontend\.env.example` shows these defaults (copy it to `frontend\.env.local`):
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
