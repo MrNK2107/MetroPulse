@@ -11,6 +11,8 @@ interface Props {
   suggestions: Suggestion[];
   suggestionNames: string[];
   onSuggest: () => void;
+  /** Pin suggestion k (0-based) so its full score and catchment show. */
+  onPickSuggestion?: (k: number) => void;
   onClear: () => void;
 }
 
@@ -26,7 +28,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-export function SitingPanel({ mode, onMode, result, placeName, suggestions, suggestionNames, onSuggest, onClear }: Props) {
+export function SitingPanel({ mode, onMode, result, placeName, suggestions, suggestionNames, onSuggest, onPickSuggestion, onClear }: Props) {
   const m = MODES[mode];
   const maxHourly = result ? Math.max(...result.hourly) : 1;
   return (
@@ -117,12 +119,16 @@ export function SitingPanel({ mode, onMode, result, placeName, suggestions, sugg
                 className="flex items-baseline gap-3 border-t border-ink/20 pt-2"
               >
                 <span className="font-display text-2xl font-bold text-supply">{k + 1}</span>
-                <span className="flex-1">
-                  <span className="block font-medium">{suggestionNames[k]}</span>
+                <button
+                  type="button"
+                  onClick={() => onPickSuggestion?.(k)}
+                  className="flex-1 text-left hover:text-supply focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                >
+                  <span className="block font-medium underline decoration-ink/20 underline-offset-2">{suggestionNames[k]}</span>
                   <span className="font-mono text-[11px] text-ink-soft">
                     {fmtInt(s.result.newBoardings)} new boardings/day · score {s.result.score}
                   </span>
-                </span>
+                </button>
               </li>
             ))}
           </ol>

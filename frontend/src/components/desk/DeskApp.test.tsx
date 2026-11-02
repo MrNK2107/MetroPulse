@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DeskApp } from "./DeskApp";
+import { DeskApp, deskHref } from "./DeskApp";
 
 jest.setTimeout(20000);
 
@@ -70,5 +70,36 @@ describe("DeskApp", () => {
     );
     expect(screen.getAllByRole("listitem", { name: /suggested site/i })).toHaveLength(3);
     expect(screen.getByText(/est\. daily boardings/i)).toBeInTheDocument();
+  });
+
+  it("keeps the address bar on the current view", async () => {
+    window.history.replaceState(null, "", "/desk?city=chennai");
+    render(<DeskApp initialCity="chennai" />);
+    await userEvent.click(screen.getByRole("tab", { name: /alerts/i }));
+    expect(window.location.search).toBe("?city=chennai&tab=alerts");
+    const feed = screen.getByRole("list", { name: /incidents/i });
+    await userEvent.click(within(within(feed).getAllByRole("listitem")[0]).getAllByRole("button")[0]);
+    expect(window.location.search).toBe("?city=chennai&tab=alerts&incident=1");
+    await userEvent.click(screen.getByRole("tab", { name: /siting/i }));
+    await userEvent.click(screen.getByRole("button", { name: /suggest 3 sites/i }));
+    expect(window.location.search).toBe("?city=chennai&tab=siting&suggest=1");
+  });
+
+  it("pins a suggested site when it is clicked in the list", async () => {
+    render(<DeskApp initialCity="chennai" initialTab="siting" />);
+    await userEvent.click(screen.getByRole("button", { name: /suggest 3 sites/i }));
+    expect(screen.queryByText(/est\. daily boardings/i)).not.toBeInTheDocument();
+    const second = screen.getAllByRole("listitem", { name: /suggested site/i })[1];
+    await userEvent.click(within(second).getByRole("button"));
+    expect(screen.getByText(/est\. daily boardings/i)).toBeInTheDocument();
+  });
+});
+
+describe("deskHref", () => {
+  it("round-trips the parameters the desk page reads", () => {
+    expect(deskHref("pune", "pulse")).toBe("/desk?city=pune");
+    expect(deskHref("pune", "alerts", 2)).toBe("/desk?city=pune&tab=alerts&incident=2");
+    expect(deskHref("pune", "siting", 2, true)).toBe("/desk?city=pune&tab=siting&suggest=1");
+    expect(deskHref("pune", "pulse", 2, true)).toBe("/desk?city=pune");
   });
 });

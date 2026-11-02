@@ -41,6 +41,15 @@ export interface DeskAppProps {
 
 export type { Tab as DeskTab };
 
+/** The shareable URL for a desk view; the inverse of what app/desk/page.tsx parses. */
+export function deskHref(cityId: string, tab: Tab, incident?: number, suggest?: boolean): string {
+  const q = new URLSearchParams({ city: cityId });
+  if (tab !== "pulse") q.set("tab", tab);
+  if (tab === "alerts" && incident) q.set("incident", String(incident));
+  if (tab === "siting" && suggest) q.set("suggest", "1");
+  return `/desk?${q.toString()}`;
+}
+
 function initialState(cityId: string, incident?: number, suggest?: boolean) {
   const model = getCityModel(getCity(cityId)!);
   let selected: Incident | null = null;
@@ -100,10 +109,15 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     setSelected(null);
     setPin(null);
     setSuggestions([]);
-    if (typeof window !== "undefined" && window.history?.replaceState) {
-      window.history.replaceState(null, "", `/desk?city=${cityId}`);
-    }
   }, [cityId]);
+
+  // Keep the address bar on the current view, so copying it shares exactly this.
+  const selectedIndex = selected ? incidents.findIndex((i) => i.id === selected.id) + 1 : 0;
+  const href = deskHref(cityId, tab, selectedIndex || undefined, suggestions.length > 0);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.history?.replaceState) return;
+    if (window.location.pathname + window.location.search !== href) window.history.replaceState(null, "", href);
+  }, [href]);
 
   const lastMode = useRef(mode);
   useEffect(() => {
@@ -293,6 +307,10 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               suggestions={suggestions}
               suggestionNames={suggestions.map((s) => placeName(model, model.grid.cells[s.cell]))}
               onSuggest={() => setSuggestions(suggestSites(model, mode, 3, covered))}
+              onPickSuggestion={(k) => {
+                const c = model.grid.cells[suggestions[k].cell];
+                setPin({ x: c.x, y: c.y });
+              }}
               onClear={() => setPin(null)}
             />
           )}

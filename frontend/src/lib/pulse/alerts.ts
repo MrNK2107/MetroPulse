@@ -43,6 +43,18 @@ export function robustStats(values: number[]): { median: number; mad: number } {
   return { median: med, mad: median(values.map((v) => Math.abs(v - med))) };
 }
 
+/** Median of exactly four numbers, without allocating (hot loop: cells x 168). */
+export function median4(a: number, b: number, c: number, d: number): number {
+  // sort the pairs, then the middle two of four are max(lo) and min(hi)
+  const lo1 = a < b ? a : b;
+  const hi1 = a < b ? b : a;
+  const lo2 = c < d ? c : d;
+  const hi2 = c < d ? d : c;
+  const midLo = lo1 > lo2 ? lo1 : lo2;
+  const midHi = hi1 < hi2 ? hi1 : hi2;
+  return (midLo + midHi) / 2;
+}
+
 function median(values: number[]): number {
   const s = [...values].sort((a, b) => a - b);
   const m = s.length >> 1;
@@ -109,11 +121,16 @@ export function detectIncidents(model: CityModel): Incident[] {
   const sign = new Int8Array(n * H);
   const delta = new Float32Array(n * H);
   const med = new Float32Array(n * H);
-  const vals = [0, 0, 0, 0];
+  if (baselineWeeks.length !== 4) throw new Error("detectIncidents expects exactly four baseline weeks");
+  const [w0, w1, w2, w3] = baselineWeeks;
 
   for (let i = 0; i < n * H; i++) {
-    for (let w = 0; w < 4; w++) vals[w] = baselineWeeks[w][i];
-    const { median: m, mad } = robustStats(vals);
+    const a = w0[i];
+    const b = w1[i];
+    const c = w2[i];
+    const e = w3[i];
+    const m = median4(a, b, c, e);
+    const mad = median4(Math.abs(a - m), Math.abs(b - m), Math.abs(c - m), Math.abs(e - m));
     const d = thisWeek[i] - m;
     const scale = Math.max(1.4826 * mad, 0.08 * m, 3);
     med[i] = m;
@@ -182,7 +199,8 @@ export function detectIncidents(model: CityModel): Incident[] {
     for (const [h, d] of Array.from(byHourDelta.entries()))
       if (Math.abs(d) > Math.abs(byHourDelta.get(peakHour)!)) peakHour = h;
     const peakMed = byHourMed.get(peakHour)!;
-    const peakRatio = (peakMed + byHourDelta.get(peakHour)!) / peakMed;
+    // a cluster on near-empty hexagons can have a ~0 median; keep the ratio finite
+    const peakRatio = (peakMed + byHourDelta.get(peakHour)!) / Math.max(peakMed, 1);
 
     const cells = Array.from(cellSet);
     const centroid = {

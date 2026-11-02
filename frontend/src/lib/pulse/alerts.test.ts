@@ -1,10 +1,19 @@
 import { getCity, listCities } from "./geo";
 import { buildCityModel } from "./model";
-import { detectIncidents, robustStats } from "./alerts";
+import { detectIncidents, median4, robustStats, Z_THRESHOLD } from "./alerts";
+import { mulberry32 } from "./model";
 
 describe("robust statistics", () => {
   it("returns the median and MAD", () => {
     expect(robustStats([10, 12, 11, 50])).toEqual({ median: 11.5, mad: 1 });
+  });
+
+  it("median4 agrees with the sorted median for any order", () => {
+    const r = mulberry32(7);
+    for (let k = 0; k < 2000; k++) {
+      const v = [r(), r(), r(), r()].map((x) => Math.round(x * 20));
+      expect(median4(v[0], v[1], v[2], v[3])).toBeCloseTo(robustStats(v).median, 10);
+    }
   });
 });
 
@@ -41,6 +50,27 @@ describe("incident detection", () => {
     for (let k = 1; k < incidents.length; k++) {
       expect(Math.abs(incidents[k - 1].excessTrips)).toBeGreaterThanOrEqual(Math.abs(incidents[k].excessTrips));
     }
+  });
+
+  it("keeps the peak ratio finite on hexagons with an empty baseline", () => {
+    const zero = new Float32Array(model.thisWeek.length);
+    const spike = new Float32Array(model.thisWeek.length);
+    const H = 168;
+    const c = model.grid.cells.length >> 1;
+    for (const cell of [c, ...model.grid.neighbours(c)]) for (let h = 30; h < 33; h++) spike[cell * H + h] = 50;
+    const found = detectIncidents({ ...model, baselineWeeks: [zero, zero, zero, zero], thisWeek: spike });
+    expect(found).toHaveLength(1);
+    expect(found[0].kind).toBe("surge");
+    expect(Number.isFinite(found[0].peakRatio)).toBe(true);
+    expect(found[0].explanation).not.toMatch(/Infinity|NaN/);
+  });
+
+  it("does not flag a change below the relative threshold even when z is large", () => {
+    // a steady baseline makes MAD ~0, so z is huge; a 20% rise must still not count
+    const base = model.baselineMean;
+    const up = base.map((v) => v * 1.2);
+    expect(Z_THRESHOLD).toBeGreaterThan(0);
+    expect(detectIncidents({ ...model, baselineWeeks: [base, base, base, base], thisWeek: up })).toHaveLength(0);
   });
 
   it("finds nothing when the current week equals the baseline", () => {
