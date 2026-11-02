@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DeskApp } from "./DeskApp";
@@ -48,5 +49,26 @@ describe("DeskApp", () => {
     expect(screen.getByText(/score = 60 x/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /suggest 3 sites/i }));
     expect(screen.getAllByRole("listitem", { name: /suggested site/i })).toHaveLength(3);
+  });
+
+  it("opens from a shareable link on a selected incident", () => {
+    render(
+      <StrictMode>
+        <DeskApp initialCity="chennai" initialTab="alerts" initialIncident={1} />
+      </StrictMode>
+    );
+    expect(screen.getByRole("tab", { name: /alerts/i })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText(/likely cause/i)).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: /hour of the week/i })).toHaveValue(String(4 * 24 + 20));
+  });
+
+  it("opens from a shareable link with suggested sites and the best one pinned", () => {
+    render(
+      <StrictMode>
+        <DeskApp initialCity="chennai" initialTab="siting" initialSuggest />
+      </StrictMode>
+    );
+    expect(screen.getAllByRole("listitem", { name: /suggested site/i })).toHaveLength(3);
+    expect(screen.getByText(/est\. daily boardings/i)).toBeInTheDocument();
   });
 });

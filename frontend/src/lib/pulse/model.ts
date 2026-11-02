@@ -298,3 +298,17 @@ export function buildCityModel(city: City): CityModel {
     },
   };
 }
+
+const scaleCache = new WeakMap<CityModel, number>();
+
+/** Colour-scale ceiling: half the busiest baseline hex-hour (the map uses a sqrt ramp). */
+export function demandScaleMax(model: CityModel): number {
+  const hit = scaleCache.get(model);
+  if (hit) return hit;
+  let max = 0;
+  const arr = model.baselineMean;
+  for (let i = 0; i < arr.length; i++) if (arr[i] > max) max = arr[i];
+  const v = max * 0.5 || 1;
+  scaleCache.set(model, v);
+  return v;
+}

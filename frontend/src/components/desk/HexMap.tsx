@@ -181,7 +181,7 @@ function HexMapInner({
             fontFamily="var(--font-mono), monospace"
             fill="#16130F"
             stroke="#F4EFE6"
-            strokeWidth={fs * 0.25}
+            strokeWidth={fs * 0.16}
             paintOrder="stroke"
             style={{ pointerEvents: "none" }}
           >

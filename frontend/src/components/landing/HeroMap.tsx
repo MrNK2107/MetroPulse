@@ -2,19 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getCity } from "@/lib/pulse/geo";
-import { getCityModel, HOURS_PER_WEEK, dayHourLabel } from "@/lib/pulse/model";
+import { demandScaleMax, getCityModel, HOURS_PER_WEEK, dayHourLabel } from "@/lib/pulse/model";
 import { HexMap } from "@/components/desk/HexMap";
 
 /** The landing page's live map: Chennai's sample week, playing slowly. */
 export function HeroMap() {
   const city = getCity("chennai")!;
   const model = useMemo(() => getCityModel(city), [city]);
-  const [hour, setHour] = useState(24 + 9);
+  const [hour, setHour] = useState(24 + 8);
 
   useEffect(() => {
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
-    const t = setInterval(() => setHour((h) => (h + 1) % HOURS_PER_WEEK), 450);
+    const t = setInterval(() => setHour((h) => (h + 1) % HOURS_PER_WEEK), 700);
     return () => clearInterval(t);
   }, []);
 
@@ -24,14 +24,10 @@ export function HeroMap() {
     for (let c = 0; c < n; c++) v[c] = model.thisWeek[c * HOURS_PER_WEEK + hour];
     return v;
   }, [model, hour, n]);
-  const scaleMax = useMemo(() => {
-    let m = 0;
-    model.baselineMean.forEach((x) => (m = Math.max(m, x)));
-    return m * 0.6;
-  }, [model]);
+  const scaleMax = useMemo(() => demandScaleMax(model), [model]);
 
   return (
-    <div className="relative">
+    <div className="relative h-full w-full">
       <HexMap
         title="Chennai's sample week, hour by hour"
         grid={model.grid}

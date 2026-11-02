@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCity, listCities, Point } from "@/lib/pulse/geo";
-import { CityModel, getCityModel, HOURS_PER_WEEK, dayHourLabel } from "@/lib/pulse/model";
+import { CityModel, demandScaleMax, getCityModel, HOURS_PER_WEEK, dayHourLabel } from "@/lib/pulse/model";
 import { detectIncidents, Incident } from "@/lib/pulse/alerts";
 import { existingCoverage, ModeId, scoreSite, suggestSites, Suggestion } from "@/lib/pulse/siting";
 import { HexMap, Marker } from "./HexMap";
@@ -23,36 +23,62 @@ const COMPASS = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"];
 
 export function placeName(model: CityModel, p: Point): string {
   const { anchor, km } = model.nearestAnchor(p);
-  if (km < 0.6) return anchor.name;
+  if (km < 0.35) return anchor.name;
   const a = model.grid.project(anchor.lat, anchor.lng);
   const ang = (Math.atan2(p.y - a.y, p.x - a.x) * 180) / Math.PI;
   const dir = COMPASS[Math.round(((ang + 360) % 360) / 45) % 8];
   return `${km.toFixed(1)} km ${dir} of ${anchor.name}`;
 }
 
-function percentile(arr: Float32Array, q: number): number {
-  const step = Math.max(1, Math.floor(arr.length / 20000));
-  const s: number[] = [];
-  for (let i = 0; i < arr.length; i += step) s.push(arr[i]);
-  s.sort((a, b) => a - b);
-  return s[Math.floor(q * (s.length - 1))] || 1;
+export interface DeskAppProps {
+  initialCity: string;
+  initialTab?: Tab;
+  /** 1-based index into this week's incidents, as in a shared link. */
+  initialIncident?: number;
+  /** Open Siting with the three suggested sites and the best one pinned. */
+  initialSuggest?: boolean;
 }
 
-export function DeskApp({ initialCity }: { initialCity: string }) {
-  const [cityId, setCityId] = useState(getCity(initialCity) ? initialCity : "chennai");
-  const [tab, setTab] = useState<Tab>("pulse");
-  const [hour, setHour] = useState(24 + 9); // Tue 09:00
+export type { Tab as DeskTab };
+
+function initialState(cityId: string, incident?: number, suggest?: boolean) {
+  const model = getCityModel(getCity(cityId)!);
+  let selected: Incident | null = null;
+  let hour = 24 + 9; // Tue 09:00
+  let suggestions: Suggestion[] = [];
+  let pin: Point | null = null;
+  if (incident) {
+    selected = detectIncidents(model)[incident - 1] ?? null;
+    if (selected) hour = selected.peakHour;
+  }
+  if (suggest) {
+    suggestions = suggestSites(model, "metro", 3, existingCoverage(model));
+    if (suggestions[0]) {
+      const c = model.grid.cells[suggestions[0].cell];
+      pin = { x: c.x, y: c.y };
+    }
+  }
+  return { selected, hour, suggestions, pin };
+}
+
+export function DeskApp({ initialCity, initialTab, initialIncident, initialSuggest }: DeskAppProps) {
+  const startCity = getCity(initialCity) ? initialCity : "chennai";
+  const [init] = useState(() => initialState(startCity, initialIncident, initialSuggest));
+  const [cityId, setCityId] = useState(startCity);
+  const [tab, setTab] = useState<Tab>(initialTab ?? "pulse");
+  const [hour, setHour] = useState(init.hour);
   const [playing, setPlaying] = useState(false);
-  const [selected, setSelected] = useState<Incident | null>(null);
+  const [selected, setSelected] = useState<Incident | null>(init.selected);
   const [mode, setMode] = useState<ModeId>("metro");
-  const [pin, setPin] = useState<Point | null>(null);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [pin, setPin] = useState<Point | null>(init.pin);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>(init.suggestions);
+  const lastCity = useRef(startCity);
 
   const city = getCity(cityId)!;
   const model = useMemo(() => getCityModel(city), [city]);
   const incidents = useMemo(() => detectIncidents(model), [model]);
   const covered = useMemo(() => existingCoverage(model), [model]);
-  const scaleMax = useMemo(() => percentile(model.baselineMean, 0.995), [model]);
+  const scaleMax = useMemo(() => demandScaleMax(model), [model]);
   const cityNow = useMemo(() => model.cityHourly(model.thisWeek), [model]);
   const cityBase = useMemo(() => model.cityHourly(model.baselineMean), [model]);
   const n = model.grid.cells.length;
@@ -67,6 +93,10 @@ export function DeskApp({ initialCity }: { initialCity: string }) {
 
   // Reset per-city state when the city changes, and keep the URL shareable.
   useEffect(() => {
+    // Compare with the last city rather than skipping the first run: React
+    // strict mode runs mount effects twice, which would wipe a deep link.
+    if (lastCity.current === cityId) return;
+    lastCity.current = cityId;
     setSelected(null);
     setPin(null);
     setSuggestions([]);
@@ -75,7 +105,11 @@ export function DeskApp({ initialCity }: { initialCity: string }) {
     }
   }, [cityId]);
 
-  useEffect(() => setSuggestions([]), [mode]);
+  const lastMode = useRef(mode);
+  useEffect(() => {
+    if (lastMode.current !== mode) setSuggestions([]);
+    lastMode.current = mode;
+  }, [mode]);
 
   useEffect(() => {
     if (!playing) return;
