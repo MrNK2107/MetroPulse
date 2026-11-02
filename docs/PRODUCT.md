@@ -93,7 +93,7 @@ works offline, deterministically and for free.
 - **Built for Indian planning artefacts.** DPR alternatives analysis, CMP catchments, the
   NTOD 500–800 m walk band, and briefings sized for how decisions are actually circulated.
 - **Runs in the browser.** The core loop (model, detector, siting, briefing) is plain TypeScript
-  that runs client-side in under a second per city. No GPU, no LLM, no server, no map-tile
+  that runs client-side, in about a second per city. No GPU, no LLM, no server, no map-tile
   subscription.
 
 ## Honesty about data (today)

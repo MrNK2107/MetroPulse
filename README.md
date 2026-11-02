@@ -1,70 +1,172 @@
 # MetroPulse
 
-### An India district digital twin with a tool-using planning agent
+### Test the station before you pour the concrete.
 
-MetroPulse is a FastAPI + Next.js app. It has two parts that work today:
+MetroPulse is a mobility-intelligence desk for Indian cities. It shows where a city moves, hour by
+hour and hexagon by hexagon. It flags the hours that break pattern and says why in plain language.
+It scores a proposed metro, BRT or feeder stop in seconds, and it turns the week into a briefing a
+commissioner can read on a phone.
 
-1. **India Twin.** District boundaries keyed to official LGD codes. It answers place-name lookups
-   and serves district indicators from Census 2011 and VIIRS night lights. Every value comes with a
-   provenance receipt (source, licence, dataset version, period) and a trust label.
-2. **Planning agent.** A ReAct-style agent you chat with over a token-gated WebSocket (`/ws/agent`).
-   It streams its reasoning steps, tool calls and clarifying questions to a chat panel on the map.
+It opens on 30 Indian cities, runs entirely in the browser, needs no sign-up, no server and no
+language model, and every number on screen shows how it was computed.
+
+<img src="docs/screenshots/landing.png" alt="MetroPulse landing page: 'Test the station before you pour the concrete', beside a live hexagon demand map of Chennai" width="900">
+
+> **Honest about data.** The desk runs on the **MetroPulse sample city model**: a seeded, synthetic
+> demand field built from each city's real anchor points (CBDs, job hubs, transport hubs,
+> residential centres in `data/cities/*.yaml`) and its published population, inside a sample city
+> outline. The sample week contains scripted incidents so the detector has something to find. Every
+> screen and every briefing says so. **The algorithms are real; the numbers are illustrative until a
+> city's own data is connected.**
+
+---
+
+## One loop, run every week: see, notice, decide, persuade
+
+### 1. See: Pulse, a 168-hour city playback
+
+Every hexagon (about 0.74 km², the size of an H3 resolution-8 cell) has a weekday and a weekend
+demand profile. Press play to watch the week: the morning wave into the job hubs, the evening
+release, the quiet Sunday. The timeline compares this week with the four-week baseline and pins
+this week's incidents.
+
+<img src="docs/screenshots/desk-pulse.png" alt="The desk on Pulse: Chennai's hexagon demand map at Tuesday 09:00, city-wide trip ends against the baseline, the busiest hexagons, and the 168-hour timeline" width="900">
+
+### 2. Notice: alerts that explain themselves
+
+A robust detector compares each hex-hour with the same hour in the four previous weeks (median and
+MAD), flags hex-hours at robust z ≥ 4 and a change of at least 30%, and joins flagged hex-hours that
+touch in space or time into one incident. Each incident is written up in sentences: what happened,
+where, how big, the likely cause and what to check, with the full rule trace one click away.
+
+<img src="docs/screenshots/desk-alerts.png" alt="The Alerts tab: a surge near T Nagar on Friday 18:00-23:00 is outlined on the map, explained in the feed with its likely cause and what to check" width="900">
+
+### 3. Decide: "what if a station opens here?"
+
+Drop a pin and choose metro, BRT or feeder. MetroPulse draws the walk and feeder catchments and
+reports residents and jobs in the walk band, estimated daily boardings, how much of that is new
+coverage rather than cannibalised from existing hubs, the weekday peak hour, and a 0-100 score with
+its formula. Catchments are area-weighted, so the score does not jump with where inside a hexagon
+the pin lands. **Suggest 3 sites** runs a greedy search over every hexagon; each pick counts only
+the demand the earlier picks and existing hubs do not already serve. Click a suggestion to pin it.
+
+<img src="docs/screenshots/desk-siting.png" alt="The Siting tab: a proposed metro station at T Nagar with its walk and feeder catchments drawn, a score of 100, boardings, coverage, an hourly boardings chart and the score formula" width="900">
+
+### 4. Persuade: a briefing a commissioner reads on a phone
+
+One click turns the week into an editorial, print-ready briefing: headline numbers, the busiest
+demand cores, walk-band coverage today and with the recommended sites, the week's incidents and
+the three recommended sites, with methodology and the data caveat at the end. **Print or save as
+PDF** produces a clean board-pack page.
+
+<img src="docs/screenshots/brief.png" alt="The Chennai city briefing: headline, four headline figures, the demand map with recommended sites, and the week's incidents" width="620">
+
+### Share exactly what you see
+
+The address bar always holds the current view, so copying it shares that view:
+
+| Link | Opens |
+|---|---|
+| `/desk?city=pune` | Pune on Pulse |
+| `/desk?city=chennai&tab=alerts&incident=1` | Chennai's most severe incident, selected, with the timeline at its peak |
+| `/desk?city=chennai&tab=siting&suggest=1` | The three suggested metro sites, the best one pinned and scored |
+| `/brief?city=mumbai` | Mumbai's briefing |
+
+<p>
+<img src="docs/screenshots/desk-mumbai.png" alt="Mumbai on Pulse: a long peninsula outline cut at the western shore, demand concentrated at CSMT, BKC and Andheri" width="560">
+<img src="docs/screenshots/mobile-desk.png" alt="The desk on a phone: Bengaluru alerts with the map above the incident feed" width="200">
+</p>
+
+---
+
+## Try it in two minutes
+
+The desk is frontend-only. No backend, database or API key is needed.
+
+```bash
+cd frontend
+npm install
+npm run dev            # http://localhost:3000
+```
+
+Open `/` for the landing page, `/desk` for the desk and `/brief?city=<id>` for a briefing. A
+five-minute walkthrough for a live demo is in [`docs/DEMO.md`](docs/DEMO.md). The product brief
+(positioning, customers, pricing, roadmap) is in [`docs/PRODUCT.md`](docs/PRODUCT.md).
+
+## How it works
+
+```text
+data/cities/*.yaml ──scripts/export_sample_cities.py──▶ frontend/src/data/cities.json
+                                                          (30 cities: centre, population,
+                                                           anchors, sample outline)
+frontend/src/lib/pulse/
+  geo.ts      hexagon grid over the outline (pointy-top, H3-res-8 sized), neighbours, radius search
+  model.ts    seeded demand field: residents, jobs, leisure and hub profiles by hour of week;
+              4 baseline weeks + this week with scripted incidents (deterministic per city)
+  alerts.ts   median/MAD baseline per hex-hour → robust-z flags → union-find clusters in space
+              and time → rule-traced explanations
+  siting.ts   area-weighted walk/feeder catchments, capture rates per mode, cannibalisation
+              against existing hubs, score formula, greedy multi-site suggestion, coverage
+frontend/src/components/
+  desk/       DeskApp (tabs, URL state), HexMap (SVG), Timeline, AlertFeed, SitingPanel
+  brief/      Briefing (print stylesheet)
+```
+
+| Engine | Rule |
+|---|---|
+| Baseline | median of the same hour in 4 trailing weeks; spread = 1.4826 × MAD, floored at 8% of the median and 3 trips |
+| Flag | robust z ≥ 4 **and** change ≥ 30% of the median |
+| Incident | ≥ 3 flagged hex-hours of one sign joined by hexagon adjacency (same hour) or the next hour (same hexagon) |
+| Cause | fixed rules on direction, hour and the nearest anchor's type (event, shift change, diverted riders, supply disruption, holiday) |
+| Siting score | 60 × min(1, boardings ÷ reference) + 40 × new-coverage share; metro walk 800 m / feeder 2.5 km, BRT 500 m / 1.5 km, feeder bus 400 m / 800 m |
+
+Every engine has unit tests (`frontend/src/lib/pulse/*.test.ts`): every scripted incident is found
+in all 30 cities with at most two false alarms, a quiet week raises nothing, the siting score is
+stable across a hexagon, a 5 km catchment measures π·25 km² within 10%, and suggestions spread out.
+
+---
+
+## The platform underneath: India Twin and planning agent
+
+The repo also holds the FastAPI backend that the desk will use for real data. It has two parts that
+work today:
+
+1. **India Twin** (`/twin`). District boundaries keyed to official LGD codes. It answers place-name
+   lookups and serves district indicators from Census 2011 and VIIRS night lights. Every value
+   comes with a provenance receipt (source, licence, dataset version, period) and a trust label.
+2. **Planning agent.** A ReAct-style agent you chat with over a token-gated WebSocket
+   (`/ws/agent`). It streams its reasoning steps, tool calls and clarifying questions.
 
 It produces data-informed estimates for exploration. It does not forecast city outcomes, and its
-answers are not decision-grade policy advice.
+answers are not decision-grade policy advice. (An older "3-loop" city simulator that streamed hex
+frames over `/ws/simulate` was retired in commit `87e958a`.)
 
-> **Status, October 2026.** An earlier version of this README described a "3-loop" city simulator
-> that streamed H3 hex frames over `/ws/simulate`, with sliders, a timeline scrubber and a metric
-> dashboard. That simulator was retired in commit `87e958a` and replaced by the India Twin. Its
-> engine, socket and UI are gone from the code. This README describes what is in the repo now.
-
----
-
-## Screenshots
-
-Captured from a local run on 2026-10-31: uvicorn and `next dev`, headless Chrome at a 1280x760 viewport.
-
-| Agent: reasoning step (`AGENT_THINK`) | Agent: clarifying question (`AGENT_ASK`) |
+| Agent: reasoning step | District panel with provenance receipts |
 |---|---|
-| <img src="docs/screenshots/agent-think.png" alt="Agent chat panel streaming the agent's first reasoning step" width="380"> | <img src="docs/screenshots/agent-ask.png" alt="Agent chat panel showing a clarifying question with three answer buttons" width="380"> |
+| <img src="docs/screenshots/agent-think.png" alt="Agent chat panel streaming the agent's first reasoning step" width="380"> | <img src="docs/screenshots/place-card.png" alt="District panel showing Census 2011 and VIIRS indicators with trust labels and an expanded source receipt" width="380"> |
 
-| District panel with provenance receipts | Fresh clone, before the twin data is built |
-|---|---|
-| <img src="docs/screenshots/place-card.png" alt="District panel showing Census 2011 and VIIRS indicators with trust labels and an expanded source receipt" width="380"> | <img src="docs/screenshots/twin-not-built.png" alt="The map shows setup steps for building the twin data" width="480"> |
+These two shots are from 2026-10-31: the agent against a local Ollama model with no mocks, and the
+district panel built from the synthetic test fixtures in `backend/tests/fixtures/twin/` (the real
+build needs 7 source files, some behind a login; see [Data](#data)).
 
-**What the shots show, and what they don't**
-
-- **Agent:** real sessions against a local Ollama model (`LLM_PROVIDER=ollama`, `gemma4`), with no
-  mocks. The two shots come from two separate runs of the same question. A step took 25 to 40 s on
-  this shared machine. Some runs hit the LLM timeout first, and the panel then showed the generic
-  `AGENT_ERROR`. No run reached `AGENT_RESULT` tonight.
-- **District panel:** the twin was built from the **test fixtures** in
-  `backend/tests/fixtures/twin/`. These are synthetic district squares with made-up round
-  numbers. The real build needs 7 source files, and some of them sit behind a login or a captcha
-  (see [Data](#data)). The panel layout, trust labels and receipts are what the real build shows.
-- **Fresh clone:** with no twin data built, the map shows this setup panel.
-- There is no cascade or incident view any more. It belonged to the retired simulator.
-
----
-
-## What exists, in numbers
+### What exists, in numbers
 
 | | |
 |---|---|
 | REST endpoints | 16 under `/api/*`, plus one WebSocket, `/ws/agent` (listed [below](#api-reference)) |
 | Twin indicators | 6: total, male and female population, literates and workers (Census 2011), and night-light radiance sum (VIIRS) |
 | Agent tools | 5: `parse_scenario`, `query_case_studies`, `get_city_profile`, `list_cities`, `compare_sectors` |
-| City configs | 30 Indian cities in `data/cities/*.yaml` (+ GeoJSON outlines) |
+| City configs | 30 Indian cities in `data/cities/*.yaml`, exported for the desk to `frontend/src/data/cities.json` |
 | Case studies (RAG) | 20, served by `GET /api/case-studies` |
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
 | Backend tests | 870 pytest tests (unit and integration), all passing on 2026-11-02, no network access |
-| Frontend tests | 68 Jest + Testing Library tests, 35 of them cover the agent chat client: reducer, parser and backoff units, plus component tests against a mock WebSocket |
+| Frontend tests | 147 Jest + Testing Library tests: the desk engines (model, detector, siting), desk, map, timeline and briefing components, landing page, and the agent chat client |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---
 
-## Architecture
+## Platform architecture
 
 ```text
  Next.js 14 (App Router)                          FastAPI
@@ -104,7 +206,7 @@ storage, external services and known limits, with mermaid diagrams.
 
 ---
 
-## Getting started
+## Full stack: getting started
 
 Prerequisites: Python 3.11+, Node 18+. Supabase and an LLM key are optional.
 
@@ -140,7 +242,7 @@ python scripts/twin_build.py build --boundary-version lgd-YYYYMMDD
 ```
 
 To see the UI without the real data, build the test fixtures into a scratch folder and point the
-API at it with `TWIN_DATA_DIR=<folder>`. The screenshots above were made this way.
+API at it with `TWIN_DATA_DIR=<folder>`. The district-panel screenshot was made this way.
 
 ### Agent
 
@@ -212,7 +314,7 @@ cd backend
 python -m pytest tests -q          # unit + integration
 
 cd frontend
-npm run test                       # jest (npm run test:ci in CI)
+npm run test                       # jest (npm run test:ci in CI; locally `npx jest --maxWorkers=2`)
 npm run lint
 npm run type-check
 npm run build
@@ -248,16 +350,26 @@ backend/
   scripts/twin_build.py
   tests/           unit/, integration/, fixtures/twin/
 frontend/src/
-  app/page.tsx     map page
+  app/             page.tsx (landing), desk/, brief/, twin/ (India Twin map)
+  lib/pulse/       sample city model, incident detector, station siting (see How it works)
+  components/desk/ DeskApp, HexMap, Timeline, AlertFeed, SitingPanel
+  components/brief/Briefing.tsx
   components/twin/ IndiaMap, PlaceSearch, PlaceCard, TwinNotBuilt
   components/agent/AgentChat.tsx
   lib/             agentChat.ts (protocol), twinApi.ts
   store/twinStore.ts
 data/              cities/, sez/, transit/, slums/, flood/, twin/{manual,seed}
+scripts/           export_sample_cities.py (city configs -> desk JSON)
 docs/              twin/, benchmarks.md, LIMITATIONS.md, ...
 ```
 
 ## Known gaps
+
+- The desk runs on the sample city model. Connectors for a city's own data (GTFS stations,
+  survey zones, AFC taps) are the next step; until then its numbers are illustrative.
+- The sample outlines are drawn around each city's anchors, not administrative boundaries, and
+  each city has one mapped interchange, so "existing coverage" is a lower bound.
+- Every sample week carries the same three kinds of scripted incident.
 
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
 - No real-data twin build has been published yet. See [Data](#data).
