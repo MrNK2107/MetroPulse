@@ -92,7 +92,8 @@ export interface HexGrid {
 
 export function buildHexGrid(city: City, edgeKm = EDGE_KM): HexGrid {
   const [lat0, lng0] = city.center;
-  const kx = 111.32 * Math.cos((lat0 * Math.PI) / 180);
+  // Rounded so the server render and the browser agree to the bit (Math.cos may differ in the last place).
+  const kx = Math.round(111.32 * Math.cos((lat0 * Math.PI) / 180) * 1e9) / 1e9;
   const ky = 110.57;
   const project = (lat: number, lng: number): Point => ({ x: (lng - lng0) * kx, y: (lat - lat0) * ky });
   const unproject = (p: Point) => ({ lat: lat0 + p.y / ky, lng: lng0 + p.x / kx });

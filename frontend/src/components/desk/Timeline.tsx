@@ -86,10 +86,14 @@ export function Timeline({ hour, onHour, playing, onPlaying, current, baseline, 
             style={{ left: `${(p.hour / 167) * 100}%` }}
           />
         ))}
-        <div className="mt-1 flex font-mono text-[10px] uppercase tracking-widest text-ink-faint">
+        {/* On a phone the strip is ~180px wide: three-letter labels would push the page sideways. */}
+        <div className="mt-1 flex font-mono text-[10px] uppercase tracking-normal text-ink-faint sm:tracking-widest">
           {DAYS.map((d) => (
-            <span key={d} className="flex-1">
-              {d}
+            <span key={d} className="min-w-0 flex-1">
+              <span className="sm:hidden" aria-hidden>
+                {d[0]}
+              </span>
+              <span className="hidden sm:inline">{d}</span>
             </span>
           ))}
         </div>

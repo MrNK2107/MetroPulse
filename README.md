@@ -161,7 +161,7 @@ build needs 7 source files, some behind a login; see [Data](#data)).
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
 | Backend tests | 870 pytest tests (unit and integration), all passing on 2026-11-02, no network access |
-| Frontend tests | 147 Jest + Testing Library tests: the desk engines (model, detector, siting), desk, map, timeline and briefing components, landing page, and the agent chat client |
+| Frontend tests | 149 Jest + Testing Library tests: the desk engines (projection, model, detector, siting), desk, map, timeline and briefing components, landing page, and the agent chat client |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---

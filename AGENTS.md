@@ -8,7 +8,7 @@ AI-Powered Macro-Urban Digital Twin Sandbox. Next.js 14 (frontend) + FastAPI (ba
 - Twin data: `cd backend && python scripts/twin_build.py check|build`
 - Backend tests: `cd backend && pytest tests/unit tests/integration` (870 tests; needs `python -m spacy download en_core_web_sm`)
 - Frontend: `cd frontend && npm run dev`
-- Frontend tests: `cd frontend && npm run test` (147 tests; CI uses `npm run test:ci`; locally under a memory cap use `npx jest --maxWorkers=2`)
+- Frontend tests: `cd frontend && npm run test` (149 tests; CI uses `npm run test:ci`; locally under a memory cap use `npx jest --maxWorkers=2`)
 - Lint/typecheck: `cd frontend && npm run lint && npm run type-check`
 
 ## Desk (the product surface)
