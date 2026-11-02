@@ -1,5 +1,7 @@
 # RAG Engine
 
+> **Status: parked.** This module (`backend/app/rag/`) is not wired into the running app. It was built for the retired city simulator, so the "Primary Loop" and simulation references below describe that older design. The live case-study endpoint is `GET /api/case-studies`; the planning agent queries case studies through its own tool.
+
 The RAG engine supports coefficient reasoning, explanations, and confidence scoring. It does not replace the simulation math and does not invent exact forecasts.
 
 ## Architecture
