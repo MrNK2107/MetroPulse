@@ -187,7 +187,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
             ))}
           </select>
         </label>
-        <nav role="tablist" aria-label="Desk" className="ml-auto flex border border-ink">
+        <nav role="tablist" aria-label="Desk" className="flex w-full border border-ink sm:ml-auto sm:w-auto">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -195,19 +195,19 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal ${
+              className={`flex-1 px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal sm:flex-none ${
                 tab === t.id ? "bg-ink text-paper" : "hover:bg-paper-deep"
               }`}
             >
-              <span className="mr-1.5 font-mono text-[10px] uppercase tracking-widest opacity-60">{t.verb}</span>
+              <span className="mr-1.5 hidden font-mono text-[10px] uppercase tracking-widest opacity-60 sm:inline">{t.verb}</span>
               {t.label}
             </button>
           ))}
           <Link
             href={`/brief?city=${cityId}`}
-            className="border-l border-ink px-3 py-1.5 text-sm font-medium hover:bg-signal hover:text-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
+            className="flex-1 border-l border-ink px-3 py-1.5 text-center text-sm font-medium sm:flex-none hover:bg-signal hover:text-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
           >
-            <span className="mr-1.5 font-mono text-[10px] uppercase tracking-widest opacity-60">Persuade</span>
+            <span className="mr-1.5 hidden font-mono text-[10px] uppercase tracking-widest opacity-60 sm:inline">Persuade</span>
             Briefing
           </Link>
         </nav>

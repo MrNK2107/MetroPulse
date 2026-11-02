@@ -151,7 +151,7 @@ function HexMapInner({
       {feeder && (
         <g>
           {Array.from(feeder).map((i) => (
-            <path key={`f${i}`} d={paths[i]} fill="#1E3A8A" fillOpacity={0.2} stroke="#1E3A8A" strokeOpacity={0.35} strokeWidth={0.03} />
+            <path key={`f${i}`} d={paths[i]} fill="#1E3A8A" fillOpacity={0.3} stroke="#1E3A8A" strokeOpacity={0.4} strokeWidth={0.03} />
           ))}
         </g>
       )}
