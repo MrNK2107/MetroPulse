@@ -1,6 +1,6 @@
 # MetroPulse — Project Status
 
-> **Note (2026-11-02):** this file is a 2026-10-20 snapshot and its numbers are historical. Current counts, from the 2026-11-02 run: backend **867 / 867** pytest pass (hermetic, no network), frontend **68 / 68** Jest pass (9 suites). See README.md and NIGHT_RUN_NOTES.md for up-to-date status.
+> **Note (2026-11-02):** this file is a 2026-10-20 snapshot and its numbers are historical. Current counts, from the 2026-11-02 run: backend **868 / 868** pytest pass (hermetic, no network), frontend **68 / 68** Jest pass (9 suites). See README.md and NIGHT_RUN_NOTES.md for up-to-date status.
 
 **Last Updated:** 2026-10-20 (night run; India Twin era — see AGENTS.md)
 

@@ -165,3 +165,37 @@ Backend 867/867 (memcap 2 GB, peak 0.53 GB, 16.8 s). Frontend jest 68/68 with `-
 - Whether to enable `INGEST_TOKEN` in deployments (user decision).
 - (done) `_ingestion_loop` now picks the city before the try, so the except branch no longer re-indexes `cities`.
 - `status.md` is a 2026-10-20 snapshot (738 tests); README/NIGHT_RUN_NOTES hold current numbers.
+
+---
+
+# Night run 2026-11-02, daytime wave (branch `night-run/2026-11-02`, from `night-run/2026-11-01`)
+
+Worked in a worktree (`_night_run/2026-11-02/wt/MetroPulse`). The user's checkout was not touched. `backend/.env` was never loaded, and the conftest network guard stayed on.
+
+## What changed
+1. Frontend dep prune (task 1): `@tremor/react`, `katex` and `react-markdown` were already removed on `night-run/2026-11-01`. Re-checked: none of them is in package.json, the lockfile or any import in `src/` or the configs. `h3-js` was only a transitive dep of the `deck.gl` umbrella (via `@deck.gl/carto` and `geo-layers`).
+   - `chore(deps)`: replaced the `deck.gl` umbrella with what `IndiaMap` imports (`@deck.gl/core`, `react`, `layers`) plus their peers (`@deck.gl/widgets`, `@luma.gl/core`, `@luma.gl/engine`, `@loaders.gl/core`), pinned to the versions already locked. 268 packages are gone, including h3-js, carto, arcgis and google-maps (node_modules went from 653 to 525 top-level entries).
+2. Stale simulator text (task 2): ARCHITECTURE.md had already been rewritten, but its "Stale prompt text" note was out of date. The live tool descriptions sent to the LLM on every step still said "simulation platform" and "use this before committing to a full simulation run", and no simulation tool exists.
+   - `fix(agent)`: rewrote `AgentTools.get_tool_descriptions()`. `compare_sectors` is now described as what it is: each sector change × that sector's weight, ranked, a static estimate rather than a forecast.
+   - Also fixed the exported but unused `AGENT_SYSTEM_PROMPT`.
+   - New test `test_prompt_text_does_not_promise_a_simulator`, written first and seen failing.
+   - ARCHITECTURE "Known limits" now has a "No forecasting" entry in place of the stale note.
+   - README project tree: `simulation/` now marks confidence, overlay and explainability as simulator leftovers.
+3. `fix(docker)`:
+   - Compose was broken from the start. The frontend used a `Dockerfile` that doesn't exist (now `Dockerfile.dev`). The browser URLs used the compose hostname `backend` and `/ws/simulate` (now `localhost:8000` and `/ws/agent`). The backend couldn't see the repo-level `data/` (now mounted read-only at `/data`, which is where `engine/config.py` and `twin/paths.py` resolve it inside the container).
+   - New `backend/.dockerignore`: `COPY . .` used to bake `backend/.env` and `.venv` into the image. That affects Fly deploys, which now need `fly secrets` (see NEEDS_INPUT).
+   - New `frontend/.dockerignore`: host node_modules no longer overwrites the container's install.
+   - Not run: Docker isn't allowed today. The YAML was parsed and the Dockerfile paths checked with Python.
+4. Test counts updated to 868 in README, AGENTS.md and status.md.
+
+## Verified
+- Backend 868/868 (memcap 2 GB, peak 0.46 GB, 16.5 s, CPU only, network guard on).
+- Frontend after the deck.gl swap, from a clean `npm ci`: tsc clean, `next lint` clean, jest 68/68 with `--maxWorkers=2` (peak 0.94 GB).
+- Runtime: `next dev` on :18130 with no backend (peak 1.44 GB, stopped by PID). Headless Chrome mounted the `deckgl-overlay` canvas, and the dev log showed no module-resolution errors. The banner said "Failed to fetch", which is expected without a backend.
+- No `next build` (memory rule for today).
+- The `npm ls` "extraneous @emnapi/wasi-threads" warning predates this run (it is in the old lockfile too).
+
+## Left
+- Fly: set secrets before the next deploy. The Fly image also has no `data/` (build context is `backend/`), so city configs and the twin are missing there. This is a deploy decision.
+- A `next build` after the deck.gl swap, on a day with memory to spare.
+- Earlier items are still open: per-user agent auth, real twin build (manual downloads), no LICENSE, the `INGEST_TOKEN` policy, and deleting the dormant simulator modules.

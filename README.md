@@ -235,7 +235,8 @@ backend/
     routes/        health, regions, case_studies, realtime, twin
     ws/agent.py    /ws/agent (auth, connection limit, streaming)
     rag/           retriever, evidence pack, coefficient extractor (not wired into the running app)
-    simulation/    llm.py (provider switch), confidence, explainability
+    simulation/    llm.py (provider switch, used by the agent); confidence, overlay and
+                   explainability are leftovers from the retired simulator
     realtime.py    6 ingestion connectors
   engine/
     agent/         UrbanAgent, tools, prompts, memory
