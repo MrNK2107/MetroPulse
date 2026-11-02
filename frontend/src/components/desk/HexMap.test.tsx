@@ -21,6 +21,25 @@ describe("HexMap", () => {
     expect(screen.queryByText("Far Away Park")).not.toBeInTheDocument();
   });
 
+  it("draws a place listed twice in the city config once", () => {
+    // 17 city configs list a place under both urban_anchors and special_zones
+    // (e.g. Rajkot's Aji Industrial Estate), sometimes with different types.
+    const [lat, lng] = city.center;
+    const anchors = [
+      { name: "Twice Listed Estate", type: "industrial", lat, lng, weight: 1 },
+      { name: "Twice Listed Estate", type: "sez", lat, lng, weight: 1 },
+    ];
+    const err = jest.spyOn(console, "error").mockImplementation(() => {});
+    const { container } = render(
+      <HexMap title="Hexagon map" grid={grid} anchors={anchors} values={values} scaleMax={1} />
+    );
+    const keyWarnings = err.mock.calls.filter((c) => String(c[0]).includes("same key"));
+    err.mockRestore();
+    expect(keyWarnings).toHaveLength(0);
+    const labels = Array.from(container.querySelectorAll("text")).filter((t) => t.textContent === "Twice Listed Estate");
+    expect(labels).toHaveLength(1);
+  });
+
   it("reports a pick only when it is enabled", () => {
     const onPick = jest.fn();
     const { rerender } = render(

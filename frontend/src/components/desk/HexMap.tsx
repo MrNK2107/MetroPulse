@@ -101,10 +101,18 @@ function HexMapInner({
   const hubs = useMemo(
     // Some configured anchors sit well outside the sample boundary; drawing them
     // leaves an orphan label in the margin, so keep only those near a hexagon.
-    () =>
-      anchors
+    // Some configs also list one place twice (urban anchor and special zone),
+    // so draw each name once, as an existing hub if either entry is one.
+    () => {
+      const byName = new Map<string, Anchor>();
+      for (const a of anchors) {
+        const seen = byName.get(a.name);
+        if (!seen || (a.type === "transport" && seen.type !== "transport")) byName.set(a.name, a);
+      }
+      return Array.from(byName.values())
         .map((a) => ({ a, p: grid.project(a.lat, a.lng) }))
-        .filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0),
+        .filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0);
+    },
     [anchors, grid]
   );
 
