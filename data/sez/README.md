@@ -1,5 +1,6 @@
-# SEZ Data
+# SEZ data
 
-This directory is a placeholder for Special Economic Zone boundary GeoJSON files. The simulation engine uses distance-based zone detection when real boundaries are unavailable.
+Reserved for Special Economic Zone boundary GeoJSON files. Nothing in MetroPulse reads this folder yet: the desk runs on the sample city
+model and the India Twin reads `data/twin/`.
 
-To use real data, place GeoJSON boundary files here (e.g., `hitec_city.geojson`, `genome_valley.geojson`) and run `scripts/preprocess/sez_zones.py --city <name>`.
+Today the desk knows SEZs only as anchor points from `data/cities/*.yaml`; real boundaries would spread their jobs over the right hexagons.

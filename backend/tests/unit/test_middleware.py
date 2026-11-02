@@ -1,7 +1,7 @@
 """Tests for RequestLoggingMiddleware in app/main.py.
 
 Tests cover: logging request method/path/status/time, skipping health checks,
-adding X-API-Version header, and graceful exception handling.
+and graceful exception handling.
 """
 from __future__ import annotations
 
@@ -13,10 +13,11 @@ import pytest
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
-from app.main import CorrelationIdMiddleware, RequestLoggingMiddleware
+from app.main import app
+from app.middleware import CorrelationIdMiddleware, RateLimitMiddleware, RequestLoggingMiddleware
 
 
-def _make_starlette_request(method: str = "GET", path: str = "/api/v1/regions") -> Request:
+def _make_starlette_request(method: str = "GET", path: str = "/api/regions") -> Request:
     """Create a minimal Starlette Request for middleware testing."""
     scope = {
         "type": "http",
@@ -45,7 +46,7 @@ async def _run_middleware(request: Request, response_status: int = 200) -> Respo
 @pytest.mark.asyncio
 async def test_logs_request_method_path_status(caplog):
     """Non-health requests should be logged with method, path, and status."""
-    request = _make_starlette_request("GET", "/api/v1/regions")
+    request = _make_starlette_request("GET", "/api/regions")
 
     with caplog.at_level(logging.INFO):
         response = await _run_middleware(request, response_status=200)
@@ -61,7 +62,7 @@ async def test_logs_request_method_path_status(caplog):
     assert len(json_logs) >= 1, f"Expected JSON log, got: {[r.message for r in caplog.records]}"
     log = json_logs[0]
     assert log["method"] == "GET"
-    assert log["path"] == "/api/v1/regions"
+    assert log["path"] == "/api/regions"
     assert log["status"] == 200
     assert "response_time_ms" in log
     assert isinstance(log["response_time_ms"], (int, float))
@@ -70,7 +71,7 @@ async def test_logs_request_method_path_status(caplog):
 @pytest.mark.asyncio
 async def test_logs_post_request(caplog):
     """POST requests should also be logged."""
-    request = _make_starlette_request("POST", "/api/v1/ingest")
+    request = _make_starlette_request("POST", "/api/ingest")
 
     with caplog.at_level(logging.INFO):
         await _run_middleware(request, response_status=200)
@@ -84,8 +85,8 @@ async def test_logs_post_request(caplog):
 
 @pytest.mark.asyncio
 async def test_skips_health_endpoint_logging(caplog):
-    """/api/v1/health should not be logged."""
-    request = _make_starlette_request("GET", "/api/v1/health")
+    """/api/health should not be logged."""
+    request = _make_starlette_request("GET", "/api/health")
 
     with caplog.at_level(logging.INFO):
         await _run_middleware(request, response_status=200)
@@ -96,8 +97,8 @@ async def test_skips_health_endpoint_logging(caplog):
 
 @pytest.mark.asyncio
 async def test_skips_health_data_endpoint_logging(caplog):
-    """/api/v1/health/data should not be logged."""
-    request = _make_starlette_request("GET", "/api/v1/health/data")
+    """/api/health/data should not be logged."""
+    request = _make_starlette_request("GET", "/api/health/data")
 
     with caplog.at_level(logging.INFO):
         await _run_middleware(request, response_status=200)
@@ -121,7 +122,7 @@ async def test_skips_root_health_endpoint_logging(caplog):
 @pytest.mark.asyncio
 async def test_does_log_non_health_endpoints(caplog):
     """Non-health endpoints should still be logged."""
-    request = _make_starlette_request("GET", "/api/v1/regions")
+    request = _make_starlette_request("GET", "/api/regions")
 
     with caplog.at_level(logging.INFO):
         await _run_middleware(request, response_status=200)
@@ -130,48 +131,13 @@ async def test_does_log_non_health_endpoints(caplog):
     assert len(json_logs) >= 1
 
 
-# ── Adds X-API-Version header ──────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_adds_api_version_header():
-    """Responses should have X-API-Version: 1 header."""
-    request = _make_starlette_request("GET", "/api/v1/regions")
-
-    response = await _run_middleware(request, response_status=200)
-    assert response.headers.get("X-API-Version") == "1"
-
-
-@pytest.mark.asyncio
-async def test_api_version_header_on_error_response():
-    """Even error responses should get the version header."""
-    request = _make_starlette_request("GET", "/api/v1/nonexistent")
-
-    response = await _run_middleware(request, response_status=404)
-    assert response.headers.get("X-API-Version") == "1"
-
-
-@pytest.mark.asyncio
-async def test_api_version_header_on_health_endpoint():
-    """Health endpoints should also get the version header (middleware skips logging but not header)."""
-    request = _make_starlette_request("GET", "/api/v1/health")
-
-    response = await _run_middleware(request, response_status=200)
-    # Note: The current implementation skips the ENTIRE dispatch for health,
-    # so the header may or may not be present. Test what the code actually does.
-    # The health check path does `return await call_next(request)` early,
-    # so X-API-Version is NOT added. This is a known behavior.
-    # We test the actual behavior:
-    assert response.headers.get("X-API-Version") is None or response.headers.get("X-API-Version") == "1"
-
-
 # ── Handles exceptions gracefully ──────────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_handles_call_next_exception():
     """If call_next raises, the middleware should propagate the exception."""
-    request = _make_starlette_request("GET", "/api/v1/error")
+    request = _make_starlette_request("GET", "/api/error")
 
     middleware = RequestLoggingMiddleware(app=MagicMock())
     call_next = AsyncMock(side_effect=RuntimeError("Internal error"))
@@ -183,9 +149,9 @@ async def test_handles_call_next_exception():
 @pytest.mark.asyncio
 async def test_response_time_is_positive():
     """Response time should be a non-negative number."""
-    request = _make_starlette_request("GET", "/api/v1/simulations")
+    request = _make_starlette_request("GET", "/api/twin/places")
 
-    with patch("app.main.logger") as mock_logger:
+    with patch("app.middleware.logger") as mock_logger:
         await _run_middleware(request, response_status=200)
 
         # Find the info call
@@ -201,7 +167,7 @@ async def test_response_time_is_positive():
 @pytest.mark.asyncio
 async def test_correlation_id_header_present():
     """Every response should have an X-Request-ID header."""
-    request = _make_starlette_request("GET", "/api/v1/regions")
+    request = _make_starlette_request("GET", "/api/regions")
 
     middleware = CorrelationIdMiddleware(app=MagicMock())
     mock_response = Response(content="ok", status_code=200)
@@ -221,7 +187,7 @@ async def test_correlation_id_passthrough():
     scope = {
         "type": "http",
         "method": "GET",
-        "path": "/api/v1/regions",
+        "path": "/api/regions",
         "query_string": b"",
         "headers": [(b"x-request-id", client_request_id.encode())],
         "server": ("testserver", 80),
@@ -239,7 +205,7 @@ async def test_correlation_id_passthrough():
 @pytest.mark.asyncio
 async def test_correlation_id_stashed_on_request_state():
     """The middleware should stash the request_id on request.state."""
-    request = _make_starlette_request("GET", "/api/v1/regions")
+    request = _make_starlette_request("GET", "/api/regions")
 
     middleware = CorrelationIdMiddleware(app=MagicMock())
     mock_response = Response(content="ok", status_code=200)
@@ -253,7 +219,7 @@ async def test_correlation_id_stashed_on_request_state():
 @pytest.mark.asyncio
 async def test_request_logging_includes_correlation_id(caplog):
     """The JSON log entry should include request_id when correlation middleware runs."""
-    request = _make_starlette_request("GET", "/api/v1/regions")
+    request = _make_starlette_request("GET", "/api/regions")
     # Simulate what CorrelationIdMiddleware would do
     request.state.request_id = "test-req-id-abc"
     with caplog.at_level(logging.INFO):
@@ -267,3 +233,54 @@ async def test_request_logging_includes_correlation_id(caplog):
 
     assert len(json_logs) >= 1
     assert json_logs[0].get("request_id") == "test-req-id-abc"
+
+
+@pytest.mark.asyncio
+async def test_correlation_id_rejects_malformed_client_value():
+    """A client X-Request-ID with spaces or control characters is replaced by a UUID."""
+    scope = {
+        "type": "http", "method": "GET", "path": "/api/regions", "query_string": b"",
+        "headers": [(b"x-request-id", b"bad id; drop table")], "server": ("testserver", 80),
+    }
+    middleware = CorrelationIdMiddleware(app=MagicMock())
+    response = await middleware.dispatch(Request(scope), AsyncMock(return_value=Response("ok")))
+    import uuid
+    uuid.UUID(response.headers["X-Request-ID"])
+
+
+def _req_from(ip: str, path: str = "/api/regions") -> Request:
+    return Request({
+        "type": "http", "method": "GET", "path": path, "query_string": b"",
+        "headers": [], "server": ("testserver", 80), "client": (ip, 1234),
+    })
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_blocks_after_limit_per_ip():
+    middleware = RateLimitMiddleware(app=MagicMock(), limit=3)
+    call_next = AsyncMock(return_value=Response("ok"))
+    for _ in range(3):
+        assert (await middleware.dispatch(_req_from("10.0.0.1"), call_next)).status_code == 200
+    blocked = await middleware.dispatch(_req_from("10.0.0.1"), call_next)
+    assert blocked.status_code == 429
+    assert int(blocked.headers["Retry-After"]) >= 1
+    # Another IP is unaffected; health checks are exempt.
+    assert (await middleware.dispatch(_req_from("10.0.0.2"), call_next)).status_code == 200
+    assert (await middleware.dispatch(_req_from("10.0.0.1", "/api/health"), call_next)).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_zero_disables():
+    middleware = RateLimitMiddleware(app=MagicMock(), limit=0)
+    call_next = AsyncMock(return_value=Response("ok"))
+    for _ in range(50):
+        assert (await middleware.dispatch(_req_from("10.0.0.3"), call_next)).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_app_responses_carry_request_id():
+    from httpx import ASGITransport, AsyncClient
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/health", headers={"X-Request-ID": "desk-trace-1"})
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "desk-trace-1"

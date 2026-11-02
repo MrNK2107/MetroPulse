@@ -1,6 +1,30 @@
 # MetroPulse — Project Status
 
-**Last Updated:** 2026-05-27  
+> **Note (2026-11-02):** this file is a 2026-10-20 snapshot and its numbers are historical. Current counts, from the 2026-11-02 run: backend **870 / 870** pytest pass (hermetic, no network), frontend **68 / 68** Jest pass (9 suites). See README.md and NIGHT_RUN_NOTES.md for up-to-date status.
+
+**Last Updated:** 2026-10-20 (night run; India Twin era — see AGENTS.md)
+
+## Current State (2026-10-20, verified)
+
+| Check | Result |
+|-------|--------|
+| Backend `pytest tests/unit tests/integration` | **738 / 738 pass** (needs `pip install -r requirements.txt` + `python -m spacy download en_core_web_sm`) |
+| Frontend `npm test` | **18 / 18 pass** (4 suites) |
+| Frontend `npm run type-check` / `npm run lint` | clean / clean |
+| TODO/FIXME in source | 0 (stale `advance()` TODO resolved) |
+
+**Changes this run:**
+- `/ws/agent` re-mounted (M2 item): shared-token auth via `AGENT_WS_TOKEN` (disabled when unset; `?token=` or `Authorization: Bearer`; constant-time compare; 1008 on failure), `WS_MAX_CONNECTIONS` now enforced (1013 when full), generic client errors, message length cap. Tests: `backend/tests/integration/test_ws_agent.py` (9). Verified live with uvicorn: bad/missing token rejected (HTTP 403), good token PING/PONG.
+- Missing dependency declared: `psycopg2-binary` (imported by `twin/store/pg_sync.py`).
+- Dashboard UI: map "Loading district boundaries" indicator, first-visit hint, dismissible error banner (moved bottom-centre so it no longer covers search), panel skeleton loader, panel error with **Try again**, PlaceCard empty state. Store gained `retry()` / `dismissError()`.
+- `.impeccable/` gitignored.
+
+**Still open:** per-user Supabase Auth for `/ws/agent` (spec §4; shared token is interim), no frontend agent client yet, twin data must be built locally (`python scripts/twin_build.py build`) or the map shows "twin data not built".
+
+---
+
+> Sections below are the historical May 2026 audit of the retired legacy city simulator (tag `legacy-metropulse`) and are kept for reference.
+  
 **LLM Support:** OpenAI, Google Gemini, Ollama (configurable via `LLM_PROVIDER`)  
 **Audit Method:** Deep codebase audit + verified test runs + verification agent
 

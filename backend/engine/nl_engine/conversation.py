@@ -73,13 +73,15 @@ class ConversationManager:
 
         return ["Mild", "Moderate", "Severe"]
 
-    # TODO: advance() is available for richer multi-turn conversation tracking
-    # (state machine: IDLE → PARSING → CONFIRMED → SIMULATING → DONE).
-    # Currently the WebSocket handler in app/ws/simulation.py manages flow
-    # directly without calling this.  Wire it in if multi-turn state tracking
-    # is needed (e.g. to show a progress indicator or enable pause/resume).
     def advance(self) -> ConversationState:
-        """Advance conversation state."""
+        """Advance the conversation one step and return the new state.
+
+        Linear flow: IDLE -> PARSING -> CONFIRMED -> SIMULATING -> DONE.
+        NEEDS_INPUT re-enters PARSING once the user replies; DONE is terminal
+        until reset(). Callers own the transitions. The legacy /ws/simulate
+        handler that used to sit beside this class is retired, so nothing in
+        the M1 India Twin drives it yet (parked for M2 multi-turn tracking).
+        """
         self.turn_count += 1
 
         if self.state == ConversationState.IDLE:

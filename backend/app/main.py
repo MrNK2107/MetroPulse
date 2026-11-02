@@ -1,25 +1,20 @@
-import collections
 import asyncio
 import logging
-import json
-import time
-import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
 
 from app.config import settings
 from app.db import get_db
+from app.middleware import CorrelationIdMiddleware, RateLimitMiddleware, RequestLoggingMiddleware
 from app.routes.health import router as health_router
 from app.routes.regions import router as regions_router
-from app.routes.simulations import router as simulations_router
 from app.routes.case_studies import router as case_studies_router
 from app.routes.realtime import router as realtime_router
-from app.ws.simulation import router as ws_router
+from app.routes.twin import install_error_handlers as install_twin_error_handlers
+from app.routes.twin import router as twin_router
+from app.ws.agent import router as agent_ws_router
 
 logger = logging.getLogger(__name__)
 
@@ -48,36 +43,17 @@ async def _ingestion_loop(db: object) -> None:
     city_idx = 0
     while True:
         await asyncio.sleep(settings.news_refresh_seconds)
+        if not cities:
+            await asyncio.sleep(900)
+            continue
+        city = cities[city_idx % len(cities)]
+        city_idx += 1
         try:
-            if not cities:
-                await asyncio.sleep(900)
-                continue
-            city = cities[city_idx % len(cities)]
             await run_ingestion_cycle(db, city)
-            city_idx += 1
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            logger.warning("Scheduled ingestion failed for %s: %s", cities[city_idx % len(cities)], e)
-            city_idx += 1
-
-
-async def _cleanup_loop() -> None:
-    """Background task that runs every 5 minutes to clean up stale data."""
-    while True:
-        await asyncio.sleep(300)  # 5 minutes
-        try:
-            # Cleanup stale rate limit entries (handled inside RateLimitMiddleware
-            # via _last_cleanup, but we can also prune old snapshots cache here)
-            from app.realtime import get_http_client
-            logger.debug("Cleanup task: running periodic maintenance")
-            # The rate limit middleware already has its own cleanup, but this
-            # background task could be extended for cache expiry, session
-            # cleanup, old simulation history pruning, etc.
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            logger.warning("Cleanup task failed: %s", e)
+            logger.warning("Scheduled ingestion failed for %s: %s", city, e)
 
 
 @asynccontextmanager
@@ -94,18 +70,12 @@ async def lifespan(app: FastAPI):
     await get_http_client()
 
     ingestion_task = asyncio.create_task(_ingestion_loop(db))
-    cleanup_task = asyncio.create_task(_cleanup_loop())
 
     yield
 
     ingestion_task.cancel()
-    cleanup_task.cancel()
     try:
         await ingestion_task
-    except asyncio.CancelledError:
-        pass
-    try:
-        await cleanup_task
     except asyncio.CancelledError:
         pass
 
@@ -118,140 +88,35 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
     openapi_tags=[
-        {"name": "Health", "description": "Service health and readiness checks"},
-        {"name": "Regions", "description": "City region data and baselines"},
-        {"name": "Simulation", "description": "Simulation run management and results"},
-        {"name": "Case Studies", "description": "RAG case study search and retrieval"},
-        {"name": "Realtime", "description": "Live data sources, snapshots, and ingestion"},
-        {"name": "WebSocket", "description": "Real-time simulation streaming"},
+        {"name": "health", "description": "Service, data and LLM-provider health checks"},
+        {"name": "regions", "description": "City configs and baselines"},
+        {"name": "case-studies", "description": "Case-study search used by the agent's evidence tools"},
+        {"name": "realtime-data", "description": "Live data sources, snapshots and token-gated ingestion"},
+        {"name": "twin", "description": "India twin: districts, places and city boundaries"},
+        {"name": "agent", "description": "Token-gated agent socket and its status probe"},
     ],
 )
 
-
-class CorrelationIdMiddleware(BaseHTTPMiddleware):
-    """Assigns a unique X-Request-ID to every request for distributed tracing."""
-
-    async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-        # Stash on request state so downstream middleware/handlers can access it
-        request.state.request_id = request_id
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        return response
-
-
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Structured JSON logging for all requests except health checks. Includes correlation ID."""
-
-    async def dispatch(self, request: Request, call_next):
-        # Skip logging for health check endpoints
-        if request.url.path in ("/api/v1/health", "/api/v1/health/data", "/health"):
-            return await call_next(request)
-
-        start = time.perf_counter()
-
-        # Read and log request body for POST/PUT requests
-        body_preview = None
-        if request.method in ("POST", "PUT", "PATCH"):
-            try:
-                raw_body = await request.body()
-                body_text = raw_body.decode("utf-8", errors="replace")
-                body_preview = body_text[:1000]
-                if len(body_text) > 1000:
-                    body_preview += "...[truncated]"
-            except Exception:
-                body_preview = "<unreadable>"
-
-        response = await call_next(request)
-        elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
-
-        log_entry = {
-            "method": request.method,
-            "path": request.url.path,
-            "status": response.status_code,
-            "response_time_ms": elapsed_ms,
-        }
-        user_agent = request.headers.get("user-agent")
-        if user_agent:
-            log_entry["user_agent"] = user_agent
-        request_id = getattr(request.state, "request_id", None)
-        if request_id:
-            log_entry["request_id"] = request_id
-        if body_preview:
-            log_entry["request_body"] = body_preview
-        logger.info(json.dumps(log_entry))
-
-        # Add version header to response
-        response.headers["X-API-Version"] = "1"
-        return response
-
-
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Global rate limiter: 60 requests per minute per IP. Skips health checks."""
-
-    _RATE_LIMIT = 60
-    _WINDOW_SECONDS = 60.0
-
-    def __init__(self, app):
-        super().__init__(app)
-        self._requests: dict[str, collections.deque] = {}
-        self._last_cleanup = time.time()
-
-    async def dispatch(self, request: Request, call_next):
-        if request.url.path in ("/api/v1/health", "/api/v1/health/data", "/health"):
-            return await call_next(request)
-
-        client_ip = request.client.host if request.client else "unknown"
-        now = time.time()
-
-        # Periodic cleanup of stale IP entries (every 60s)
-        if now - self._last_cleanup > 60.0:
-            stale = [ip for ip, q in self._requests.items() if not q or now - q[-1] > self._WINDOW_SECONDS]
-            for ip in stale:
-                del self._requests[ip]
-            self._last_cleanup = now
-
-        if client_ip not in self._requests:
-            self._requests[client_ip] = collections.deque()
-        timestamps = self._requests[client_ip]
-
-        # Evict expired entries
-        while timestamps and now - timestamps[0] > self._WINDOW_SECONDS:
-            timestamps.popleft()
-
-        if len(timestamps) >= self._RATE_LIMIT:
-            retry_after = self._WINDOW_SECONDS - (now - timestamps[0])
-            from starlette.responses import JSONResponse
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "success": False,
-                    "data": None,
-                    "error": f"Rate limit exceeded. Max {self._RATE_LIMIT} requests per {self._WINDOW_SECONDS:.0f}s.",
-                    "meta": {"retry_after_seconds": round(retry_after, 1)},
-                },
-                headers={"Retry-After": str(int(retry_after) + 1)},
-            )
-
-        timestamps.append(now)
-        return await call_next(request)
-
-
+# Starlette runs the last-added middleware first: CORS -> correlation id -> logging -> rate limit.
+app.add_middleware(RateLimitMiddleware, limit=settings.rate_limit_per_minute)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(CorrelationIdMiddleware)
+# CORS is added last so it is outermost and a 429 still carries CORS headers.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Ingest-Token", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 
-app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(RateLimitMiddleware)
-
-app.include_router(health_router, prefix="/api/v1", tags=["Health"])
-app.include_router(regions_router, prefix="/api/v1", tags=["Regions"])
-app.include_router(simulations_router, prefix="/api/v1", tags=["Simulation"])
-app.include_router(case_studies_router, prefix="/api/v1", tags=["Case Studies"])
-app.include_router(realtime_router, prefix="/api/v1", tags=["Realtime"])
-app.include_router(ws_router, tags=["WebSocket"])
+app.include_router(health_router, tags=["health"])
+app.include_router(regions_router, prefix="/api", tags=["regions"])
+app.include_router(case_studies_router, prefix="/api", tags=["case-studies"])
+app.include_router(realtime_router, prefix="/api", tags=["realtime-data"])
+app.include_router(twin_router, prefix="/api/twin", tags=["twin"])
+install_twin_error_handlers(app)
+# /ws/agent is token-gated (AGENT_WS_TOKEN; disabled when unset) and capped at
+# WS_MAX_CONNECTIONS concurrent sessions. See app/ws/agent.py.
+app.include_router(agent_ws_router, tags=["agent"])

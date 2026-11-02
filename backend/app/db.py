@@ -403,7 +403,7 @@ class DatabaseClient:
     async def get_region_profile(self, region_id: str) -> dict[str, Any] | None:
         try:
             cfg = CityConfig.load(region_id)
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):  # unknown city or a name CityConfig rejects
             return None
         profile = CityProfile(
             id=region_id,
@@ -433,7 +433,7 @@ class DatabaseClient:
         rid = str(region_id)
         try:
             cfg = CityConfig.load(rid)
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):  # unknown city or a name CityConfig rejects
             return None
         return {
             "region_id": rid,
@@ -572,26 +572,21 @@ class DatabaseClient:
                     "Supabase save_city_snapshot failed (table may not exist), using in-memory only: %s", e
                 )
 
-    async def list_simulations(self, page: int = 1, per_page: int = 20, city: str | None = None) -> list[dict[str, Any]]:
+    async def list_simulations(self, page: int = 1, per_page: int = 20) -> list[dict[str, Any]]:
         start = (page - 1) * per_page
         if self._client:
             try:
-                query = (
-                    self._client.table("simulations")
+                result = await self._retry(
+                    lambda: self._client.table("simulations")
                     .select("id,region_id,params,horizon_months,result_summary,created_at")
                     .order("created_at", desc=True)
                     .range(start, start + per_page - 1)
+                    .execute()
                 )
-                if city:
-                    query = query.eq("region_id", city)
-                result = await self._retry(lambda: query.execute())
                 return result.data
-            except (OSError, KeyError, ValueError):
+            except Exception:
                 logger.debug("Supabase list_simulations failed, using in-memory fallback")
-        items = self._saved
-        if city:
-            items = [s for s in items if s.get("region_id") == city or s.get("params", {}).get("city") == city]
-        return items[start : start + per_page]
+        return self._saved[start : start + per_page]
 
     async def get_simulation(self, simulation_id: UUID) -> dict[str, Any] | None:
         if self._client:
@@ -607,82 +602,6 @@ class DatabaseClient:
             except Exception:
                 logger.debug("Supabase get_simulation failed, using in-memory fallback")
         return next((item for item in self._saved if item["id"] == str(simulation_id)), None)
-
-    async def delete_simulation(self, simulation_id: UUID) -> bool:
-        """Delete a simulation by ID. Returns True if deleted."""
-        if self._client:
-            try:
-                await self._retry(
-                    lambda: self._client.table("simulations")
-                    .delete()
-                    .eq("id", str(simulation_id))
-                    .execute()
-                )
-                return True
-            except Exception:
-                logger.debug("Supabase delete_simulation failed, using in-memory fallback")
-        before = len(self._saved)
-        self._saved = [s for s in self._saved if s["id"] != str(simulation_id)]
-        return len(self._saved) < before
-
-    async def add_note(self, simulation_id: UUID, note: str) -> bool:
-        """Add a note/annotation to a simulation. Returns True if the simulation exists."""
-        if self._client:
-            try:
-                result = await asyncio.to_thread(
-                    lambda: self._client.table("simulation_notes")
-                    .insert({
-                        "simulation_id": str(simulation_id),
-                        "note": note,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                    })
-                    .execute()
-                )
-                return True
-            except Exception as e:
-                logger.warning("Supabase add_note failed, using in-memory fallback: %s", e)
-        # In-memory fallback: attach to the simulation record
-        sim = next((item for item in self._saved if item["id"] == str(simulation_id)), None)
-        if sim is None:
-            return False
-        sim.setdefault("notes", []).append({
-            "note": note,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
-        return True
-
-    async def get_notes(self, simulation_id: UUID) -> list[dict[str, Any]]:
-        """Retrieve all notes for a simulation."""
-        if self._client:
-            try:
-                result = await asyncio.to_thread(
-                    lambda: self._client.table("simulation_notes")
-                    .select("*")
-                    .eq("simulation_id", str(simulation_id))
-                    .order("created_at", desc=True)
-                    .execute()
-                )
-                return result.data or []
-            except Exception as e:
-                logger.warning("Supabase get_notes failed, using in-memory fallback: %s", e)
-        sim = next((item for item in self._saved if item["id"] == str(simulation_id)), None)
-        if sim is None:
-            return []
-        return sim.get("notes", [])
-
-    async def list_all_simulations_unpaged(self) -> list[dict[str, Any]]:
-        """Return all simulations (for stats aggregation)."""
-        if self._client:
-            try:
-                result = await self._retry(
-                    lambda: self._client.table("simulations")
-                    .select("id,region_id,params,result_summary,created_at")
-                    .execute()
-                )
-                return result.data or []
-            except Exception:
-                logger.debug("Supabase list_all_simulations_unpaged failed, using in-memory fallback")
-        return self._saved
 
     async def save_simulation(
         self,

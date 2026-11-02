@@ -3,35 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --color-dark-50: #f8fafc;
-  --color-dark-100: #1e1e2e;
-  --color-dark-200: #181825;
-  --color-dark-300: #11111b;
-  --color-dark-400: #0a0a14;
-  --color-dark-500: #05050a;
+  --map-bg: #05070d;
+  --paper: #f4efe6;
+  --paper-deep: #eae2d3;
+  --paper-edge: #d8cdb8;
+  --ink: #16130f;
+  --ink-soft: #4a443b;
+  --signal: #d9480f;
+  --supply: #1e3a8a;
 }
-
-/* Light mode overrides — toggled by adding .light class on <html> */
-:root.light {
-  --color-dark-50: #0f172a;
-  --color-dark-100: #e2e8f0;
-  --color-dark-200: #f1f5f9;
-  --color-dark-300: #f8fafc;
-  --color-dark-400: #ffffff;
-  --color-dark-500: #ffffff;
-}
-
-/* Light mode: invert text colors for readability on light backgrounds */
-:root.light .text-gray-100 { color: #0f172a !important; }
-:root.light .text-gray-200 { color: #1e293b !important; }
-:root.light .text-gray-300 { color: #334155 !important; }
-:root.light .text-gray-400 { color: #475569 !important; }
-:root.light .text-gray-500 { color: #64748b !important; }
-:root.light .text-gray-600 { color: #94a3b8 !important; }
-:root.light .border-dark-100\/50 { border-color: rgba(148, 163, 184, 0.3) !important; }
-:root.light .border-dark-100\/30 { border-color: rgba(148, 163, 184, 0.2) !important; }
-:root.light .border-dark-100\/40 { border-color: rgba(148, 163, 184, 0.25) !important; }
-:root.light .border-dark-100\/60 { border-color: rgba(148, 163, 184, 0.35) !important; }
 
 * {
   box-sizing: border-box;
@@ -41,51 +21,77 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.maplibregl-ctrl-attrib {
-  background: rgba(0, 0, 0, 0.5) !important;
-  color: #666 !important;
-  font-size: 10px !important;
+/* Newsprint grain: a faint dot screen, like a printed planning map. */
+.paper-grain {
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(22, 19, 15, 0.06) 0.6px, transparent 0.7px);
+  background-size: 5px 5px;
 }
 
-.maplibregl-ctrl-attrib a {
-  color: #888 !important;
+.rule-double {
+  border-top: 3px double var(--ink);
 }
 
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 4px;
-  border-radius: 2px;
-  outline: none;
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #3b82f6;
-  cursor: pointer;
-  border: 2px solid #1e293b;
-  transition: transform 0.15s;
+::selection {
+  background: #f2b391;
+  color: var(--ink);
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #3b82f6;
-  cursor: pointer;
-  border: 2px solid #1e293b;
+.feed-enter {
+  animation: slide-in 260ms ease-out both;
+}
+
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--len, 100);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.ring-draw {
+  animation: ring-draw 700ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-enter,
+  .ring-draw {
+    animation: none;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .paper-grain {
+    background-image: none;
+    background-color: #fff;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -97,71 +103,6 @@ input[type="range"]::-moz-range-thumb {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #b9ad97;
   border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-.prose {
-  --tw-prose-body: #d1d5db;
-  --tw-prose-headings: #f3f4f6;
-  --tw-prose-links: #60a5fa;
-  --tw-prose-bold: #f3f4f6;
-  --tw-prose-bullets: #6b7280;
-}
-
-/* Print / PDF export styles */
-@media print {
-  /* Hide interactive and non-essential UI elements */
-  body, html {
-    overflow: visible !important;
-    height: auto !important;
-  }
-  /* Hide map, controls, sidebars, buttons, drawing tools */
-  .absolute.inset-0.z-0,
-  [data-export-btn],
-  [data-pdf-btn],
-  [data-share-btn],
-  button[aria-label="Toggle scenario panel"],
-  button[aria-label="Show keyboard shortcuts"],
-  button[title="Switch to light mode"],
-  button[title="Switch to dark mode"],
-  .hidden.md\:flex.absolute.top-1\/2,
-  .absolute.right-4.top-20,
-  .absolute.left-1\/2.top-20,
-  .absolute.top-4.right-4 {
-    display: none !important;
-  }
-  /* Make panels static and full-width for print */
-  aside, .absolute.right-0 {
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    border: none !important;
-    height: auto !important;
-    overflow: visible !important;
-    transform: none !important;
-  }
-  /* Bottom metrics drawer */
-  .absolute.bottom-4 {
-    position: static !important;
-    transform: none !important;
-    width: 100% !important;
-  }
-  /* Dark background becomes white for print */
-  .bg-dark-400, .bg-dark-200, .bg-dark-300 {
-    background: white !important;
-    color: #111 !important;
-  }
-  .text-gray-100, .text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500 {
-    color: #111 !important;
-  }
-  /* Force color printing */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
 }

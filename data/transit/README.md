@@ -1,5 +1,6 @@
-# Transit Data
+# Transit data
 
-This directory is a placeholder for transit station GeoJSON files. The simulation engine uses synthetic metro proximity when real station data is unavailable.
+Reserved for transit station and route files (GTFS or GeoJSON). Nothing in MetroPulse reads this folder yet: the desk runs on the sample city
+model and the India Twin reads `data/twin/`.
 
-To use real data, place GeoJSON station files here and run `scripts/preprocess/transit_nodes.py --city <name>`.
+This is the first connector on the roadmap (`docs/PRODUCT.md`): real stations would replace the configured transport anchors as the desk's existing hubs, so siting's "new coverage" stops being a lower bound.

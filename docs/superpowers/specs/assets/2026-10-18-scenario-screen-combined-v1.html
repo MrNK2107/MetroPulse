@@ -1,0 +1,110 @@
+<style>
+  .wr{background:#05070d;color:#cfd8e3;font-family:system-ui,sans-serif;border-radius:12px;padding:12px;font-size:12px}
+  .top{display:flex;gap:10px;align-items:center;background:#0b1322;border-radius:8px;padding:8px 12px;margin-bottom:10px}
+  .top .q{flex:1;font-size:14px;color:#fff}
+  .pill{font-size:11px;padding:3px 8px;border-radius:10px;background:#16233a;white-space:nowrap}
+  .pill.on{background:#33202a;color:#ffb3b3}
+  .grid{display:grid;grid-template-columns:230px 1fr 260px;gap:10px}
+  .panel{background:#0a1120;border-radius:8px;padding:10px}
+  .h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.6;margin-bottom:6px}
+  .br{padding:6px 8px;border-radius:6px;margin:3px 0;background:#0f1a2b;display:flex;justify-content:space-between;gap:6px}
+  .br.sel{background:#2a1520;outline:1px solid #ff3b3b55}
+  .br small{opacity:.6}
+  .conf{display:inline-block;width:34px;height:5px;border-radius:3px;background:#16233a;position:relative;vertical-align:middle;margin-left:4px}
+  .conf i{position:absolute;left:0;top:0;height:5px;border-radius:3px;background:#9fb3c8}
+  .india{fill:#0d1726;stroke:#2c4a6e;stroke-width:1}
+  @keyframes ring{0%{r:2;opacity:.9}100%{r:20;opacity:0}}
+  .ring{fill:none;stroke-width:1.4;animation:ring 2.4s ease-out infinite}
+  @keyframes dash{to{stroke-dashoffset:-20}}
+  .flow{fill:none;stroke-dasharray:4 4;animation:dash 1s linear infinite}
+  .lbl{font-size:8px}
+  .step{padding:6px 0;border-bottom:1px solid #16233a}
+  .step b{color:#fff}
+  .src{font-size:11px;color:#7fa7d6}
+  .ledger{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .ledger div{background:#0a1120;border-radius:8px;padding:8px}
+  .ledger .n{font-size:17px;font-weight:700}
+  .tl{position:relative;height:30px;margin-top:8px}
+  .tl .line{position:absolute;top:13px;left:0;right:0;height:3px;background:#16233a;border-radius:2px}
+  .tl .done{position:absolute;top:13px;left:0;width:34%;height:3px;background:linear-gradient(90deg,#2ec4b6,#ff3b3b);border-radius:2px}
+  .tl .ev{position:absolute;top:8px;width:12px;height:12px;border-radius:50%;background:#0a1120;border:2px solid #ff9f1c}
+  .tl .ev.past{background:#ff9f1c}
+  .cap{background:#0b1322ee;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.45;margin-top:6px}
+  .inset{position:absolute;right:8px;top:8px;width:120px;background:#0b1322;border-radius:8px;padding:6px;font-size:11px}
+</style>
+
+<h2>A + B together: the full answer screen</h2>
+<p class="subtitle">Scenario tree on the left, cinematic map in the centre, the "why" chain on the right, and an impact ledger along the bottom. All numbers are illustrative.</p>
+
+<div class="wr">
+  <div class="top">
+    <span class="q">What happens if the US tries to corner India?</span>
+    <span class="pill on">Economy</span><span class="pill on">Jobs</span><span class="pill">Security</span><span class="pill">Diplomacy</span><span class="pill">Society</span><span class="pill">Energy</span>
+  </div>
+
+  <div class="grid">
+    <!-- Scenario tree -->
+    <div class="panel">
+      <div class="h">Scenario tree · 23 branches</div>
+      <div class="br"><span>1. Tariff escalation</span><small>41%</small></div>
+      <div class="br sel" style="margin-left:10px"><span>1a. 50% tariff on textiles, gems, pharma</span><small>24%</small></div>
+      <div class="br" style="margin-left:20px"><span>India retaliates on almonds, Harley</span><small>14%</small></div>
+      <div class="br" style="margin-left:20px"><span>India fast-tracks EU FTA</span><small>10%</small></div>
+      <div class="br" style="margin-left:10px"><span>1b. Pharma carve-out deal</span><small>17%</small></div>
+      <div class="br"><span>2. H-1B / tech services squeeze</span><small>27%</small></div>
+      <div class="br"><span>3. Secondary sanctions (Russian oil)</span><small>20%</small></div>
+      <div class="br"><span>4. Defence spares / GE engine halt</span><small>8%</small></div>
+      <div class="br"><span>5. Dollar/SWIFT pressure</span><small>4%</small></div>
+      <div style="margin-top:8px;font-size:11px;opacity:.7">Confidence in selected branch <span class="conf"><i style="width:55%"></i></span> medium<br>Based on 6 past episodes (1998 sanctions, 2019 GSP removal, 2025 tariffs...)</div>
+    </div>
+
+    <!-- Cinematic map -->
+    <div class="panel" style="position:relative">
+      <svg viewBox="0 0 300 300" width="100%" height="330">
+        <polygon class="india" points="60,25 75,0 98,15 115,45 108,60 130,68 160,85 200,92 205,106 215,115 205,130 208,150 190,155 185,170 170,177 145,200 123,215 122,240 118,267 100,289 90,287 80,270 70,245 60,220 50,195 48,170 46,157 20,162 5,140 15,127 30,124 25,110 40,90 55,72 65,60 60,45"/>
+        <polygon class="india" points="218,108 240,100 270,88 290,95 270,120 258,135 250,150 243,132 235,128 220,118"/>
+        <!-- export flows out to sea -->
+        <path class="flow" d="M48,180 Q10,220 0,250" stroke="#ff3b3b"/>
+        <path class="flow" d="M93,259 Q60,290 30,300" stroke="#ff3b3b"/>
+        <!-- migration arcs -->
+        <path class="flow" d="M93,259 Q150,190 171,114" stroke="#2ec4b6" opacity=".8"/>
+        <path class="flow" d="M48,158 Q110,120 171,114" stroke="#2ec4b6" opacity=".8"/>
+        <!-- hotspots -->
+        <circle cx="93" cy="259" r="5" fill="#ff3b3b"/><circle class="ring" cx="93" cy="259" r="4" stroke="#ff3b3b"/>
+        <circle cx="48" cy="158" r="5" fill="#ff3b3b"/><circle class="ring" cx="48" cy="158" r="4" stroke="#ff3b3b" style="animation-delay:.6s"/>
+        <circle cx="48" cy="180" r="4" fill="#ff9f1c"/><circle class="ring" cx="48" cy="180" r="4" stroke="#ff9f1c" style="animation-delay:1.2s"/>
+        <circle cx="105" cy="196" r="4" fill="#ff9f1c"/>
+        <circle cx="96" cy="240" r="3.5" fill="#ff9f1c"/>
+        <circle cx="171" cy="114" r="4" fill="#2ec4b6"/><circle class="ring" cx="171" cy="114" r="4" stroke="#2ec4b6" style="animation-delay:1.8s"/>
+        <text class="lbl" x="99" y="262" fill="#ffb3b3">Tiruppur</text>
+        <text class="lbl" x="54" y="156" fill="#ffb3b3">Surat (diamonds)</text>
+        <text class="lbl" x="54" y="183" fill="#ffd199">Mumbai</text>
+        <text class="lbl" x="110" y="198" fill="#ffd199">Hyderabad (pharma)</text>
+        <text class="lbl" x="176" y="112" fill="#7fe3d9">Bihar · return migration</text>
+      </svg>
+      <div class="inset"><b style="color:#fff">Zoom: Tiruppur</b><br>Knitwear exports to US<br><span style="color:#ff8080">orders −38%</span><br>Workers at risk ~1.1 lakh<br><span class="src">AEPC · Census · news</span></div>
+      <div class="cap">▶ <b>Month 4.</b> US buyers move orders to Bangladesh and Vietnam. Tiruppur's mills cut night shifts; migrant workers from Bihar and Odisha begin heading home before Chhath.</div>
+      <div class="tl"><div class="line"></div><div class="done"></div>
+        <div class="ev past" style="left:2%"></div><div class="ev past" style="left:14%"></div><div class="ev past" style="left:31%"></div><div class="ev" style="left:52%"></div><div class="ev" style="left:75%"></div><div class="ev" style="left:96%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;opacity:.6"><span>Day 0 · tariff announced</span><span>Month 6</span><span>Year 1</span><span>Year 3</span></div>
+    </div>
+
+    <!-- Why chain -->
+    <div class="panel">
+      <div class="h">Why this happens</div>
+      <div class="step"><b>1.</b> US takes ~18% of India's goods exports, the largest single market.<div class="src">Source: Commerce Ministry trade data</div></div>
+      <div class="step"><b>2.</b> Textiles and gems are labour-heavy with thin margins, so a 50% tariff wipes out their price edge.<div class="src">Source: past tariff episodes, industry reports</div></div>
+      <div class="step"><b>3.</b> Buyers switch to Bangladesh and Vietnam within 1–2 order cycles.<div class="src">Pattern: 2019 GSP removal, 2025 tariffs</div></div>
+      <div class="step"><b>4.</b> Job losses hit migrant workers first, and they return to home states.<div class="src">Source: PLFS, 2020 lockdown migration data</div></div>
+      <div class="step" style="border:0"><b>5.</b> Remittances to Bihar and UP districts fall, and rural spending drops.<div class="src">Model: projection · confidence low</div></div>
+    </div>
+  </div>
+
+  <div class="ledger">
+    <div><div style="opacity:.6">GDP impact (yr 1)</div><div class="n" style="color:#ff9f1c">−0.4 to −0.9%</div></div>
+    <div><div style="opacity:.6">Jobs at risk</div><div class="n" style="color:#ff3b3b">8–14 lakh</div></div>
+    <div><div style="opacity:.6">Rupee</div><div class="n" style="color:#ff9f1c">₹88 → ₹92</div></div>
+    <div><div style="opacity:.6">Hardest-hit states</div><div class="n" style="font-size:13px">TN · Gujarat · Maharashtra · Bihar</div></div>
+  </div>
+</div>

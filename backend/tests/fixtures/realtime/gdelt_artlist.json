@@ -1,0 +1,7 @@
+{
+  "articles": [
+    {"url": "https://example.org/a", "title": "City budget lifts infrastructure spend", "seendate": "20261101T080000Z", "domain": "example.org", "language": "English", "sourcecountry": "India", "tone": 3.2},
+    {"url": "https://example.org/b", "title": "Commuters face delays", "seendate": "20261101T070000Z", "domain": "example.org", "language": "English", "sourcecountry": "India", "tone": -2.0},
+    {"url": "https://example.org/c", "title": "Startups report steady demand", "seendate": "20261031T200000Z", "domain": "example.org", "language": "English", "sourcecountry": "India", "tone": 0.8}
+  ]
+}
