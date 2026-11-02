@@ -241,6 +241,22 @@ def test_tool_descriptions_name_every_public_tool():
         assert callable(getattr(AgentTools, name))
 
 
+def test_prompt_text_does_not_promise_a_simulator():
+    # The month-by-month simulator was retired and no simulation tool exists, so
+    # nothing sent to (or exported for) the LLM may tell it to run one.
+    from engine.agent import prompts
+
+    texts = {
+        "get_tool_descriptions": AgentTools(intent_router=StubRouter()).get_tool_descriptions(),
+        "AGENT_SYSTEM_PROMPT": prompts.AGENT_SYSTEM_PROMPT,
+        "REACT_SYSTEM_PROMPT": prompts.REACT_SYSTEM_PROMPT,
+        "TOOL_DESCRIPTIONS": prompts.TOOL_DESCRIPTIONS,
+        "PLAN_PROMPT": prompts.PLAN_PROMPT,
+    }
+    for label, text in texts.items():
+        assert "simulat" not in text.lower(), label
+
+
 # ── AgentMemory ──────────────────────────────────────────────────────────────
 
 

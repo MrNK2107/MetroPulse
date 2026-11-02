@@ -164,8 +164,8 @@ class AgentTools:
    Use this to understand a city's economic context.
 
 4. list_cities()
-   List all available cities in the simulation platform.
+   List all cities that have a config (sector weights, baselines, zones).
 
 5. compare_sectors(city: str, sector_changes: dict[str, float])
-   Quick pre-simulation analysis showing which sectors would be most impacted by changes.
-   Use this before committing to a full simulation run."""
+   Weight each sector change by the sector's share of the city economy and rank the results.
+   This is a static weighted estimate, not a forecast."""
