@@ -98,7 +98,12 @@ function HexMapInner({
   const fs = size / 70; // label font size in km units
 
   const hubs = useMemo(
-    () => anchors.map((a) => ({ a, p: grid.project(a.lat, a.lng) })),
+    // Some configured anchors sit well outside the sample boundary; drawing them
+    // leaves an orphan label in the margin, so keep only those near a hexagon.
+    () =>
+      anchors
+        .map((a) => ({ a, p: grid.project(a.lat, a.lng) }))
+        .filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0),
     [anchors, grid]
   );
 
@@ -114,7 +119,17 @@ function HexMapInner({
     pt.x = e.clientX;
     pt.y = e.clientY;
     const p = pt.matrixTransform(ctm.inverse());
+    // A pin off the hexagons would score an empty catchment; ignore it.
+    if (grid.cellAt(p.x, -p.y) === undefined) return;
     onPick({ x: p.x, y: -p.y });
+  };
+
+  const labelX = (p: { x: number; y: number }) => {
+    let x = p.x + fs * 0.6;
+    for (const m of markers) {
+      if (Math.abs(m.at.y - p.y) < fs * 1.4 && m.at.x > p.x - fs * 1.4 && m.at.x < x + fs * 1.2) x = m.at.x + fs * 1.5;
+    }
+    return x;
   };
 
   return (
@@ -129,18 +144,21 @@ function HexMapInner({
       style={{ cursor: onPick ? "crosshair" : "default" }}
     >
       <path d={boundary} fill="#EAE2D3" stroke="#16130F" strokeWidth={0.12} strokeDasharray="0.5 0.3" />
-      <HexLayer paths={paths} values={values} scaleMax={scaleMax} />
+      {/* Fade demand behind a catchment so the walk and feeder bands read clearly. */}
+      <g opacity={walk || feeder ? 0.55 : 1}>
+        <HexLayer paths={paths} values={values} scaleMax={scaleMax} />
+      </g>
       {feeder && (
         <g>
           {Array.from(feeder).map((i) => (
-            <path key={`f${i}`} d={paths[i]} fill="#1E3A8A" fillOpacity={0.16} stroke="none" />
+            <path key={`f${i}`} d={paths[i]} fill="#1E3A8A" fillOpacity={0.2} stroke="#1E3A8A" strokeOpacity={0.35} strokeWidth={0.03} />
           ))}
         </g>
       )}
       {walk && (
         <g>
           {Array.from(walk).map((i) => (
-            <path key={`w${i}`} d={paths[i]} fill="#1E3A8A" fillOpacity={0.45} stroke="#1E3A8A" strokeWidth={0.05} />
+            <path key={`w${i}`} d={paths[i]} fill="#1E3A8A" fillOpacity={0.6} stroke="#F4EFE6" strokeWidth={0.05} />
           ))}
         </g>
       )}
@@ -172,22 +190,6 @@ function HexMapInner({
             </circle>
           )
         )}
-        {hubs.map(({ a, p }) => (
-          <text
-            key={`t${a.name}`}
-            x={p.x + fs * 0.6}
-            y={-p.y + fs * 0.35}
-            fontSize={fs}
-            fontFamily="var(--font-mono), monospace"
-            fill="#16130F"
-            stroke="#F4EFE6"
-            strokeWidth={fs * 0.16}
-            paintOrder="stroke"
-            style={{ pointerEvents: "none" }}
-          >
-            {a.name}
-          </text>
-        ))}
       </g>
       <g>
         {markers.map((m) =>
@@ -227,6 +229,25 @@ function HexMapInner({
             </g>
           )
         )}
+      </g>
+      {/* Labels sit above the markers and step right of any marker that would cover them. */}
+      <g>
+        {hubs.map(({ a, p }) => (
+          <text
+            key={`t${a.name}`}
+            x={labelX(p)}
+            y={-p.y + fs * 0.35}
+            fontSize={fs}
+            fontFamily="var(--font-mono), monospace"
+            fill="#16130F"
+            stroke="#F4EFE6"
+            strokeWidth={fs * 0.16}
+            paintOrder="stroke"
+            style={{ pointerEvents: "none" }}
+          >
+            {a.name}
+          </text>
+        ))}
       </g>
     </svg>
   );

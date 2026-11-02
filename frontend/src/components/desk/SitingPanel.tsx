@@ -68,7 +68,7 @@ export function SitingPanel({ mode, onMode, result, placeName, suggestions, sugg
             </div>
             <div className="text-right">
               <div className="font-display text-5xl font-bold leading-none text-supply tabular">{result.score}</div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">score / 100</div>
+              <div className="whitespace-nowrap font-mono text-[10px] uppercase tracking-widest text-ink-faint">score / 100</div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
