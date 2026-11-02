@@ -1,5 +1,6 @@
-# Flood Data
+# Flood data
 
-This directory is a placeholder for GeoTIFF flood risk data. The simulation engine uses synthetic distance-based flood risk when real data is unavailable.
+Reserved for flood-risk rasters (for example SRTM DEM or flood-extent GeoTIFFs). Nothing in MetroPulse reads this folder yet: the desk runs on the sample city
+model and the India Twin reads `data/twin/`.
 
-To use real data, place SRTM DEM GeoTIFF files here and run `scripts/preprocess/flood_risk.py --city <name>`.
+Waterlogging is one of the scripted incidents in the desk's sample week; real flood layers would let the alerts name the low-lying hexagons instead.
