@@ -73,7 +73,7 @@ export function Briefing({ cityId }: { cityId: string }) {
 
       <article className="mx-auto max-w-[860px] px-5 py-8 sm:px-8">
         <header className="border-b-4 border-double border-ink pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Wordmark size={24} />
             <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">City briefing · sample week</span>
           </div>
@@ -97,7 +97,7 @@ export function Briefing({ cityId }: { cityId: string }) {
             value={`${pct(data.coverNow)} → ${pct(data.coverAfter)}`}
             note={`residents within ${MODES.metro.walkKm} km: today → with the 3 sites`}
           />
-          <Figure label="Incidents" value={String(data.incidents.length)} note={`${surge} surges · ${drop} drops`} />
+          <Figure label="Incidents" value={String(data.incidents.length)} note={`${surge} surge${surge === 1 ? "" : "s"} · ${drop} drop${drop === 1 ? "" : "s"}`} />
         </div>
 
         <figure className="mt-8 grid gap-4 sm:grid-cols-[1fr_260px]">

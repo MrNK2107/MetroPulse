@@ -89,7 +89,8 @@ function HexMapInner({
     const pad = 1.5;
     const minX = Math.min(...xs) - pad;
     const minY = Math.min(...ys) - pad;
-    const w = Math.max(...xs) - Math.min(...xs) + 2 * pad;
+    // extra room on the right: anchor labels run rightwards from their dot
+    const w = Math.max(...xs) - Math.min(...xs) + 2 * pad + 0.12 * (Math.max(...xs) - Math.min(...xs));
     const h = Math.max(...ys) - Math.min(...ys) + 2 * pad;
     const boundary = "M" + grid.boundary.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join("L") + "Z";
     return { paths, viewBox: `${minX} ${minY} ${w} ${h}`, boundary, size: Math.max(w, h) };
