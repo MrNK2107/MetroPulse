@@ -146,7 +146,9 @@ def test_twin_path_prefix_match():
 def test_only_gated_agent_websocket_is_mounted():
     # M2 re-mounted /ws/agent behind AGENT_WS_TOKEN + WS_MAX_CONNECTIONS
     # (see tests/integration/test_ws_agent.py). No other socket may appear.
-    from starlette.routing import WebSocketRoute
+    # Walk the routes instead of scanning app.routes: FastAPI 0.16x no longer
+    # flattens included routers into app.routes.
+    from tests.route_walk import websocket_paths
 
-    ws_paths = {r.path for r in app.routes if isinstance(r, WebSocketRoute)}
-    assert ws_paths == {"/ws/agent"}
+    assert app.url_path_for("agent_websocket") == "/ws/agent"
+    assert websocket_paths(app) == {"/ws/agent"}

@@ -53,8 +53,7 @@ def _assert_rejected(client: TestClient, url: str, code: int, **kwargs) -> None:
 
 
 def test_route_is_mounted():
-    paths = {getattr(r, "path", None) for r in app.routes}
-    assert "/ws/agent" in paths
+    assert app.url_path_for("agent_websocket") == "/ws/agent"
 
 
 def test_disabled_when_no_token_configured(client, monkeypatch):

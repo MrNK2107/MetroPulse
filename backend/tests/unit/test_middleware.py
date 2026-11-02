@@ -108,9 +108,9 @@ async def test_skips_health_data_endpoint_logging(caplog):
 
 
 @pytest.mark.asyncio
-async def test_skips_root_health_endpoint_logging(caplog):
-    """/health should not be logged."""
-    request = _make_starlette_request("GET", "/health")
+async def test_skips_llm_health_endpoint_logging(caplog):
+    """/api/health/llm should not be logged (there is no bare /health route)."""
+    request = _make_starlette_request("GET", "/api/health/llm")
 
     with caplog.at_level(logging.INFO):
         await _run_middleware(request, response_status=200)

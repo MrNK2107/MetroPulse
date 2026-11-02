@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import get_db
+from app.logging_setup import setup_logging
 from app.middleware import CorrelationIdMiddleware, RateLimitMiddleware, RequestLoggingMiddleware
 from app.routes.health import router as health_router
 from app.routes.regions import router as regions_router
@@ -17,6 +18,11 @@ from app.routes.twin import router as twin_router
 from app.ws.agent import router as agent_ws_router
 
 logger = logging.getLogger(__name__)
+
+# JSON request logs at LOG_LEVEL, and token / search-text redaction on uvicorn's
+# loggers. Runs at import, i.e. when uvicorn loads the app, after uvicorn has
+# configured its own loggers.
+setup_logging(settings.log_level)
 
 
 def _all_city_ids() -> list[str]:

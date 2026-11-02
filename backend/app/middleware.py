@@ -19,8 +19,22 @@ from starlette.responses import JSONResponse
 
 logger = logging.getLogger("app.main")
 
-HEALTH_PATHS = frozenset({"/health", "/api/health", "/api/health/data", "/api/health/llm"})
+# The health routes in app/routes/health.py (Fly's check polls /api/health).
+HEALTH_PATHS = frozenset({"/api/health", "/api/health/data", "/api/health/llm"})
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+
+
+def client_ip(request: Request) -> str:
+    """The caller's IP for rate limiting.
+
+    Behind Fly every request arrives from Fly's proxy, so the socket peer is the
+    same for all clients; Fly sets ``Fly-Client-IP`` to the real client address
+    (and overwrites any value the client sent). Off Fly, use the socket peer.
+    """
+    fly_ip = request.headers.get("fly-client-ip", "").strip()
+    if fly_ip:
+        return fly_ip
+    return request.client.host if request.client else "unknown"
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
@@ -57,7 +71,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Sliding-window limit of `limit` requests per minute per client IP. Health checks are exempt."""
+    """Sliding-window limit of `limit` requests per minute per client IP
+    (``Fly-Client-IP`` when present). Health checks are exempt."""
 
     WINDOW_SECONDS = 60.0
 
@@ -71,7 +86,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self.limit <= 0 or request.url.path in HEALTH_PATHS:
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "unknown"
+        key = client_ip(request)
         now = time.time()
         if now - self._last_cleanup > self.WINDOW_SECONDS:
             stale = [ip for ip, q in self._requests.items() if not q or now - q[-1] > self.WINDOW_SECONDS]
@@ -79,7 +94,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 del self._requests[ip]
             self._last_cleanup = now
 
-        timestamps = self._requests.setdefault(client_ip, collections.deque())
+        timestamps = self._requests.setdefault(key, collections.deque())
         while timestamps and now - timestamps[0] > self.WINDOW_SECONDS:
             timestamps.popleft()
 

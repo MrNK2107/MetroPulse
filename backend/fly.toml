@@ -9,6 +9,13 @@ primary_region = "iad"
   force_https = true
   auto_stop_machines = false
 
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
+
 [[vm]]
   cpu_kind = "shared"
   cpus = 2
