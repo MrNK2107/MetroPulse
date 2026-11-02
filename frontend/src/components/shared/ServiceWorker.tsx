@@ -17,7 +17,10 @@ export function ServiceWorker() {
         .catch(() => undefined);
       return;
     }
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    // The build id in the script URL makes each deploy install a new worker, whose cache
+    // name carries that id (see public/sw.js).
+    const build = encodeURIComponent(process.env.NEXT_PUBLIC_BUILD_ID || "dev");
+    navigator.serviceWorker.register(`/sw.js?v=${build}`).catch(() => undefined);
   }, []);
   return null;
 }
