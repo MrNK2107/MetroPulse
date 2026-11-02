@@ -367,19 +367,22 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
                   {busiest.map((b, k) => (
                     <li key={b.c} className="flex items-center gap-3 py-1.5 text-sm">
                       <span className="w-4 font-mono text-ink-faint">{k + 1}</span>
-                      <span className="min-w-0 flex-1">{b.name}</span>
+                      <span className="min-w-0 flex-1 leading-snug">{b.name}</span>
                       <Sparkline
                         now={b.day.now}
                         base={b.day.base}
                         at={b.day.at}
+                        width={56}
                         label={`${b.name}: today's 24 hours against the baseline`}
                       />
-                      <span className="w-12 text-right font-mono tabular">{fmtInt(b.v)}</span>
-                      <span
-                        className={`w-14 text-right font-mono text-[11px] tabular ${b.trend >= 0 ? "text-signal-deep" : "text-supply"}`}
-                        title="Against the same hour in the four-week baseline"
-                      >
-                        {b.trend >= 0 ? "▲" : "▼"} {Math.abs(b.trend * 100).toFixed(0)}%
+                      <span className="w-[62px] shrink-0 text-right leading-tight">
+                        <span className="block font-mono tabular">{fmtInt(b.v)}</span>
+                        <span
+                          className={`block font-mono text-[10px] tabular ${b.trend >= 0 ? "text-signal-deep" : "text-supply"}`}
+                          title="Against the same hour in the four-week baseline"
+                        >
+                          {b.trend >= 0 ? "▲" : "▼"} {Math.abs(b.trend * 100).toFixed(0)}%
+                        </span>
                       </span>
                     </li>
                   ))}
