@@ -1,7 +1,7 @@
 # MetroPulse — Agent Context
 
 ## Project
-AI-Powered Macro-Urban Digital Twin Sandbox. Next.js 14 (frontend) + FastAPI (backend) + Supabase PostgreSQL + pgvector.
+Mobility-intelligence desk for Indian cities (Pulse, Alerts, Siting, Briefing; runs in the browser) plus the India Twin and a planning agent. Next.js 14 (frontend) + FastAPI (backend) + optional Supabase PostgreSQL + pgvector.
 
 ## Commands
 - Backend: `cd backend && uvicorn app.main:app --reload --port 8000`

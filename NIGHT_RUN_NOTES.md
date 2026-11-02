@@ -200,3 +200,24 @@ Worked in a worktree (`_night_run/2026-11-02/wt/MetroPulse`). The user's checkou
 - Fly: set secrets before the next deploy. The Fly image also has no `data/` (build context is `backend/`), so city configs and the twin are missing there. This is a deploy decision.
 - A `next build` after the deck.gl swap, on a day with memory to spare.
 - Earlier items are still open: per-user agent auth, real twin build (manual downloads), no LICENSE, the `INGEST_TOKEN` policy, and deleting the dormant simulator modules.
+
+---
+
+# Night run 2026-11-02, night finishing pass (same branch `night-run/2026-11-02`)
+
+## What changed
+1. Committed the re-shot desk screenshots (taken after `aa747a2`, so the map's right-edge labels fit, e.g. Whitefield on the phone shot). Every image the README references exists.
+2. `docs/LIMITATIONS.md` and `docs/DATA_CREDIBILITY.md` rewritten for what ships (desk sample model, twin receipts and trust labels, agent estimates, parked news proxies). Both still described the retired simulator (alpha/beta coefficients, confidence decay per simulated month, panels that no longer exist). `docs/RAG_ENGINE.md` marked parked. The four `data/{flood,sez,slums,transit}/README.md` pointed at preprocess scripts that do not exist; they now say nothing reads them yet.
+3. Desk bugs found with a headless sweep (every city × alerts/siting-suggest/brief, plus tab, play, incident, pin, suggest flows and phone width), each with a failing test first:
+   - 17 city configs list one place twice (urban anchor + special zone), so the map drew doubled labels and React logged duplicate-key errors. `HexMap` now draws each name once (as a hub if either entry is transport).
+   - Phone width: the timeline's day labels made the desk scroll sideways by 32 px on every tab. One-letter labels below `sm`.
+   - Hydration warnings in Guwahati, Lucknow and Vadodara: Node and Chrome disagreed on the last bit of `Math.cos`, so anchor coordinates differed between server HTML and client. The east-west scale in `buildHexGrid` is rounded to 1e-9. New `geo.test.ts`.
+4. AGENTS.md project line describes the desk; test counts 149.
+
+## Verified
+Backend 870/870 (memcap 2 GB, peak 0.82 GB). Frontend jest 149/149 (`--maxWorkers=2`, peak ~1.1 GB), tsc and `next lint` clean, `next build` OK (peak 1.63 GB under 3 GB). After the fixes the sweep logged zero console errors across 30 cities and no horizontal overflow at 390 px. Dev server was stopped by PID.
+
+## Left
+- The duplicated anchors are also counted twice by the demand model (double weight for those places in 17 cities). Deduping in `scripts/export_sample_cities.py` changes those cities' numbers and needs the detector tests rechecked; a modelling decision, not done.
+- No LICENSE (NEEDS_INPUT). INGEST_TOKEN policy, Fly secrets and `data/` in the Fly image are still open.
+- Internal files for publishing: see `_night_run/2026-11-02-night/notes/metropulse.md`.
