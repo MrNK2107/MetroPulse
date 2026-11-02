@@ -181,3 +181,14 @@ export function suggestSites(
   }
   return picks;
 }
+
+/** Share of residents living outside every existing hub's walk band. */
+export function transitDesertShare(model: CityModel, covered: Set<number> = existingCoverage(model)): number {
+  let total = 0;
+  let inside = 0;
+  for (let c = 0; c < model.residents.length; c++) {
+    total += model.residents[c];
+    if (covered.has(c)) inside += model.residents[c];
+  }
+  return total > 0 ? 1 - inside / total : 0;
+}

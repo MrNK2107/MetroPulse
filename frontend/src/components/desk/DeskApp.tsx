@@ -195,7 +195,7 @@ export function DeskApp({ initialCity }: { initialCity: string }) {
           {tab === "pulse" && (
             <div className="space-y-4">
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">City-wide trips</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">Trip ends, city-wide</div>
                 <div className="font-display text-4xl font-bold leading-tight tabular">{fmtInt(cityNow[hour])}</div>
                 <div className="text-sm text-ink-soft">
                   in the hour from {dayHourLabel(hour)},{" "}

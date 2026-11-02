@@ -1,6 +1,6 @@
 import { getCity } from "./geo";
 import { buildCityModel } from "./model";
-import { MODES, scoreSite, suggestSites, existingCoverage } from "./siting";
+import { MODES, scoreSite, suggestSites, existingCoverage, transitDesertShare } from "./siting";
 
 const model = buildCityModel(getCity("chennai")!);
 
@@ -63,5 +63,17 @@ describe("station siting", () => {
         const pb = model.grid.cells[picks[b].cell];
         expect(Math.hypot(pa.x - pb.x, pa.y - pb.y)).toBeGreaterThan(MODES.metro.walkKm);
       }
+  });
+});
+
+describe("transit-desert share", () => {
+  it("is the share of residents outside every existing hub's walk band", () => {
+    const share = transitDesertShare(model);
+    expect(share).toBeGreaterThan(0);
+    expect(share).toBeLessThan(1);
+    const covered = existingCoverage(model);
+    let inside = 0;
+    covered.forEach((c) => (inside += model.residents[c]));
+    expect(share).toBeCloseTo(1 - inside / model.city.population, 3);
   });
 });
