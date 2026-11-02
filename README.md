@@ -58,7 +58,7 @@ Captured from a local run on 2026-10-31: uvicorn and `next dev`, headless Chrome
 | Case studies (RAG) | 20, served by `GET /api/case-studies` |
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
-| Backend tests | 867 pytest tests (unit and integration), all passing on 2026-11-02, no network access |
+| Backend tests | 868 pytest tests (unit and integration), all passing on 2026-11-02, no network access |
 | Frontend tests | 68 Jest + Testing Library tests, 35 of them cover the agent chat client: reducer, parser and backoff units, plus component tests against a mock WebSocket |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
