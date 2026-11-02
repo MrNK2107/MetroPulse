@@ -186,10 +186,11 @@ Worked in a worktree (`_night_run/2026-11-02/wt/MetroPulse`). The user's checkou
    - New `backend/.dockerignore`: `COPY . .` used to bake `backend/.env` and `.venv` into the image. That affects Fly deploys, which now need `fly secrets` (see NEEDS_INPUT).
    - New `frontend/.dockerignore`: host node_modules no longer overwrites the container's install.
    - Not run: Docker isn't allowed today. The YAML was parsed and the Dockerfile paths checked with Python.
-4. Test counts updated to 868 in README, AGENTS.md and status.md.
+4. `fix(llm)`: the Ollama call now sends `options.num_ctx` from the new `OLLAMA_NUM_CTX` setting. The default is 8192, because the agent prompt grows over up to 15 steps. 0 keeps the server default. Before this it sent nothing, and the server default here (131k) used 18 GB on 10-31. 2 new tests, and the existing request-shape test was updated (written first, seen failing). Documented in `.env.example`, SETUP and ARCHITECTURE. The conftest pins it too.
+5. Test counts updated to 870 in README, AGENTS.md and status.md.
 
 ## Verified
-- Backend 868/868 (memcap 2 GB, peak 0.46 GB, 16.5 s, CPU only, network guard on).
+- Backend 870/870 (memcap 2 GB, peak 0.44 GB, 14 s, CPU only, network guard on). The prompt fix alone gave 868.
 - Frontend after the deck.gl swap, from a clean `npm ci`: tsc clean, `next lint` clean, jest 68/68 with `--maxWorkers=2` (peak 0.94 GB).
 - Runtime: `next dev` on :18130 with no backend (peak 1.44 GB, stopped by PID). Headless Chrome mounted the `deckgl-overlay` canvas, and the dev log showed no module-resolution errors. The banner said "Failed to fetch", which is expected without a backend.
 - No `next build` (memory rule for today).
