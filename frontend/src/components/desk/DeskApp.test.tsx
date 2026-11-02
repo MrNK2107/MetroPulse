@@ -2,10 +2,21 @@ import { StrictMode } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DeskApp, deskHref, nearPlace } from "./DeskApp";
+import { getCity } from "@/lib/pulse/geo";
+import { getCityModel } from "@/lib/pulse/model";
+import { detectIncidents } from "@/lib/pulse/alerts";
 
 jest.setTimeout(20000);
 
+// The first (most severe) Chennai incident is the scripted Friday-evening event surge.
+const firstIncidentPeak = detectIncidents(getCityModel(getCity("chennai")!))[0].peakHour;
+
 describe("DeskApp", () => {
+  it("pins the Friday-evening surge as the first incident", () => {
+    expect(Math.floor(firstIncidentPeak / 24)).toBe(4);
+    expect(firstIncidentPeak % 24).toBeGreaterThanOrEqual(18);
+  });
+
   it("opens on Pulse for the chosen city and labels the sample model", () => {
     render(<DeskApp initialCity="chennai" />);
     expect(screen.getByRole("heading", { name: /chennai/i })).toBeInTheDocument();
@@ -32,7 +43,7 @@ describe("DeskApp", () => {
     const items = within(feed).getAllByRole("listitem");
     expect(items.length).toBeGreaterThanOrEqual(3);
     await userEvent.click(within(items[0]).getByRole("button", { name: /surge near t nagar/i }));
-    expect(screen.getByRole("slider", { name: /hour of the week/i })).toHaveValue(String(4 * 24 + 20));
+    expect(screen.getByRole("slider", { name: /hour of the week/i })).toHaveValue(String(firstIncidentPeak));
     expect(within(items[0]).getByText(/likely cause/i)).toBeInTheDocument();
   });
 
@@ -59,7 +70,7 @@ describe("DeskApp", () => {
     );
     expect(screen.getByRole("tab", { name: /alerts/i })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText(/likely cause/i)).toBeInTheDocument();
-    expect(screen.getByRole("slider", { name: /hour of the week/i })).toHaveValue(String(4 * 24 + 20));
+    expect(screen.getByRole("slider", { name: /hour of the week/i })).toHaveValue(String(firstIncidentPeak));
   });
 
   it("opens from a shareable link with suggested sites and the best one pinned", () => {

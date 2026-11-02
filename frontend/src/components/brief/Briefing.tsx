@@ -220,7 +220,7 @@ export function Briefing({ cityId }: { cityId: string }) {
               <p>
                 <span className="font-semibold">Data.</span> Sample city model: a seeded synthetic demand field built from{" "}
                 {city.name}&rsquo;s configured anchor points ({city.anchors.map((a) => a.name).join(", ")}), its published
-                population and a procedural boundary. The week contains scripted incidents. Existing coverage counts only the
+                population and a sample outline drawn around those anchors (not the administrative boundary). The week contains scripted incidents. Existing coverage counts only the
                 mapped interchange{data.hubs.length === 1 ? "" : "s"} ({data.hubs.join(", ")}), not every station on the network.
               </p>
               <p className="border border-signal bg-signal/10 p-2 text-ink">

@@ -113,7 +113,7 @@ describe("catchment geometry", () => {
     // pi * 25 = 78.5 km2, to within sampling error
     expect(area).toBeGreaterThan(78.5 * 0.9);
     expect(area).toBeLessThan(78.5 * 1.1);
-    const walk = catchment(model.grid, c, MODES.metro.walkKm);
+    const walk = catchment(g, inner, MODES.metro.walkKm);
     const walkArea = walk.weights.reduce((a, w) => a + w, 0) * model.grid.cellAreaKm2;
     expect(walkArea).toBeGreaterThan(Math.PI * 0.64 * 0.8);
     expect(walkArea).toBeLessThan(Math.PI * 0.64 * 1.2);
