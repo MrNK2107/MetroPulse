@@ -4,6 +4,13 @@
 
 :root {
   --map-bg: #05070d;
+  --paper: #f4efe6;
+  --paper-deep: #eae2d3;
+  --paper-edge: #d8cdb8;
+  --ink: #16130f;
+  --ink-soft: #4a443b;
+  --signal: #d9480f;
+  --supply: #1e3a8a;
 }
 
 * {
@@ -14,8 +21,77 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Newsprint grain: a faint dot screen, like a printed planning map. */
+.paper-grain {
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(22, 19, 15, 0.06) 0.6px, transparent 0.7px);
+  background-size: 5px 5px;
+}
+
+.rule-double {
+  border-top: 3px double var(--ink);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: #f2b391;
+  color: var(--ink);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.feed-enter {
+  animation: slide-in 260ms ease-out both;
+}
+
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--len, 100);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.ring-draw {
+  animation: ring-draw 700ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-enter,
+  .ring-draw {
+    animation: none;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .paper-grain {
+    background-image: none;
+    background-color: #fff;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -27,10 +103,6 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #b9ad97;
   border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
 }

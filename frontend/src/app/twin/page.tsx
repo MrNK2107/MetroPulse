@@ -41,7 +41,7 @@ export default function Home() {
   }, [clear]);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden" style={{ background: "var(--map-bg)" }}>
+    <main className="relative h-screen w-screen overflow-hidden text-gray-200" style={{ background: "var(--map-bg)" }}>
       <IndiaMap />
       <div className="absolute left-4 top-4 z-10">
         <PlaceSearch />

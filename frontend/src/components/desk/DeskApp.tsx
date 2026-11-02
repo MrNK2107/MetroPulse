@@ -1,0 +1,284 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getCity, listCities, Point } from "@/lib/pulse/geo";
+import { CityModel, getCityModel, HOURS_PER_WEEK, dayHourLabel } from "@/lib/pulse/model";
+import { detectIncidents, Incident } from "@/lib/pulse/alerts";
+import { existingCoverage, ModeId, scoreSite, suggestSites, Suggestion } from "@/lib/pulse/siting";
+import { HexMap, Marker } from "./HexMap";
+import { Timeline } from "./Timeline";
+import { AlertFeed } from "./AlertFeed";
+import { SitingPanel, fmtInt } from "./SitingPanel";
+import { Wordmark } from "./Wordmark";
+
+type Tab = "pulse" | "alerts" | "siting";
+const TABS: { id: Tab; label: string; verb: string }[] = [
+  { id: "pulse", label: "Pulse", verb: "See" },
+  { id: "alerts", label: "Alerts", verb: "Notice" },
+  { id: "siting", label: "Siting", verb: "Decide" },
+];
+
+const COMPASS = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"];
+
+export function placeName(model: CityModel, p: Point): string {
+  const { anchor, km } = model.nearestAnchor(p);
+  if (km < 0.6) return anchor.name;
+  const a = model.grid.project(anchor.lat, anchor.lng);
+  const ang = (Math.atan2(p.y - a.y, p.x - a.x) * 180) / Math.PI;
+  const dir = COMPASS[Math.round(((ang + 360) % 360) / 45) % 8];
+  return `${km.toFixed(1)} km ${dir} of ${anchor.name}`;
+}
+
+function percentile(arr: Float32Array, q: number): number {
+  const step = Math.max(1, Math.floor(arr.length / 20000));
+  const s: number[] = [];
+  for (let i = 0; i < arr.length; i += step) s.push(arr[i]);
+  s.sort((a, b) => a - b);
+  return s[Math.floor(q * (s.length - 1))] || 1;
+}
+
+export function DeskApp({ initialCity }: { initialCity: string }) {
+  const [cityId, setCityId] = useState(getCity(initialCity) ? initialCity : "chennai");
+  const [tab, setTab] = useState<Tab>("pulse");
+  const [hour, setHour] = useState(24 + 9); // Tue 09:00
+  const [playing, setPlaying] = useState(false);
+  const [selected, setSelected] = useState<Incident | null>(null);
+  const [mode, setMode] = useState<ModeId>("metro");
+  const [pin, setPin] = useState<Point | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+
+  const city = getCity(cityId)!;
+  const model = useMemo(() => getCityModel(city), [city]);
+  const incidents = useMemo(() => detectIncidents(model), [model]);
+  const covered = useMemo(() => existingCoverage(model), [model]);
+  const scaleMax = useMemo(() => percentile(model.baselineMean, 0.995), [model]);
+  const cityNow = useMemo(() => model.cityHourly(model.thisWeek), [model]);
+  const cityBase = useMemo(() => model.cityHourly(model.baselineMean), [model]);
+  const n = model.grid.cells.length;
+
+  const values = useMemo(() => {
+    const v = new Float32Array(n);
+    for (let c = 0; c < n; c++) v[c] = model.thisWeek[c * HOURS_PER_WEEK + hour];
+    return v;
+  }, [model, hour, n]);
+
+  const site = useMemo(() => (pin ? scoreSite(model, pin, mode, covered) : null), [model, pin, mode, covered]);
+
+  // Reset per-city state when the city changes, and keep the URL shareable.
+  useEffect(() => {
+    setSelected(null);
+    setPin(null);
+    setSuggestions([]);
+    if (typeof window !== "undefined" && window.history?.replaceState) {
+      window.history.replaceState(null, "", `/desk?city=${cityId}`);
+    }
+  }, [cityId]);
+
+  useEffect(() => setSuggestions([]), [mode]);
+
+  useEffect(() => {
+    if (!playing) return;
+    const t = setInterval(() => setHour((h) => (h + 1) % HOURS_PER_WEEK), 180);
+    return () => clearInterval(t);
+  }, [playing]);
+
+  const selectIncident = useCallback((i: Incident) => {
+    setSelected((cur) => (cur?.id === i.id ? null : i));
+    setPlaying(false);
+    setHour(i.peakHour);
+  }, []);
+
+  const markers: Marker[] = useMemo(() => {
+    const out: Marker[] = [];
+    if (tab === "alerts")
+      for (const i of incidents)
+        out.push({ id: i.id, at: i.centroid, kind: "incident", label: i.headline });
+    if (tab === "siting") {
+      suggestions.forEach((s, k) =>
+        out.push({ id: `pick${k}`, at: model.grid.cells[s.cell], kind: "pick", text: String(k + 1), label: `Suggested site ${k + 1}` })
+      );
+      if (pin) out.push({ id: "pin", at: pin, kind: "pin", label: "Your proposed site" });
+    }
+    return out;
+  }, [tab, incidents, suggestions, pin, model]);
+
+  const busiest = useMemo(() => {
+    const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => values[b] - values[a]);
+    return order.slice(0, 5).map((c) => ({ c, name: placeName(model, model.grid.cells[c]), v: values[c] }));
+  }, [values, model, n]);
+
+  const delta = cityBase[hour] ? cityNow[hour] / cityBase[hour] - 1 : 0;
+
+  return (
+    <div className="paper-grain flex min-h-screen flex-col text-ink lg:h-screen">
+      <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b-2 border-ink px-4 py-2.5 sm:px-6">
+        <Link href="/" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-signal">
+          <Wordmark />
+        </Link>
+        <div className="flex items-baseline gap-3">
+          <h1 className="font-display text-2xl font-semibold leading-none">{city.name}</h1>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-ink-faint">{city.state}</span>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">City</span>
+          <select
+            value={cityId}
+            onChange={(e) => setCityId(e.target.value)}
+            className="border border-ink bg-paper px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          >
+            {listCities().map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <nav role="tablist" aria-label="Desk" className="ml-auto flex border border-ink">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal ${
+                tab === t.id ? "bg-ink text-paper" : "hover:bg-paper-deep"
+              }`}
+            >
+              <span className="mr-1.5 font-mono text-[10px] uppercase tracking-widest opacity-60">{t.verb}</span>
+              {t.label}
+            </button>
+          ))}
+          <Link
+            href={`/brief?city=${cityId}`}
+            className="border-l border-ink px-3 py-1.5 text-sm font-medium hover:bg-signal hover:text-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
+          >
+            <span className="mr-1.5 font-mono text-[10px] uppercase tracking-widest opacity-60">Persuade</span>
+            Briefing
+          </Link>
+        </nav>
+      </header>
+
+      <p className="border-b border-ink/30 bg-signal/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
+        Sample city model: a seeded synthetic demand field built from {city.name}&rsquo;s real anchor points and published
+        population, with scripted incidents. The algorithms are real; the numbers are illustrative until the city&rsquo;s own data
+        is connected.
+      </p>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="relative min-h-[420px] border-ink lg:border-r-2">
+          <HexMap
+            title={`Hexagon map of ${city.name}`}
+            grid={model.grid}
+            anchors={city.anchors}
+            values={values}
+            scaleMax={scaleMax}
+            outlined={tab === "alerts" && selected ? new Set(selected.cells) : undefined}
+            walk={tab === "siting" && site ? new Set(site.walkCells) : undefined}
+            feeder={tab === "siting" && site ? new Set(site.feederCells) : undefined}
+            markers={markers}
+            onPick={tab === "siting" ? setPin : undefined}
+            className="absolute inset-0 h-full w-full"
+          />
+          <div className="pointer-events-none absolute bottom-3 left-3 border border-ink bg-paper/90 px-2 py-1.5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">Trips per hexagon, this hour</div>
+            <div className="mt-1 h-2 w-40" style={{ background: "linear-gradient(90deg,#EAE2D3,#F2B391 30%,#D9480F 65%,#6E2206)" }} />
+            <div className="flex justify-between font-mono text-[10px] text-ink-faint">
+              <span>0</span>
+              <span>{fmtInt(scaleMax)}+</span>
+            </div>
+          </div>
+        </section>
+
+        <aside className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">
+          {tab === "pulse" && (
+            <div className="space-y-4">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">City-wide trips</div>
+                <div className="font-display text-4xl font-bold leading-tight tabular">{fmtInt(cityNow[hour])}</div>
+                <div className="text-sm text-ink-soft">
+                  in the hour from {dayHourLabel(hour)},{" "}
+                  <span className={delta >= 0 ? "text-signal-deep" : "text-supply"}>
+                    {delta >= 0 ? "+" : ""}
+                    {(delta * 100).toFixed(1)}%
+                  </span>{" "}
+                  against the four-week baseline
+                </div>
+              </div>
+              <div>
+                <h2 className="rule-double pt-2 font-display text-lg font-semibold">Busiest hexagons now</h2>
+                <ol className="mt-1 divide-y divide-ink/15">
+                  {busiest.map((b, k) => (
+                    <li key={b.c} className="flex items-baseline gap-3 py-1.5 text-sm">
+                      <span className="w-4 font-mono text-ink-faint">{k + 1}</span>
+                      <span className="flex-1">{b.name}</span>
+                      <span className="font-mono tabular">{fmtInt(b.v)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <dl className="grid grid-cols-3 gap-2 border-t border-ink/20 pt-2 text-center">
+                <div>
+                  <dt className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">Hexagons</dt>
+                  <dd className="font-display text-xl">{fmtInt(n)}</dd>
+                </div>
+                <div>
+                  <dt className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">Each</dt>
+                  <dd className="font-display text-xl">{model.grid.cellAreaKm2.toFixed(2)} km²</dd>
+                </div>
+                <div>
+                  <dt className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">Residents</dt>
+                  <dd className="font-display text-xl">{(city.population / 1e6).toFixed(1)}M</dd>
+                </div>
+              </dl>
+              <p className="text-xs leading-relaxed text-ink-soft">
+                Press play to watch the week: the weekday morning wave into the job hubs, the evening release, the quieter
+                weekend. Diamonds on the timeline are this week&rsquo;s incidents.
+              </p>
+            </div>
+          )}
+          {tab === "alerts" && (
+            <div className="space-y-3">
+              <div>
+                <h2 className="font-display text-lg font-semibold">This week&rsquo;s incidents</h2>
+                <p className="text-xs text-ink-soft">
+                  Each hex-hour is compared with the same hour in the four previous weeks (median and MAD). Flagged hex-hours that
+                  touch in space or time become one incident, explained by a fixed rule trace.
+                </p>
+              </div>
+              <AlertFeed incidents={incidents} selectedId={selected?.id ?? null} onSelect={selectIncident} />
+            </div>
+          )}
+          {tab === "siting" && (
+            <SitingPanel
+              mode={mode}
+              onMode={setMode}
+              result={site}
+              placeName={pin ? placeName(model, pin) : null}
+              suggestions={suggestions}
+              suggestionNames={suggestions.map((s) => placeName(model, model.grid.cells[s.cell]))}
+              onSuggest={() => setSuggestions(suggestSites(model, mode, 3, covered))}
+              onClear={() => setPin(null)}
+            />
+          )}
+        </aside>
+      </div>
+
+      <footer className="border-t-2 border-ink px-4 py-3 sm:px-6">
+        <Timeline
+          hour={hour}
+          onHour={(h) => {
+            setPlaying(false);
+            setHour(h);
+          }}
+          playing={playing}
+          onPlaying={setPlaying}
+          current={cityNow}
+          baseline={cityBase}
+          pins={incidents.map((i) => ({ hour: i.peakHour, kind: i.kind, label: i.headline }))}
+        />
+      </footer>
+    </div>
+  );
+}
