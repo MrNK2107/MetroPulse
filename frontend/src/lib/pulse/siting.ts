@@ -16,7 +16,9 @@
  * whole feeder band, which spreads picks out into a network).
  */
 import type { HexGrid, Point } from "./geo";
-import { CityModel, HOURS_PER_WEEK } from "./model";
+import type { CityModel } from "./model";
+import type { Calibration } from "./calibrate";
+import { HOURS_PER_WEEK } from "./time";
 
 export type ModeId = "metro" | "brt" | "feeder";
 
@@ -157,8 +159,16 @@ function captureRates(walk: Catchment, feeder: Catchment, mode: Mode): number[] 
   });
 }
 
-export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered?: Coverage): SiteResult {
+export function scoreSite(
+  model: CityModel,
+  site: Point,
+  modeId: ModeId,
+  covered?: Coverage,
+  calibration?: Calibration
+): SiteResult {
   const mode = MODES[modeId];
+  const factor = calibration?.factor[modeId] ?? 1;
+  const calibrated = calibration !== undefined && calibration.stations[modeId] >= 3;
   const walk = catchment(model.grid, site, mode.walkKm);
   const feeder = catchment(model.grid, site, mode.feederKm);
   const rates = captureRates(walk, feeder, mode);
@@ -175,11 +185,11 @@ export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered
   const hourly = new Array<number>(24).fill(0);
   feeder.cells.forEach((c, k) => {
     const rate = rates[k];
-    const b = model.dailyTrips[c] * rate;
+    const b = model.dailyTrips[c] * rate * factor;
     boardings += b;
     fresh += b * (1 - (covered ? covered[c] : 0));
     // weekday hourly shape (Mon-Fri average)
-    for (let h = 0; h < 120; h++) hourly[h % 24] += (model.baselineMean[c * HOURS_PER_WEEK + h] * rate) / 5;
+    for (let h = 0; h < 120; h++) hourly[h % 24] += (model.baselineMean[c * HOURS_PER_WEEK + h] * rate * factor) / 5;
   });
   let peakHour = 0;
   for (let h = 1; h < 24; h++) if (hourly[h] > hourly[peakHour]) peakHour = h;
@@ -201,7 +211,12 @@ export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered
     score,
     formula:
       `score = 60 x min(1, ${Math.round(boardings).toLocaleString("en-IN")} / ${mode.referenceBoardings.toLocaleString("en-IN")})` +
-      ` + 40 x ${newShare.toFixed(2)} = ${score}`,
+      ` + 40 x ${newShare.toFixed(2)} = ${score}` +
+      (calibrated
+        ? `; boardings × ${factor.toFixed(2)} (calibrated on ${calibration.stations[modeId]} stations, IQR ±${Math.round(
+            calibration.iqr[modeId] * 100
+          )}%)`
+        : ""),
   };
 }
 

@@ -14,17 +14,10 @@ import { buildHexGrid, City, HexGrid, Point, Anchor } from "./geo";
 import type { Station } from "./import/types";
 import { CityData, cityDataKey } from "./userdata";
 
-export const HOURS_PER_WEEK = 168;
-export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+import { HOURS_PER_WEEK } from "./time";
+import { calibrate, Calibration, UNCALIBRATED } from "./calibrate";
 
-export function dayHourLabel(h: number): string {
-  const d = Math.floor(h / 24) % 7;
-  return `${DAYS[d]} ${String(h % 24).padStart(2, "0")}:00`;
-}
-
-export function hourLabel(h: number): string {
-  return `${String(h % 24).padStart(2, "0")}:00`;
-}
+export { HOURS_PER_WEEK, DAYS, dayHourLabel, hourLabel } from "./time";
 
 export interface ScriptedIncident {
   kind: "surge" | "drop";
@@ -53,6 +46,8 @@ export interface CityModel {
   hubs: Station[];
   /** The user's own data this model was built from, if any. */
   data: CityData | null;
+  /** Boardings scale factors from observed counts; UNCALIBRATED without counts. */
+  calibration: Calibration;
   cityHourly(week: Float32Array): number[];
   rankCellsByDailyTrips(): number[];
   nearestAnchor(p: Point): { anchor: Anchor; km: number };
@@ -284,7 +279,7 @@ export function buildCityModel(baseCity: City, data?: CityData | null): CityMode
   }
 
   let ranked: number[] | null = null;
-  return {
+  const model: CityModel = {
     city,
     grid,
     residents,
@@ -296,6 +291,7 @@ export function buildCityModel(baseCity: City, data?: CityData | null): CityMode
     scripted,
     hubs,
     data: data ?? null,
+    calibration: UNCALIBRATED,
     cityHourly(week) {
       const out = new Array<number>(HOURS_PER_WEEK).fill(0);
       for (let c = 0; c < n; c++)
@@ -319,6 +315,8 @@ export function buildCityModel(baseCity: City, data?: CityData | null): CityMode
       return { anchor: best.a, km: bd };
     },
   };
+  if (data?.counts && data.hubs) model.calibration = calibrate(model, data.counts.rows);
+  return model;
 }
 
 const scaleCache = new WeakMap<CityModel, number>();
