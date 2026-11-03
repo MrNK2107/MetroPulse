@@ -35,7 +35,7 @@ describe("scenario library", () => {
     saveScenario({ ...make("aaaaaaaa"), name: "Renamed" });
     expect(listScenarios()).toHaveLength(1);
     expect(getScenario("aaaaaaaa")?.name).toBe("Renamed");
-    expect(getScenario("aaaaaaaa")?.updatedAt > "2026-11-03T00:00:00.000Z").toBe(true);
+    expect(getScenario("aaaaaaaa")!.updatedAt > "2026-11-03T00:00:00.000Z").toBe(true);
   });
 
   it("exports and imports JSON, regenerating a colliding id", () => {

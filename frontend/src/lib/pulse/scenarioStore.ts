@@ -55,10 +55,12 @@ function isScenario(x: unknown): x is Scenario {
 
 /** Newest first. */
 export function listScenarios(cityId?: string): Scenario[] {
+  // Newest first; a tie (two saves in the same millisecond) keeps the later save first.
   return readAll()
-    .filter((s) => !cityId || s.cityId === cityId)
-    .slice()
-    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+    .map((s, k) => ({ s, k }))
+    .filter(({ s }) => !cityId || s.cityId === cityId)
+    .sort((a, b) => (a.s.updatedAt < b.s.updatedAt ? 1 : a.s.updatedAt > b.s.updatedAt ? -1 : b.k - a.k))
+    .map(({ s }) => s);
 }
 
 export function getScenario(id: string): Scenario | null {
