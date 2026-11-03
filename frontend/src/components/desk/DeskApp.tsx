@@ -15,6 +15,8 @@ import { Sparkline } from "./Sparkline";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { useDeskShortcuts } from "./useDeskShortcuts";
 import { cellDay, downloadText, incidentsToCsv } from "@/lib/pulse/export";
+import { CityData, clearCityData, loadCityData, saveCityData } from "@/lib/pulse/userdata";
+import { DataDrawer, dataStatus } from "./DataDrawer";
 
 type Tab = "pulse" | "alerts" | "siting";
 const TAB_ORDER: Tab[] = ["pulse", "alerts", "siting"];
@@ -93,10 +95,17 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
   const [suggestions, setSuggestions] = useState<Suggestion[]>(init.suggestions);
   const lastCity = useRef(startCity);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [dataOpen, setDataOpen] = useState(false);
+  const [data, setData] = useState<CityData | null>(null);
   const [notice, setNotice] = useState("");
 
   const city = getCity(cityId)!;
-  const model = useMemo(() => getCityModel(city), [city]);
+  // The user's own data lives in this browser only, so it is read after mount.
+  useEffect(() => {
+    setData(loadCityData(cityId));
+  }, [cityId]);
+  const model = useMemo(() => getCityModel(city, data), [city, data]);
+  const status = dataStatus(model);
   const incidents = useMemo(() => detectIncidents(model), [model]);
   const covered = useMemo(() => existingCoverage(model), [model]);
   const scaleMax = useMemo(() => demandScaleMax(model), [model]);
@@ -110,7 +119,21 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     return v;
   }, [model, hour, n]);
 
-  const site = useMemo(() => (pin ? scoreSite(model, pin, mode, covered) : null), [model, pin, mode, covered]);
+  const site = useMemo(
+    () => (pin ? scoreSite(model, pin, mode, covered, model.calibration) : null),
+    [model, pin, mode, covered]
+  );
+
+  const changeData = useCallback(
+    (next: CityData | null) => {
+      if (next) saveCityData(next);
+      else clearCityData(cityId);
+      setData(next);
+      setPin(null);
+      setSuggestions([]);
+    },
+    [cityId]
+  );
 
   // Reset per-city state when the city changes, and keep the URL shareable.
   useEffect(() => {
@@ -283,6 +306,15 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         <div className="no-print flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setDataOpen(true)}
+            className={`border px-2.5 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
+              data ? "border-supply bg-supply text-paper hover:bg-supply-deep" : "border-ink hover:bg-paper-deep"
+            }`}
+          >
+            Your data
+          </button>
+          <button
+            type="button"
             onClick={copyLink}
             className="border border-ink px-2.5 py-1 text-sm hover:bg-paper-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           >
@@ -300,6 +332,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         </div>
       </header>
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <DataDrawer open={dataOpen} city={city} model={model} data={data} onChange={changeData} onClose={() => setDataOpen(false)} />
       <div role="status" aria-live="polite" className="sr-only">
         {notice}
       </div>
@@ -312,11 +345,18 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         </div>
       )}
 
-      <p className="border-b border-ink/30 bg-signal/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
-        Sample city model: a seeded synthetic demand field built from {city.name}&rsquo;s real anchor points and published
-        population, with scripted incidents. The algorithms are real; the numbers are illustrative until the city&rsquo;s own data
-        is connected.
-      </p>
+      {status ? (
+        <p className="border-b border-ink/30 bg-supply/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
+          <span className="font-semibold text-supply-deep">Your data · </span>
+          {status}. Demand between stations is still the sample model.
+        </p>
+      ) : (
+        <p className="border-b border-ink/30 bg-signal/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
+          Sample city model: a seeded synthetic demand field built from {city.name}&rsquo;s real anchor points and published
+          population, with scripted incidents. The algorithms are real; the numbers are illustrative until the city&rsquo;s own
+          data is loaded under <strong>Your data</strong>.
+        </p>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section className="relative min-h-[420px] border-ink lg:border-r-2">
@@ -330,6 +370,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
             walk={tab === "siting" && site ? new Set(site.walkCells) : undefined}
             feeder={tab === "siting" && site ? new Set(site.feederCells) : undefined}
             markers={markers}
+            hubs={data?.hubs ? model.hubs : undefined}
             onPick={tab === "siting" ? setPin : undefined}
             className="absolute inset-0 h-full w-full"
           />
@@ -438,7 +479,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               placeName={pin ? placeName(model, pin) : null}
               suggestions={suggestions}
               suggestionNames={suggestions.map((s) => placeName(model, model.grid.cells[s.cell]))}
-              onSuggest={() => setSuggestions(suggestSites(model, mode, 3, covered))}
+              onSuggest={() => setSuggestions(suggestSites(model, mode, 3, covered, model.calibration))}
               onPickSuggestion={(k) => {
                 const c = model.grid.cells[suggestions[k].cell];
                 setPin({ x: c.x, y: c.y });

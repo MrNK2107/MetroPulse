@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getCity } from "@/lib/pulse/geo";
 import { getCityModel, HOURS_PER_WEEK, dayHourLabel, hourLabel } from "@/lib/pulse/model";
 import { detectIncidents } from "@/lib/pulse/alerts";
@@ -10,6 +10,7 @@ import { HexMap } from "@/components/desk/HexMap";
 import { nearPlace, placeName } from "@/components/desk/DeskApp";
 import { fmtInt } from "@/components/desk/SitingPanel";
 import { Wordmark } from "@/components/desk/Wordmark";
+import { CityData, describeCityData, loadCityData } from "@/lib/pulse/userdata";
 
 function Figure({ label, value, note }: { label: string; value: string; note: string }) {
   return (
@@ -29,14 +30,18 @@ function pct(x: number): string {
 
 export function Briefing({ cityId }: { cityId: string }) {
   const city = getCity(cityId) ?? getCity("chennai")!;
-  const model = getCityModel(city);
+  const [userData, setUserData] = useState<CityData | null>(null);
+  useEffect(() => {
+    setUserData(loadCityData(city.id));
+  }, [city.id]);
+  const model = getCityModel(city, userData);
   const data = useMemo(() => {
     const covered = existingCoverage(model);
     const incidents = detectIncidents(model);
-    const sites = suggestSites(model, "metro", 3, covered);
+    const sites = suggestSites(model, "metro", 3, covered, model.calibration);
     const coverNow = walkCoverage(model);
     const coverAfter = walkCoverage(model, sites.map((s) => s.result));
-    const hubs = city.anchors.filter((a) => a.type === "transport").map((a) => a.name);
+    const hubs = model.hubs.length <= 6 ? model.hubs.map((h) => h.name) : [`${model.hubs.length} stations`];
     const hourly = model.cityHourly(model.baselineMean);
     let peak = 0;
     for (let h = 0; h < 24; h++) if (hourly[24 + h] > hourly[24 + peak]) peak = h;
@@ -75,7 +80,9 @@ export function Briefing({ cityId }: { cityId: string }) {
         <header className="border-b-4 border-double border-ink pb-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Wordmark size={24} />
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">City briefing · sample week</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">
+              City briefing · {userData ? "your data" : "sample week"}
+            </span>
           </div>
           <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] sm:text-5xl">
             {city.name}: {data.incidents.length} incidents this week, and the next station belongs {best ? nearPlace(placeName(model, model.grid.cells[best.cell])) : "near the core"}
@@ -217,15 +224,27 @@ export function Briefing({ cityId }: { cityId: string }) {
               </p>
             </div>
             <div className="space-y-2">
-              <p>
-                <span className="font-semibold">Data.</span> Sample city model: a seeded synthetic demand field built from{" "}
-                {city.name}&rsquo;s configured anchor points ({city.anchors.map((a) => a.name).join(", ")}), its published
-                population and a sample outline drawn around those anchors (not the administrative boundary). The week contains scripted incidents. Existing coverage counts only the
-                mapped interchange{data.hubs.length === 1 ? "" : "s"} ({data.hubs.join(", ")}), not every station on the network.
-              </p>
+              {userData ? (
+                <p>
+                  <span className="font-semibold">Data.</span> {describeCityData(userData)}. Demand between stations is the
+                  MetroPulse sample model (a seeded synthetic field built from {city.name}&rsquo;s configured anchor points and
+                  published population){model.calibration.stations.metro >= 3
+                    ? `, with metro boardings calibrated on ${model.calibration.stations.metro} stations (× ${model.calibration.factor.metro.toFixed(2)})`
+                    : ""}
+                  . The week contains scripted incidents.
+                </p>
+              ) : (
+                <p>
+                  <span className="font-semibold">Data.</span> Sample city model: a seeded synthetic demand field built from{" "}
+                  {city.name}&rsquo;s configured anchor points ({city.anchors.map((a) => a.name).join(", ")}), its published
+                  population and a sample outline drawn around those anchors (not the administrative boundary). The week contains
+                  scripted incidents. Existing coverage counts only the mapped interchange{data.hubs.length === 1 ? "" : "s"} (
+                  {data.hubs.join(", ")}), not every station on the network.
+                </p>
+              )}
               <p className="border border-signal bg-signal/10 p-2 text-ink">
-                The algorithms are real. The numbers are illustrative until {city.name}&rsquo;s own data (AFC taps, GTFS, survey
-                zones) is connected. Do not cite them as ridership forecasts.
+                The algorithms are real. The numbers are illustrative until {city.name}&rsquo;s own data (boundary, stations,
+                counts) is loaded on the desk under Your data and calibrated. Do not cite them as ridership forecasts.
               </p>
               <p className="font-mono text-[11px] text-ink-faint">Generated {dayHourLabel(0).slice(0, 3)}–Sun of the sample week · {HOURS_PER_WEEK} hours · MetroPulse</p>
             </div>

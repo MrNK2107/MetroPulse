@@ -121,3 +121,26 @@ describe("nearPlace", () => {
     expect(nearPlace("0.8 km N of Chennai Central")).toBe("0.8 km N of Chennai Central");
   });
 });
+
+describe("DeskApp with the user's data", () => {
+  it("replaces the sample banner with the data status and opens the drawer", async () => {
+    window.localStorage.setItem(
+      "metropulse.citydata.chennai.v1",
+      JSON.stringify({
+        version: 1,
+        cityId: "chennai",
+        hubs: { source: "stations.csv", stations: [{ name: "Central", lat: 13.0827, lng: 80.2707, mode: "metro" }, { name: "Egmore", lat: 13.0732, lng: 80.2609, mode: "metro" }] },
+        loadedAt: "2026-11-03T00:00:00.000Z",
+      })
+    );
+    try {
+      render(<DeskApp initialCity="chennai" />);
+      expect(await screen.findByText(/stations: 2 from stations\.csv/i)).toBeInTheDocument();
+      expect(screen.queryByText(/sample city model/i)).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /your data/i }));
+      expect(screen.getByRole("dialog", { name: /your data/i })).toBeInTheDocument();
+    } finally {
+      window.localStorage.clear();
+    }
+  });
+});

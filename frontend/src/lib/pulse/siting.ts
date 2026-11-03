@@ -229,7 +229,8 @@ export function suggestSites(
   model: CityModel,
   modeId: ModeId,
   k = 3,
-  start: Coverage = existingCoverage(model)
+  start: Coverage = existingCoverage(model),
+  calibration?: Calibration
 ): Suggestion[] {
   const mode = MODES[modeId];
   const { grid } = model;
@@ -257,7 +258,7 @@ export function suggestSites(
       }
     }
     if (best < 0) break;
-    picks.push({ cell: best, result: scoreSite(model, grid.cells[best], modeId, covered) });
+    picks.push({ cell: best, result: scoreSite(model, grid.cells[best], modeId, covered, calibration) });
     // the new station now serves its whole catchment
     serve(covered, bands[best].feeder);
   }
