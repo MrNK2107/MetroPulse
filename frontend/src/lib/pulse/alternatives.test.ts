@@ -36,7 +36,7 @@ describe("alternatives table", () => {
   });
 
   it("renders a Markdown table with a separator row", () => {
-    const md = alternativesMarkdown(rows).split("\n");
+    const md = alternativesMarkdown(rows).trim().split("\n");
     expect(md[0]).toMatch(/^\| Option \| Mode \| Stations \|/);
     expect(md[1]).toMatch(/^\|( ?-+:? ?\|){10}$/);
     expect(md).toHaveLength(4);
