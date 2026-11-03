@@ -10,8 +10,7 @@ not the original plan. MetroPulse has two user-facing parts:
    urban-policy questions about 30 Indian cities using 5 read-only tools.
 
 The earlier month-by-month simulator (primary/secondary/tertiary loops, `/ws/simulate`,
-simulation frames) has been retired. Some of its modules are still in the tree, but the running
-app does not import them (see [Dormant code](#dormant-code)).
+simulation frames) has been retired and its modules were removed from the tree in 2.0.0.
 
 ## Components
 
@@ -25,7 +24,7 @@ app does not import them (see [Dormant code](#dormant-code)).
 | Twin store | Versioned Parquet files read with DuckDB, `CURRENT.json` pointer | `data/twin/published` |
 | App DB (optional) | Supabase Postgres + pgvector; in-memory fallback when unset | `backend/app/db.py`, `supabase/migrations` |
 | Twin DB mirror (optional) | Postgres/PostGIS via psycopg2 | `backend/twin/store/pg_sync.py` |
-| LLM | One of `mimo` (default), `openai`, `gemini`, `ollama` | `backend/app/simulation/llm.py` |
+| LLM | One of `mimo` (default), `openai`, `gemini`, `ollama` | `backend/app/llm.py` |
 
 ### Backend modules in use
 
@@ -44,13 +43,13 @@ backend/
 │   ├── realtime.py        6 connectors (Google News RSS, GDELT, 3 news-sentiment proxies,
 │   │                      static census from city YAML) and run_ingestion_cycle()
 │   ├── realtime_models.py SnapshotData, SourceStatus, SnapshotQuality
+│   ├── llm.py             call_llm: provider dispatch for the agent
 │   ├── routes/            health, regions, case_studies, realtime, twin
-│   ├── simulation/        llm.py (call_llm); confidence.py and overlay.py are imported
-│   │                      through the package __init__ but no route uses them
 │   └── ws/agent.py        /ws/agent socket and GET /api/agent/status
 ├── engine/
 │   ├── agent/             UrbanAgent, AgentTools, AgentMemory, prompts
 │   ├── nl_engine/         IntentRouter, RegexParser, SpacyParser, domain_maps
+│   │                      (used only by the agent's parse_scenario tool)
 │   ├── config.py          CityConfig: loads data/cities/<city>.yaml (30 cities)
 │   └── models.py          ParsedScenario, sector names and labels
 └── twin/
@@ -60,6 +59,9 @@ backend/
     ├── pipeline/          run_pipeline() + adapters: census2011, viirs
     └── store/             parquet_store, catalog, atomic publish, schema, pg_sync
 ```
+
+`twin/pipeline/census2011.py`, `twin/pipeline/viirs.py` and `twin/store/pg_sync.py` are used,
+but only by the build CLI.
 
 ### Frontend
 
@@ -240,7 +242,7 @@ Details that matter when changing it:
   - `query_case_studies`: with Supabase, an embedding plus the pgvector `match_case_studies`
     RPC; otherwise keyword ranking over the 20 built-in case studies.
   - `get_city_profile`, `compare_sectors`, `list_cities`: read `data/cities/*.yaml`.
-- **LLM call** (`app/simulation/llm.py`): `LLM_PROVIDER` picks the backend. Each call has an
+- **LLM call** (`app/llm.py`): `LLM_PROVIDER` picks the backend. Each call has an
   `LLM_TIMEOUT_MS` limit (default 25 s). OpenAI uses JSON mode. MiMo gets a "JSON only"
   system message. Ollama uses `/api/chat` with `stream: false` and sends `options.num_ctx` from
   `OLLAMA_NUM_CTX` (default 8192; 0 leaves the server default, which can be very large).
@@ -276,16 +278,6 @@ behaviour most are `AGENT_WS_TOKEN`, `INGEST_TOKEN`, `WS_MAX_CONNECTIONS`, `LLM_
 `LLM_TIMEOUT_MS`, the provider keys, `SUPABASE_URL`/`SUPABASE_KEY`, `CORS_ORIGINS`,
 `TWIN_DATA_DIR`, `NEWS_REFRESH_SECONDS` and `SEED_CASE_STUDIES_ON_STARTUP`. The frontend reads
 `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL`.
-
-## Dormant code
-
-These modules are in the tree but are not imported by `app.main` or the agent: `app/rag/*`,
-`app/source_ingestion.py`, `app/simulation/explainability.py`, `app/core/provenance.py`,
-`engine/grid.py`, `engine/prediction_generator.py`, `engine/scenario_parser.py`,
-`engine/simulation_explainability.py`, `engine/translator.py`,
-`engine/nl_engine/conversation.py` and `engine/nl_engine/group_scorer.py`. Most still have unit
-tests. `twin/pipeline/census2011.py`, `twin/pipeline/viirs.py` and `twin/store/pg_sync.py`
-are used, but only by the build CLI.
 
 ## Known limits
 

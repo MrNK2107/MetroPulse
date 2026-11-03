@@ -23,7 +23,7 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 - Backend package: `backend/twin/` (engine-style: never imports from `app/`); API in `backend/app/routes/twin.py` (`/api/twin/*`)
 - Built data: `data/twin/` (produced by `scripts/twin_build.py`)
 - Frontend: `frontend/src/components/twin/`, `store/twinStore.ts`, `lib/twinApi.ts`, `types/twin.ts`
-- Parked for M2 (not wired to the UI): `engine/agent/` (served by the token-gated `/ws/agent`; frontend client: `components/agent/AgentChat.tsx`), `app/rag/`, `nl_engine/`, `app/realtime*`; legacy city YAMLs in `data/cities/` still back `/api/regions*`
+- Parked for M2 (not wired to the UI): `engine/agent/` (served by the token-gated `/ws/agent`; frontend client: `components/agent/AgentChat.tsx`), `app/realtime*`; `engine/nl_engine/` is live (it backs the agent's scenario parser); legacy city YAMLs in `data/cities/` still back `/api/regions*`
 
 ## Security
 

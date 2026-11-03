@@ -23,7 +23,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.config import settings
 from app.db import get_db
-from app.simulation.llm import call_llm
+from app.llm import call_llm
 from engine.agent import UrbanAgent, AgentTools
 from engine.config import CityConfig
 

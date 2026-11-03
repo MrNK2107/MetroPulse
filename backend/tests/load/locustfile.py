@@ -1,44 +1,23 @@
 """
-Locust load test for MetroPulse WebSocket simulation.
+Locust load test for the MetroPulse API (health and India Twin read paths).
 
 Usage:
   locust -f tests/load/locustfile.py --host=http://localhost:8000
 """
-import json
-import time
-from locust import FastHttpUser, task, between
+from locust import FastHttpUser, between, task
 
 
-class SimulationUser(FastHttpUser):
-    wait_time = between(5, 15)
+class TwinReader(FastHttpUser):
+    wait_time = between(1, 5)
 
-    @task
-    def run_simulation(self):
-        payload = {
-            "type": "START",
-            "scenario": "Hyderabad pharma FDI drops 30% for 6 months with Smart City Mission",
-        }
+    @task(1)
+    def health(self):
+        self.client.get("/api/health", name="health")
 
-        start = time.time()
-        with self.client.ws_connect("/ws/simulate") as ws:
-            ws.send(json.dumps(payload))
-            frames_received = 0
-            done_received = False
+    @task(3)
+    def indicators(self):
+        self.client.get("/api/twin/indicators", name="twin indicators")
 
-            while frames_received < 6 and not done_received:
-                message = ws.receive(timeout=10)
-                if message is None:
-                    break
-                data = json.loads(message)
-                if data.get("type") == "FRAME":
-                    frames_received += 1
-                elif data.get("type") == "DONE":
-                    done_received = True
-
-        elapsed = (time.time() - start) * 1000
-        self.environment.events.request_success.fire(
-            request_type="WS",
-            name="simulation",
-            response_time=elapsed,
-            response_length=0,
-        )
+    @task(3)
+    def resolve_place(self):
+        self.client.get("/api/twin/places/resolve", params={"q": "Pune"}, name="twin resolve")
