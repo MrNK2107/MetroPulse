@@ -119,3 +119,28 @@ describe("catchment geometry", () => {
     expect(walkArea).toBeLessThan(Math.PI * 0.64 * 1.2);
   });
 });
+
+describe("existing coverage from the user's stations", () => {
+  const city = getCity("chennai")!;
+  const at = { lat: 13.0827, lng: 80.2707 };
+  const build = (mode: "metro" | "feeder") =>
+    buildCityModel(city, {
+      version: 1,
+      cityId: "chennai",
+      hubs: { source: "s.csv", stations: [{ name: "X", ...at, mode }] },
+      loadedAt: "2026-11-03T00:00:00.000Z",
+    });
+
+  it("serves a hub with its own mode's walk band, so a bus halt covers less than a metro station", () => {
+    const metro = Array.from(existingCoverage(build("metro"))).reduce((a, b) => a + b, 0);
+    const bus = Array.from(existingCoverage(build("feeder"))).reduce((a, b) => a + b, 0);
+    expect(bus).toBeGreaterThan(0);
+    expect(bus).toBeLessThan(metro);
+  });
+
+  it("keeps the 1.x coverage when no data is given", () => {
+    const m = buildCityModel(city);
+    expect(Array.from(existingCoverage(m)).reduce((a, b) => a + b, 0)).toBeCloseTo(2.6129031777381897, 6);
+    expect(walkCoverage(m)).toBeCloseTo(0.013710965939452513, 9);
+  });
+});

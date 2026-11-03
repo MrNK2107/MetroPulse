@@ -116,12 +116,11 @@ function serve(cover: Coverage, c: Catchment) {
   for (let k = 0; k < c.cells.length; k++) if (c.weights[k] > cover[c.cells[k]]) cover[c.cells[k]] = c.weights[k];
 }
 
-/** Existing hubs: the city's transport anchors, each with a metro walk band. */
+/** Existing hubs (the user's stations, or the city's transport anchors), each with its own mode's walk band. */
 export function existingCoverage(model: CityModel): Coverage {
   const cover = new Float32Array(model.grid.cells.length);
-  for (const a of model.city.anchors) {
-    if (a.type !== "transport") continue;
-    serve(cover, catchment(model.grid, model.grid.project(a.lat, a.lng), MODES.metro.walkKm));
+  for (const h of model.hubs) {
+    serve(cover, catchment(model.grid, model.grid.project(h.lat, h.lng), MODES[h.mode].walkKm));
   }
   return cover;
 }

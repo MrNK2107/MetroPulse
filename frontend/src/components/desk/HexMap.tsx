@@ -2,6 +2,7 @@
 
 import { memo, useMemo, useRef } from "react";
 import type { HexGrid, Point, Anchor } from "@/lib/pulse/geo";
+import type { Station } from "@/lib/pulse/import/types";
 
 export interface Marker {
   id: string;
@@ -21,6 +22,8 @@ interface Props {
   walk?: Set<number>;
   feeder?: Set<number>;
   markers?: Marker[];
+  /** The user's stations. When given, the configured transport anchors are not drawn. */
+  hubs?: Station[];
   onPick?: (p: Point) => void;
   className?: string;
 }
@@ -74,6 +77,7 @@ function HexMapInner({
   walk,
   feeder,
   markers = [],
+  hubs: userHubs,
   onPick,
   className,
 }: Props) {
@@ -106,6 +110,7 @@ function HexMapInner({
     () => {
       const byName = new Map<string, Anchor>();
       for (const a of anchors) {
+        if (userHubs && a.type === "transport") continue;
         const seen = byName.get(a.name);
         if (!seen || (a.type === "transport" && seen.type !== "transport")) byName.set(a.name, a);
       }
@@ -113,8 +118,15 @@ function HexMapInner({
         .map((a) => ({ a, p: grid.project(a.lat, a.lng) }))
         .filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0);
     },
-    [anchors, grid]
+    [anchors, grid, userHubs]
   );
+
+  // The user's stations: labelled when there are few, tooltips only when there are many.
+  const stations = useMemo(
+    () => (userHubs ?? []).map((h) => ({ h, p: grid.project(h.lat, h.lng) })).filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0),
+    [userHubs, grid]
+  );
+  const labelStations = stations.length <= 12;
 
   const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!onPick) return;
@@ -201,6 +213,28 @@ function HexMapInner({
         )}
       </g>
       <g>
+        {stations.map(({ h, p }, k) =>
+          h.mode === "metro" ? (
+            <rect
+              key={`s${k}`}
+              x={p.x - fs * 0.35}
+              y={-p.y - fs * 0.35}
+              width={fs * 0.7}
+              height={fs * 0.7}
+              fill="#F4EFE6"
+              stroke="#1E3A8A"
+              strokeWidth={fs * 0.18}
+            >
+              <title>{`${h.name} (existing hub)`}</title>
+            </rect>
+          ) : (
+            <circle key={`s${k}`} cx={p.x} cy={-p.y} r={fs * 0.22} fill="#1E3A8A">
+              <title data-hub="">{`${h.name} (existing ${h.mode === "brt" ? "BRT stop" : "bus halt"})`}</title>
+            </circle>
+          )
+        )}
+      </g>
+      <g>
         {markers.map((m) =>
           m.kind === "pin" ? (
             <g key={m.id} transform={`translate(${m.at.x},${-m.at.y})`}>
@@ -241,6 +275,23 @@ function HexMapInner({
       </g>
       {/* Labels sit above the markers and step right of any marker that would cover them. */}
       <g>
+        {labelStations &&
+          stations.map(({ h, p }, k) => (
+            <text
+              key={`ts${k}`}
+              x={labelX(p)}
+              y={-p.y + fs * 0.35}
+              fontSize={fs}
+              fontFamily="var(--font-mono), monospace"
+              fill="#16130F"
+              stroke="#F4EFE6"
+              strokeWidth={fs * 0.16}
+              paintOrder="stroke"
+              style={{ pointerEvents: "none" }}
+            >
+              {h.name}
+            </text>
+          ))}
         {hubs.map(({ a, p }) => (
           <text
             key={`t${a.name}`}
