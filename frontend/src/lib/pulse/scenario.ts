@@ -58,6 +58,8 @@ export interface Scenario {
   stations: ScenarioStation[];
   costs?: CostTable;
   notes?: string;
+  /** Set when the line belongs to a team workspace (cloud); absent for personal lines. */
+  workspaceId?: string;
   createdAt: string;
   updatedAt: string;
 }

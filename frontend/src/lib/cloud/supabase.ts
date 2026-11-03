@@ -24,8 +24,9 @@ export function getSupabase(): SupabaseClient | null {
 /** The production store: the `scenarios` table under row-level security (see supabase/migrations/010_scenarios.sql). */
 export function supabaseStore(sb: SupabaseClient): CloudStore {
   return {
-    async list(cityId) {
-      const { data, error } = await sb.from("scenarios").select("*").eq("city_id", cityId);
+    async list(cityId, workspaceId = null) {
+      const q = sb.from("scenarios").select("*").eq("city_id", cityId);
+      const { data, error } = await (workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null));
       if (error) throw new Error(error.message);
       return (data ?? []) as ScenarioRow[];
     },

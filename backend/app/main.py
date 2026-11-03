@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="MetroPulse API",
-    version="2.1.0",
+    version="2.2.0",
     lifespan=lifespan,
     openapi_tags=[
         {"name": "health", "description": "Service, data and LLM-provider health checks"},

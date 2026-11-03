@@ -50,7 +50,8 @@ function isScenario(x: unknown): x is Scenario {
     s.stations.length >= 1 &&
     s.stations.every((p) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) &&
     typeof s.createdAt === "string" &&
-    typeof s.updatedAt === "string"
+    typeof s.updatedAt === "string" &&
+    (s.workspaceId === undefined || typeof s.workspaceId === "string")
   );
 }
 

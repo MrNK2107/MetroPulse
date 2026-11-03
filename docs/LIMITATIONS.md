@@ -61,9 +61,10 @@ They are there to rank alternatives on cost per boarding, not to estimate a proj
 
 A loaded boundary moves the grid and loaded stations become the existing hubs. With a zones file,
 residents and jobs per hexagon come from your zone totals (each zone spread around its centroid with
-a Gaussian of the given radius, 1.2 km by default). The hourly shape of demand is still the model's
-weekday and weekend profiles, and leisure and hub demand are still anchor-based. Counts by hour or an
-OD matrix would complete the picture.
+a Gaussian of the given radius, 1.2 km by default). With counts by hour, the weekday
+shape follows the observed profile (each cell keeps its daily total); weekends, leisure and hub
+demand still follow the model's profiles, and the origin-destination pattern is the model's until
+an OD matrix is connected.
 
 ## The India Twin
 

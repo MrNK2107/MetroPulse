@@ -49,5 +49,7 @@ connection, so a test cannot leak data or depend on a live service by accident.
 When `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set, the desk offers magic-link
 sign-in and syncs saved lines to a `scenarios` table. The anon key is public; access is enforced by
 row-level security (`supabase/migrations/010_scenarios.sql`): a user reads and writes only rows where
-`user_id = auth.uid()`. Nothing a user loads under Your data (boundary, stations, counts, zones) is
-sent to the workspace; only saved lines are.
+`user_id = auth.uid()`. Team workspaces (`011_workspaces.sql`) add `workspaces` and `workspace_members`;
+a `workspace_role()` helper resolves the caller's role by user id or invited email, and only
+owners and editors can write a workspace's lines. Nothing a user loads under Your data (boundary,
+stations, counts, zones) is sent to the workspace; only saved lines are.

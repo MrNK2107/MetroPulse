@@ -62,11 +62,18 @@ export function useLineScenario(model: CityModel, mode: ModeId, initial?: Scenar
   const setCosts = useCallback((costs: CostTable) => patch((l) => ({ ...l, costs })), [patch]);
   const rename = useCallback((name: string) => patch((l) => ({ ...l, name })), [patch]);
 
-  const save = useCallback(() => {
-    if (!line) return;
-    saveScenario(line);
-    refresh();
-  }, [line, refresh]);
+  /** Save the current line, optionally with a patch applied first (for example a workspace tag). */
+  const save = useCallback(
+    (patch: Partial<Scenario> = {}): Scenario | null => {
+      if (!line) return null;
+      const next = { ...line, ...patch };
+      saveScenario(next);
+      setLine(next);
+      refresh();
+      return next;
+    },
+    [line, refresh]
+  );
 
   const open = useCallback(
     (id: string): Scenario | null => {

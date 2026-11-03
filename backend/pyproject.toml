@@ -1,6 +1,6 @@
 [project]
 name = "metropulse-backend"
-version = "2.1.0"
+version = "2.2.0"
 description = "MetroPulse Simulation Engine & API"
 requires-python = ">=3.11"
 dependencies = [

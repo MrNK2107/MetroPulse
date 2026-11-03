@@ -555,15 +555,19 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               line={line}
               network={network}
               stationNames={stationNames}
-              scenarios={lineApi.scenarios}
+              scenarios={cloud.user ? lineApi.scenarios.filter((s) => (s.workspaceId ?? null) === cloud.active) : lineApi.scenarios}
               onRemoveStation={lineApi.removeStation}
               onMoveStation={lineApi.moveStation}
               onAlignment={lineApi.setAlignment}
               onCosts={lineApi.setCosts}
               onRename={lineApi.rename}
               onSave={() => {
-                lineApi.save();
-                if (line) void cloud.pushLine(line);
+                if (cloud.user && cloud.active && !cloud.canEdit) {
+                  flash("You can view this workspace but not change it");
+                  return;
+                }
+                const saved = lineApi.save(cloud.user ? { workspaceId: cloud.active ?? undefined } : {});
+                if (saved) void cloud.pushLine(saved);
                 flash(cloud.user ? "Line saved and synced to your workspace" : "Line saved on this device");
               }}
               onCopyLink={copyLink}

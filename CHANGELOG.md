@@ -2,6 +2,17 @@
 
 All notable changes to MetroPulse are documented here. Format follows [Conventional Changelog](https://www.conventionalcommits.org/).
 
+## [2.2.0] - 2026-11-03
+
+### Added
+- **Team workspaces (beta)**: create a workspace, invite colleagues by email as editor or viewer,
+  switch the desk's library between Personal and a workspace. Lines saved in a workspace sync to
+  every member; viewers cannot save. Enforced by row-level security
+  (`supabase/migrations/011_workspaces.sql`, with a `workspace_role()` helper).
+- **Counts by hour shape the day**: a `station, hour, boardings` counts file now also gives the
+  weekday demand its observed hourly profile (each cell keeps its daily total; weekends keep the
+  model's shape).
+
 ## [2.1.0] - 2026-11-03
 
 ### Added

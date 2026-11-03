@@ -92,7 +92,7 @@ device. There is no upload endpoint.
 |---|---|---|
 | Boundary | GeoJSON Polygon, MultiPolygon, Feature or FeatureCollection (largest polygon wins; a polygon far from the city is rejected with the distance) | The hexagon grid is built on your outline instead of the sample one |
 | Stations | GTFS static zip (`stops`, `routes`, `trips`, `stop_times`; mode from route type) or a CSV with `name, lat, lng[, mode]` | Your stations become the existing hubs for coverage and cannibalisation, each with its own mode's walk band |
-| Counts | CSV `station, daily_boardings`, or `station, date, boardings`, or `station, hour, boardings` | With 3 or more matched stations per mode, siting boardings are scaled by the median observed/modelled ratio; the formula shows the factor and the inter-quartile spread |
+| Counts | CSV `station, daily_boardings`, or `station, date, boardings`, or `station, hour, boardings` | With 3 or more matched stations per mode, siting boardings are scaled by the median observed/modelled ratio; the formula shows the factor and the inter-quartile spread. Counts by hour also give the weekday its observed hourly shape |
 | Zones | CSV `zone, lat, lng, residents, jobs[, radius_km]` | Residents and jobs per hexagon come from your zones instead of the synthetic field |
 
 The drawer reports what was kept and dropped, shows an observed-versus-modelled table with the
@@ -110,9 +110,12 @@ the model's profile until counts by hour are connected.
 ### Workspaces (beta)
 
 Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` and the desk offers magic-link
-sign-in. Signed in, saved lines sync both ways with your workspace (newest wins) and follow you across
-devices; row-level security keeps each user's rows to that user (`supabase/migrations/010_scenarios.sql`).
-Without the env values the desk is local-only, exactly as before.
+sign-in. Signed in, saved lines sync both ways with your personal library (newest wins) and follow
+you across devices. Create a **team workspace**, invite colleagues by email as editor or viewer,
+and switch the desk's library to it: lines saved there sync to every member, and viewers can read
+but not save. Row-level security enforces all of it in the database
+(`supabase/migrations/010_scenarios.sql`, `011_workspaces.sql`). Without the env values the desk is
+local-only, exactly as before.
 
 GTFS feeds are parsed in a Web Worker, so a large city bus feed does not freeze the desk.
 
@@ -246,7 +249,7 @@ build needs 7 source files, some behind a login; see [Data](#data)).
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
 | Backend tests | 929 pytest tests (unit and integration), all passing on 2026-11-03, no network access |
-| Frontend tests | 304 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 7 Playwright smoke tests against the production build |
+| Frontend tests | 311 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 7 Playwright smoke tests against the production build |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---
@@ -458,13 +461,14 @@ frontend/e2e/      Playwright smoke suite and the README screenshot script
 ## Known gaps
 
 - Without a zones file the demand field between stations is the sample model. With zones loaded,
-  residents and jobs are yours but the hour-by-hour shape is still the model's profile; counts by
-  hour and OD matrices would complete it.
+  residents and jobs are yours; with counts by hour, the weekday shape is yours too. Weekends and
+  the origin-destination pattern still follow the model until an OD matrix is connected.
 - Calibration scales boardings by one factor per mode. It is not a fitted model and has no error
   bars beyond the inter-quartile spread it reports.
 - The capital-cost sketch is an editable table of order-of-magnitude figures, not an estimate.
-- Loaded data lives in one browser. Saved lines sync to a workspace only when the operator enables
-  the optional Supabase sign-in (beta).
+- Loaded data lives in one browser. Saved lines sync to personal or team workspaces only when the
+  operator enables the optional Supabase sign-in (beta); the cloud path is tested against an
+  in-memory store and a mocked auth client, not yet a live project.
 - Every sample week carries the same three kinds of scripted incident.
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
 - No real-data twin build has been published yet. See [Data](#data).

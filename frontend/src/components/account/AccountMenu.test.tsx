@@ -19,6 +19,15 @@ const fake = {
   store: memoryStore([toRow({ id: "cloud001", cityId: "chennai", name: "From the cloud", mode: "metro", alignment: "elevated", stations: [{ lat: 13.0418, lng: 80.2341 }], createdAt: "2026-11-03T00:00:00.000Z", updatedAt: "2026-11-03T00:00:00.000Z" }, "user-1")]),
 };
 
+jest.mock("@/lib/cloud/workspaces", () => {
+  const actual = jest.requireActual("@/lib/cloud/workspaces");
+  let store: ReturnType<typeof actual.memoryWorkspaces> | null = null;
+  return {
+    ...actual,
+    supabaseWorkspaces: (_sb: unknown, me: { id: string; email: string }) => (store ??= actual.memoryWorkspaces(me)),
+  };
+});
+
 jest.mock("@/lib/cloud/supabase", () => ({
   isCloudConfigured: () => fake.configured,
   getSupabase: () => ({
@@ -77,5 +86,27 @@ describe("AccountMenu", () => {
     await userEvent.click(screen.getByRole("button", { name: /sign out/i }));
     expect(fake.signOut).toHaveBeenCalled();
     expect(await screen.findByRole("button", { name: /sign in/i })).toBeInTheDocument();
+  });
+});
+
+describe("AccountMenu workspaces", () => {
+  it("lets an owner create a workspace, switch to it (which syncs) and invite a viewer", async () => {
+    const onSynced = jest.fn();
+    render(<Harness onSynced={onSynced} />);
+    await screen.findByRole("button", { name: /sign in/i });
+    fake.session = { user: { id: "user-1", email: "owner@example.org" } };
+    fake.listeners.forEach((cb) => cb("SIGNED_IN", fake.session));
+    const select = await screen.findByLabelText(/^workspace$/i);
+    expect(select).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: /new workspace/i }));
+    await userEvent.type(screen.getByLabelText(/workspace name/i), "BMRCL Phase 3");
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    await waitFor(() => expect(screen.getByLabelText(/^workspace$/i)).toHaveDisplayValue("BMRCL Phase 3"));
+    await waitFor(() => expect(onSynced).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/role: owner/i)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/invite email/i), "board@example.org");
+    await userEvent.selectOptions(screen.getByLabelText(/invite role/i), "viewer");
+    await userEvent.click(screen.getByRole("button", { name: /^invite$/i }));
+    expect(await screen.findByText(/invited board@example\.org as viewer/i)).toBeInTheDocument();
   });
 });
