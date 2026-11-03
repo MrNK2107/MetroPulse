@@ -199,7 +199,7 @@ Some design decisions:
   retries a 1013 with backoff (1, 2, then 4 s, at most 3 retries). Error frames carry no exception
   text.
 
-More detail: [`docs/twin/`](docs/twin), [`docs/RAG_ENGINE.md`](docs/RAG_ENGINE.md) (parked module),
+More detail: [`docs/twin/`](docs/twin), [`docs/archive/`](docs/archive) (simulator-era documents, including the parked RAG engine),
 [`docs/DATA_CREDIBILITY.md`](docs/DATA_CREDIBILITY.md), [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) covers components, data flow, the agent pipeline,
 storage, external services and known limits, with mermaid diagrams.
