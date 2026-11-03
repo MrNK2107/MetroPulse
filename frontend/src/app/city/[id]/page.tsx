@@ -6,7 +6,7 @@ import { getCityModel } from "@/lib/pulse/model";
 import { citySummary, pct } from "@/lib/pulse/summary";
 import { dayHourLabel, hourLabel } from "@/lib/pulse/time";
 import { Wordmark } from "@/components/desk/Wordmark";
-import { fmtInt } from "@/components/desk/SitingPanel";
+import { fmtInt } from "@/lib/pulse/format";
 
 export const dynamicParams = false;
 

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getCity, listCities } from "@/lib/pulse/geo";
+import { getCity } from "@/lib/pulse/geo";
 import { getCityModel } from "@/lib/pulse/model";
 import { citySummary, pct } from "@/lib/pulse/summary";
 
@@ -8,9 +8,9 @@ export const alt = "MetroPulse city card";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export function generateStaticParams() {
-  return listCities().map((c) => ({ id: c.id }));
-}
+// Rendered on request and cached by the host: prerendering 30 images at build time
+// is slow and Next 14.2 fails to resolve their URLs when statically generated.
+export const dynamic = "force-dynamic";
 
 export default function Image({ params }: { params: { id: string } }) {
   const city = getCity(params.id) ?? getCity("chennai")!;

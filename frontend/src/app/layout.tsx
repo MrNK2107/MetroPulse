@@ -8,6 +8,7 @@ const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], 
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "MetroPulse — test the station before you pour the concrete",
   description:
     "A demand-first planning desk for Indian cities: a 168-hour city pulse, alerts that explain themselves, station siting and print-ready briefings.",

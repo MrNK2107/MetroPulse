@@ -1,6 +1,6 @@
 import { fail, preflight } from "@/lib/api/envelope";
 
-const notFound = (_req?: Request) => fail(404, "not_found", "No such endpoint. See /developers for the list.");
+const notFound = (_req: Request) => fail(404, "not_found", "No such endpoint. See /developers for the list.");
 
 export const GET = notFound;
 export const POST = notFound;

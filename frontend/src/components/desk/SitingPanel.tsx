@@ -3,6 +3,7 @@
 import { hourLabel } from "@/lib/pulse/model";
 import { MODES, ModeId, SiteResult, Suggestion } from "@/lib/pulse/siting";
 import { LinePanel, LinePanelProps } from "./LinePanel";
+import { fmtInt } from "@/lib/pulse/format";
 
 interface Props extends Partial<LinePanelProps> {
   mode: ModeId;
@@ -20,7 +21,7 @@ interface Props extends Partial<LinePanelProps> {
   onLineMode?: (on: boolean) => void;
 }
 
-export const fmtInt = (n: number) => Math.round(n).toLocaleString("en-IN");
+export { fmtInt } from "@/lib/pulse/format";
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
