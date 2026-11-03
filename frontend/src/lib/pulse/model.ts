@@ -243,6 +243,30 @@ export function buildCityModel(baseCity: City, data?: CityData | null): CityMode
     }
   }
 
+  // Observed counts by hour reshape the weekday profile: each weekday's hours are scaled by
+  // observed share / model share, then the day is renormalised so every cell keeps its daily total.
+  const observed = data?.counts?.hourly;
+  if (observed && observed.length === 24 && observed.every((v) => Number.isFinite(v) && v >= 0) && observed.some((v) => v > 0)) {
+    const modelShare = new Array<number>(24).fill(0);
+    for (let c = 0; c < n; c++) for (let d = 0; d < 5; d++) for (let hr = 0; hr < 24; hr++) modelShare[hr] += baselineMean[c * HOURS_PER_WEEK + d * 24 + hr];
+    const modelTotal = modelShare.reduce((a, b) => a + b, 0) || 1;
+    const obsTotal = observed.reduce((a, b) => a + b, 0);
+    const ratio = modelShare.map((v, hr) => (v > 0 ? observed[hr] / obsTotal / (v / modelTotal) : 0));
+    for (let c = 0; c < n; c++) {
+      for (let d = 0; d < 5; d++) {
+        const base = c * HOURS_PER_WEEK + d * 24;
+        let before = 0;
+        let after = 0;
+        for (let hr = 0; hr < 24; hr++) {
+          before += baselineMean[base + hr];
+          baselineMean[base + hr] *= ratio[hr];
+          after += baselineMean[base + hr];
+        }
+        if (after > 0) for (let hr = 0; hr < 24; hr++) baselineMean[base + hr] *= before / after;
+      }
+    }
+  }
+
   const noisyWeek = (r: () => number) => {
     const w = new Float32Array(n * HOURS_PER_WEEK);
     const global = 1 + 0.02 * normal(r);

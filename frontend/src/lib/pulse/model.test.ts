@@ -155,3 +155,24 @@ describe("city model with the user's zones", () => {
     expect(m.residents[far.c.index]).toBe(0);
   });
 });
+
+describe("city model with an observed hourly profile", () => {
+  const city = getCity("chennai")!;
+  const hourly = Array(24).fill(0.01);
+  hourly[20] = 1 - 0.23; // a sharp 20:00 peak; the rest flat
+  const data = { version: 1 as const, cityId: "chennai", counts: { source: "c.csv", rows: [{ station: "X", dailyBoardings: 1 }], hourly }, loadedAt: "2026-11-03T00:00:00.000Z" };
+
+  it("reshapes weekday hours to the observed profile and keeps each cell's daily total", () => {
+    const base = buildCityModel(city);
+    const m = buildCityModel(city, data);
+    const tue = m.cityHourly(m.baselineMean).slice(24, 48);
+    expect(tue.indexOf(Math.max(...tue))).toBe(20);
+    const c = m.rankCellsByDailyTrips()[0];
+    const day = (model: typeof m, cell: number) => Array.from({ length: 24 }, (_, h) => model.baselineMean[cell * 168 + 24 + h]).reduce((a, b) => a + b, 0);
+    expect(day(m, c)).toBeCloseTo(day(base, c), 1);
+    // weekends keep the model's profile
+    const sun = m.cityHourly(m.baselineMean).slice(144, 168);
+    expect(sun.indexOf(Math.max(...sun))).not.toBe(20);
+    expect(Array.from(m.dailyTrips).reduce((a, b) => a + b, 0)).toBeCloseTo(Array.from(base.dailyTrips).reduce((a, b) => a + b, 0), -2);
+  });
+});

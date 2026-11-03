@@ -14,7 +14,7 @@ export interface CityData {
   cityId: string;
   boundary?: { source: string; ring: [number, number][] };
   hubs?: { source: string; stations: Station[] };
-  counts?: { source: string; rows: { station: string; dailyBoardings: number }[] };
+  counts?: { source: string; rows: { station: string; dailyBoardings: number }[]; hourly?: number[] };
   /** Survey zones: residents and jobs per zone centroid replace the synthetic field. */
   zones?: { source: string; rows: Zone[] };
   loadedAt: string;
@@ -105,7 +105,7 @@ export function describeCityData(data: CityData | null | undefined): string {
   if (data.hubs) parts.push(`Stations: ${data.hubs.stations.length} from ${data.hubs.source}`);
   if (data.counts) {
     const n = data.counts.rows.length;
-    parts.push(`Counts: ${n} station${n === 1 ? "" : "s"} from ${data.counts.source}`);
+    parts.push(`Counts: ${n} station${n === 1 ? "" : "s"} from ${data.counts.source}${data.counts.hourly ? " (with hours)" : ""}`);
   }
   if (data.zones) parts.push(`Zones: ${data.zones.rows.length} from ${data.zones.source}`);
   return parts.join(" · ");

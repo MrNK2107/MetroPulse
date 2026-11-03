@@ -6,7 +6,7 @@ import type { CityModel } from "@/lib/pulse/model";
 import { parseBoundaryGeoJson, ringAreaKm2 } from "@/lib/pulse/import/geojson";
 import { parseGtfsOffThread } from "@/lib/pulse/import/gtfsWorkerClient";
 import { parseStationsCsv } from "@/lib/pulse/import/stations";
-import { parseCountsCsv } from "@/lib/pulse/import/counts";
+import { parseCountsDetailed } from "@/lib/pulse/import/counts";
 import { parseZonesCsv } from "@/lib/pulse/import/zones";
 import type { ParseResult } from "@/lib/pulse/import/types";
 import { CityData, describeCityData } from "@/lib/pulse/userdata";
@@ -187,7 +187,7 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
         apply(id, parseZonesCsv(text), (rows) => ({ zones: { source: file.name, rows } }));
       } else {
         const text = await readFile(file, "text");
-        apply(id, parseCountsCsv(text), (rows) => ({ counts: { source: file.name, rows } }));
+        apply(id, parseCountsDetailed(text), (d) => ({ counts: { source: file.name, rows: d.rows, ...(d.hourly ? { hourly: d.hourly } : {}) } }));
       }
     } catch (err) {
       setErrors((e) => ({ ...e, [id]: err instanceof Error ? err.message : "Could not read this file" }));
@@ -283,7 +283,7 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
           <Section
             id="counts"
             title="Counts"
-            blurb="Observed daily boardings per station as a CSV: station, daily_boardings (or station, date, boardings; or station, hour, boardings). Names are matched to the loaded stations. With three or more matches per mode, siting boardings are scaled to them."
+            blurb="Observed daily boardings per station as a CSV: station, daily_boardings (or station, date, boardings; or station, hour, boardings). Names are matched to the loaded stations. With three or more matches per mode, siting boardings are scaled to them; counts by hour also give the weekday its observed hourly shape."
             accept=".csv,text/csv"
             current={countsLabel}
             report={reports.counts ?? []}

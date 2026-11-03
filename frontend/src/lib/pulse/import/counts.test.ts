@@ -39,3 +39,28 @@ describe("normaliseStationName", () => {
     expect(normaliseStationName("  Majestic  (Kempegowda) Stn ")).toBe("majestic kempegowda");
   });
 });
+
+describe("parseCountsDetailed", () => {
+  it("returns a 24-hour share profile when counts are by hour, summed across stations", () => {
+    const { parseCountsDetailed } = require("./counts") as typeof import("./counts");
+    const r = parseCountsDetailed("station,hour,boardings\nA,8,100\nA,20,300\nB,20,100\nB,9,100\n");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.rows).toEqual([
+      { station: "A", dailyBoardings: 400 },
+      { station: "B", dailyBoardings: 200 },
+    ]);
+    const h = r.value.hourly!;
+    expect(h).toHaveLength(24);
+    expect(h.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
+    expect(h[20]).toBeCloseTo(400 / 600, 9);
+    expect(h[8]).toBeCloseTo(100 / 600, 9);
+    expect(r.report.join(" ")).toMatch(/hourly profile/i);
+  });
+
+  it("has no hourly profile for daily counts", () => {
+    const { parseCountsDetailed } = require("./counts") as typeof import("./counts");
+    const r = parseCountsDetailed("station,daily_boardings\nA,10\n");
+    expect(r.ok && r.value.hourly).toBeUndefined();
+  });
+});

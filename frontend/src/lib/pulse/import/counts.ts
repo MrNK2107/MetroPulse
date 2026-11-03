@@ -28,7 +28,18 @@ export function normaliseStationName(name: string): string {
     .replace(/\s+/g, " ");
 }
 
+export interface CountsDetail {
+  rows: CountRow[];
+  /** When counts come by hour: the share of the day in each of the 24 hours, summed across stations. */
+  hourly?: number[];
+}
+
 export function parseCountsCsv(text: string): ParseResult<CountRow[]> {
+  const r = parseCountsDetailed(text);
+  return r.ok ? ok(r.value.rows, r.report) : r;
+}
+
+export function parseCountsDetailed(text: string): ParseResult<CountsDetail> {
   const { header, rows } = parseCsv(text);
   const iStation = findColumn(header, STATION);
   if (iStation < 0) return fail("No station column (expected one of: station, stop_name, name)");
@@ -42,6 +53,7 @@ export function parseCountsCsv(text: string): ParseResult<CountRow[]> {
   const sum = new Map<string, number>();
   const dates = new Map<string, Set<string>>();
   const order: string[] = [];
+  const byHour = new Array<number>(24).fill(0);
   let skipped = 0;
   for (const r of rows) {
     const station = (r[iStation] ?? "").trim();
@@ -49,6 +61,14 @@ export function parseCountsCsv(text: string): ParseResult<CountRow[]> {
     if (!station || v === null || v < 0) {
       skipped++;
       continue;
+    }
+    if (shape === "by-hour") {
+      const hr = toNumber(r[iHour]);
+      if (hr === null || hr < 0 || hr > 23) {
+        skipped++;
+        continue;
+      }
+      byHour[Math.floor(hr)] += v;
     }
     if (!sum.has(station)) {
       sum.set(station, 0);
@@ -69,5 +89,11 @@ export function parseCountsCsv(text: string): ParseResult<CountRow[]> {
       (shape === "by-date" ? " (daily mean over the dates given)" : shape === "by-hour" ? " (hours summed into one day)" : ""),
   ];
   if (skipped) report.push(`${skipped} row${skipped === 1 ? "" : "s"} skipped (missing station or non-numeric value)`);
-  return ok(value, report);
+  const total = byHour.reduce((a, b) => a + b, 0);
+  let hourly: number[] | undefined;
+  if (shape === "by-hour" && total > 0) {
+    hourly = byHour.map((v) => v / total);
+    report.push(`Hourly profile from ${value.length} station${value.length === 1 ? "" : "s"}' counts by hour: weekday demand takes this shape`);
+  }
+  return ok({ rows: value, ...(hourly ? { hourly } : {}) }, report);
 }
