@@ -1,5 +1,5 @@
 import { buildHexGrid, getCity, listCities, hexDistanceKm } from "./geo";
-import { buildCityModel, HOURS_PER_WEEK, dayHourLabel } from "./model";
+import { buildCityModel, getCityModel, HOURS_PER_WEEK, dayHourLabel, modelCacheSize } from "./model";
 
 describe("sample city catalogue", () => {
   it("ships all 30 configured cities", () => {
@@ -68,5 +68,60 @@ describe("city model", () => {
   it("labels hours", () => {
     expect(dayHourLabel(0)).toBe("Mon 00:00");
     expect(dayHourLabel(24 * 4 + 19)).toBe("Fri 19:00");
+  });
+});
+
+describe("city model with the user's own data", () => {
+  const city = getCity("chennai")!;
+  const ring: [number, number][] = [
+    [80.2, 13.0],
+    [80.34, 13.0],
+    [80.34, 13.16],
+    [80.2, 13.16],
+    [80.2, 13.0],
+  ];
+  const stations = [
+    { name: "Central", lat: 13.0827, lng: 80.2707, mode: "metro" as const },
+    { name: "Mylapore Bus", lat: 13.03, lng: 80.27, mode: "feeder" as const },
+  ];
+  const data = { version: 1 as const, cityId: "chennai", boundary: { source: "b.geojson", ring }, hubs: { source: "s.csv", stations }, loadedAt: "2026-11-03T00:00:00.000Z" };
+
+  it("keeps the 1.x figures when no data is given", () => {
+    const m = buildCityModel(city);
+    expect(m.grid.cells.length).toBe(622);
+    expect(Array.from(m.dailyTrips).reduce((a, b) => a + b, 0)).toBeCloseTo(28599999.983398438, 3);
+    expect(m.thisWeek[0]).toBeCloseTo(138.7960205078125, 6);
+    expect(m.hubs.map((h) => h.mode)).toEqual(m.city.anchors.filter((a) => a.type === "transport").map(() => "metro"));
+    expect(m.data).toBeNull();
+  });
+
+  it("builds the grid on the user's boundary and lists their stations as hubs", () => {
+    const m = buildCityModel(city, data);
+    expect(m.grid.cells.length).not.toBe(622);
+    expect(m.grid.cells.length).toBeGreaterThan(50);
+    expect(m.hubs).toEqual(stations);
+    expect(m.data).toBe(data);
+    expect(m.nearestAnchor(m.grid.project(13.0827, 80.2707)).anchor.name).toBe("Central");
+  });
+
+  it("memoises per city and per data key", () => {
+    expect(getCityModel(city)).toBe(getCityModel(city));
+    expect(getCityModel(city, data)).toBe(getCityModel(city, data));
+    expect(getCityModel(city, data)).not.toBe(getCityModel(city));
+  });
+});
+
+describe("model cache", () => {
+  it("keeps at most 8 data-keyed models", () => {
+    const city = getCity("chennai")!;
+    for (let k = 0; k < 10; k++) {
+      getCityModel(city, {
+        version: 1,
+        cityId: "chennai",
+        hubs: { source: `s${k}.csv`, stations: [{ name: `S${k}`, lat: 13.0827, lng: 80.2707 + k * 0.001, mode: "metro" }] },
+        loadedAt: "2026-11-03T00:00:00.000Z",
+      });
+    }
+    expect(modelCacheSize()).toBeLessThanOrEqual(8);
   });
 });

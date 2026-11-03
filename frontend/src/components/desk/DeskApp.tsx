@@ -15,6 +15,11 @@ import { Sparkline } from "./Sparkline";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { useDeskShortcuts } from "./useDeskShortcuts";
 import { cellDay, downloadText, incidentsToCsv } from "@/lib/pulse/export";
+import { CityData, clearCityData, loadCityData, saveCityData } from "@/lib/pulse/userdata";
+import { DataDrawer, dataStatus } from "./DataDrawer";
+import { encodeScenario, Scenario, suggestCorridor } from "@/lib/pulse/scenario";
+import { useLineScenario } from "./useLineScenario";
+import { placeName } from "@/lib/pulse/placeName";
 
 type Tab = "pulse" | "alerts" | "siting";
 const TAB_ORDER: Tab[] = ["pulse", "alerts", "siting"];
@@ -24,21 +29,7 @@ const TABS: { id: Tab; label: string; verb: string }[] = [
   { id: "siting", label: "Siting", verb: "Decide" },
 ];
 
-const COMPASS = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"];
-
-export function placeName(model: CityModel, p: Point): string {
-  const { anchor, km } = model.nearestAnchor(p);
-  if (km < 0.35) return anchor.name;
-  const a = model.grid.project(anchor.lat, anchor.lng);
-  const ang = (Math.atan2(p.y - a.y, p.x - a.x) * 180) / Math.PI;
-  const dir = COMPASS[Math.round(((ang + 360) % 360) / 45) % 8];
-  return `${km.toFixed(1)} km ${dir} of ${anchor.name}`;
-}
-
-/** "near T Nagar", but "0.8 km N of Chennai Central" (that is already a position). */
-export function nearPlace(name: string): string {
-  return /^\d/.test(name) ? name : `near ${name}`;
-}
+export { placeName, nearPlace } from "@/lib/pulse/placeName";
 
 export interface DeskAppProps {
   initialCity: string;
@@ -47,16 +38,21 @@ export interface DeskAppProps {
   initialIncident?: number;
   /** Open Siting with the three suggested sites and the best one pinned. */
   initialSuggest?: boolean;
+  /** A line from the URL; `null` means the link carried one that could not be read. */
+  initialScenario?: Scenario | null;
+  /** A saved line's id, resolved on this device after mount. */
+  initialScenarioId?: string;
 }
 
 export type { Tab as DeskTab };
 
 /** The shareable URL for a desk view; the inverse of what app/desk/page.tsx parses. */
-export function deskHref(cityId: string, tab: Tab, incident?: number, suggest?: boolean): string {
+export function deskHref(cityId: string, tab: Tab, incident?: number, suggest?: boolean, line?: string): string {
   const q = new URLSearchParams({ city: cityId });
   if (tab !== "pulse") q.set("tab", tab);
   if (tab === "alerts" && incident) q.set("incident", String(incident));
-  if (tab === "siting" && suggest) q.set("suggest", "1");
+  if (tab === "siting" && line) q.set("s", line);
+  else if (tab === "siting" && suggest) q.set("suggest", "1");
   return `/desk?${q.toString()}`;
 }
 
@@ -80,7 +76,7 @@ function initialState(cityId: string, incident?: number, suggest?: boolean) {
   return { selected, hour, suggestions, pin };
 }
 
-export function DeskApp({ initialCity, initialTab, initialIncident, initialSuggest }: DeskAppProps) {
+export function DeskApp({ initialCity, initialTab, initialIncident, initialSuggest, initialScenario, initialScenarioId }: DeskAppProps) {
   const startCity = getCity(initialCity) ? initialCity : "chennai";
   const [init] = useState(() => initialState(startCity, initialIncident, initialSuggest));
   const [cityId, setCityId] = useState(startCity);
@@ -88,15 +84,48 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
   const [hour, setHour] = useState(init.hour);
   const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState<Incident | null>(init.selected);
-  const [mode, setMode] = useState<ModeId>("metro");
+  const [mode, setMode] = useState<ModeId>(initialScenario?.mode ?? "metro");
   const [pin, setPin] = useState<Point | null>(init.pin);
   const [suggestions, setSuggestions] = useState<Suggestion[]>(init.suggestions);
   const lastCity = useRef(startCity);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [dataOpen, setDataOpen] = useState(false);
+  const [lineMode, setLineMode] = useState(Boolean(initialScenario || initialScenarioId));
+  const [data, setData] = useState<CityData | null>(null);
   const [notice, setNotice] = useState("");
 
   const city = getCity(cityId)!;
-  const model = useMemo(() => getCityModel(city), [city]);
+  // The user's own data lives in this browser only, so it is read after mount. A stored
+  // boundary is treated as untrusted: if it cannot build a usable grid it is dropped, so a bad
+  // file can never make the desk unreachable.
+  useEffect(() => {
+    let loaded = loadCityData(cityId);
+    if (!loaded) return;
+    const cityNow = getCity(cityId)!;
+    let usable = false;
+    try {
+      usable = getCityModel(cityNow, loaded).grid.cells.length >= 10;
+    } catch {
+      usable = false;
+    }
+    if (!usable && loaded.boundary) {
+      const { boundary: _b, ...rest } = loaded;
+      loaded = rest.hubs || rest.counts ? { ...rest, loadedAt: new Date().toISOString() } : null;
+      if (loaded) saveCityData(loaded);
+      else clearCityData(cityId);
+      flash("Your boundary could not be used; back to the sample outline");
+    }
+    setData(loaded);
+    // Anything computed on the sample model before the data arrived refers to the wrong grid.
+    setSuggestions([]);
+    setPin(null);
+    setSelected((cur) => (cur && loaded ? detectIncidents(getCityModel(cityNow, loaded)).find((i) => i.id === cur.id) ?? null : cur));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityId]);
+  const model = useMemo(() => getCityModel(city, data), [city, data]);
+  const status = dataStatus(model);
+  const lineApi = useLineScenario(model, mode, initialScenario);
+  const { line, network } = lineApi;
   const incidents = useMemo(() => detectIncidents(model), [model]);
   const covered = useMemo(() => existingCoverage(model), [model]);
   const scaleMax = useMemo(() => demandScaleMax(model), [model]);
@@ -110,7 +139,21 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     return v;
   }, [model, hour, n]);
 
-  const site = useMemo(() => (pin ? scoreSite(model, pin, mode, covered) : null), [model, pin, mode, covered]);
+  const site = useMemo(
+    () => (pin ? scoreSite(model, pin, mode, covered, model.calibration) : null),
+    [model, pin, mode, covered]
+  );
+
+  const changeData = useCallback(
+    (next: CityData | null) => {
+      if (next) saveCityData(next);
+      else clearCityData(cityId);
+      setData(next);
+      setPin(null);
+      setSuggestions([]);
+    },
+    [cityId]
+  );
 
   // Reset per-city state when the city changes, and keep the URL shareable.
   useEffect(() => {
@@ -121,11 +164,13 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     setSelected(null);
     setPin(null);
     setSuggestions([]);
-  }, [cityId]);
+    lineApi.clear();
+  }, [cityId, lineApi]);
 
   // Keep the address bar on the current view, so copying it shares exactly this.
   const selectedIndex = selected ? incidents.findIndex((i) => i.id === selected.id) + 1 : 0;
-  const href = deskHref(cityId, tab, selectedIndex || undefined, suggestions.length > 0);
+  const lineCode = lineMode && line && line.stations.length > 0 ? encodeScenario(line) : undefined;
+  const href = deskHref(cityId, tab, selectedIndex || undefined, suggestions.length > 0, lineCode);
   useEffect(() => {
     if (typeof window === "undefined" || !window.history?.replaceState) return;
     if (window.location.pathname + window.location.search !== href) window.history.replaceState(null, "", href);
@@ -153,6 +198,19 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     setNotice(text);
     setTimeout(() => setNotice((cur) => (cur === text ? "" : cur)), 2600);
   }, []);
+
+  // Links that carried a line: say so when it could not be read or is not on this device.
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (openedRef.current) return;
+    openedRef.current = true;
+    if (initialScenario === null) flash("That shared line could not be read");
+    if (initialScenarioId) {
+      const opened = lineApi.open(initialScenarioId);
+      if (opened) setMode(opened.mode);
+      else flash("That saved line is not on this device");
+    }
+  }, [initialScenario, initialScenarioId, lineApi, flash]);
 
   const copyLink = useCallback(() => {
     const url = window.location.origin + href;
@@ -194,6 +252,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
       openBriefing: () => window.location.assign(`/brief?city=${cityId}`),
       escape: () => {
         if (selected) setSelected(null);
+        else if (lineMode && line) lineApi.clear();
         else if (pin) setPin(null);
         else setPlaying(false);
       },
@@ -207,14 +266,35 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     if (tab === "alerts")
       for (const i of incidents)
         out.push({ id: i.id, at: i.centroid, kind: "incident", label: i.headline });
-    if (tab === "siting") {
-      suggestions.forEach((s, k) =>
-        out.push({ id: `pick${k}`, at: model.grid.cells[s.cell], kind: "pick", text: String(k + 1), label: `Suggested site ${k + 1}` })
+    if (tab === "siting" && lineMode) {
+      (line?.stations ?? []).forEach((s, k) =>
+        out.push({ id: `st${k}`, at: model.grid.project(s.lat, s.lng), kind: "station", text: String(k + 1), label: `Station ${k + 1}` })
       );
+    } else if (tab === "siting") {
+      suggestions.forEach((s, k) => {
+        const cell = model.grid.cells[s.cell];
+        if (cell) out.push({ id: `pick${k}`, at: cell, kind: "pick", text: String(k + 1), label: `Suggested site ${k + 1}` });
+      });
       if (pin) out.push({ id: "pin", at: pin, kind: "pin", label: "Your proposed site" });
     }
     return out;
-  }, [tab, incidents, suggestions, pin, model]);
+  }, [tab, incidents, suggestions, pin, model, lineMode, line]);
+
+  const linePoints = useMemo(() => (line ? line.stations.map((s) => model.grid.project(s.lat, s.lng)) : []), [line, model]);
+  const stationNames = useMemo(
+    () => (line ? line.stations.map((s, k) => s.name ?? placeName(model, linePoints[k])) : []),
+    [line, linePoints, model]
+  );
+  const lineBands = useMemo(() => {
+    if (!lineMode || !network) return { walk: undefined, feeder: undefined };
+    const walk = new Set<number>();
+    const feeder = new Set<number>();
+    for (const s of network.stations) {
+      s.walkCells.forEach((c) => walk.add(c));
+      s.feederCells.forEach((c) => feeder.add(c));
+    }
+    return { walk, feeder };
+  }, [lineMode, network]);
 
   const busiest = useMemo(() => {
     const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => values[b] - values[a]);
@@ -283,6 +363,15 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         <div className="no-print flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setDataOpen(true)}
+            className={`border px-2.5 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
+              data ? "border-supply bg-supply text-paper hover:bg-supply-deep" : "border-ink hover:bg-paper-deep"
+            }`}
+          >
+            Your data
+          </button>
+          <button
+            type="button"
             onClick={copyLink}
             className="border border-ink px-2.5 py-1 text-sm hover:bg-paper-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           >
@@ -300,6 +389,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         </div>
       </header>
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <DataDrawer open={dataOpen} city={city} model={model} data={data} onChange={changeData} onClose={() => setDataOpen(false)} />
       <div role="status" aria-live="polite" className="sr-only">
         {notice}
       </div>
@@ -312,11 +402,18 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         </div>
       )}
 
-      <p className="border-b border-ink/30 bg-signal/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
-        Sample city model: a seeded synthetic demand field built from {city.name}&rsquo;s real anchor points and published
-        population, with scripted incidents. The algorithms are real; the numbers are illustrative until the city&rsquo;s own data
-        is connected.
-      </p>
+      {status ? (
+        <p className="border-b border-ink/30 bg-supply/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
+          <span className="font-semibold text-supply-deep">Your data · </span>
+          {status}. Demand between stations is still the sample model.
+        </p>
+      ) : (
+        <p className="border-b border-ink/30 bg-signal/10 px-4 py-1 font-mono text-[11px] text-ink-soft sm:px-6">
+          Sample city model: a seeded synthetic demand field built from {city.name}&rsquo;s real anchor points and published
+          population, with scripted incidents. The algorithms are real; the numbers are illustrative until the city&rsquo;s own
+          data is loaded under <strong>Your data</strong>.
+        </p>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section className="relative min-h-[420px] border-ink lg:border-r-2">
@@ -327,10 +424,12 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
             values={values}
             scaleMax={scaleMax}
             outlined={tab === "alerts" && selected ? new Set(selected.cells) : undefined}
-            walk={tab === "siting" && site ? new Set(site.walkCells) : undefined}
-            feeder={tab === "siting" && site ? new Set(site.feederCells) : undefined}
+            walk={tab === "siting" ? (lineMode ? lineBands.walk : site ? new Set(site.walkCells) : undefined) : undefined}
+            feeder={tab === "siting" ? (lineMode ? lineBands.feeder : site ? new Set(site.feederCells) : undefined) : undefined}
             markers={markers}
-            onPick={tab === "siting" ? setPin : undefined}
+            hubs={data?.hubs ? model.hubs : undefined}
+            line={tab === "siting" && lineMode ? linePoints : undefined}
+            onPick={tab === "siting" ? (lineMode ? (p) => lineApi.addStation(p) : setPin) : undefined}
             className="absolute inset-0 h-full w-full"
           />
           <div className="pointer-events-none absolute bottom-3 left-3 border border-ink bg-paper/90 px-2 py-1.5">
@@ -438,12 +537,41 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               placeName={pin ? placeName(model, pin) : null}
               suggestions={suggestions}
               suggestionNames={suggestions.map((s) => placeName(model, model.grid.cells[s.cell]))}
-              onSuggest={() => setSuggestions(suggestSites(model, mode, 3, covered))}
+              onSuggest={() => {
+                if (lineMode) lineApi.replace(suggestCorridor(model, mode, 4));
+                else setSuggestions(suggestSites(model, mode, 3, covered, model.calibration));
+              }}
               onPickSuggestion={(k) => {
                 const c = model.grid.cells[suggestions[k].cell];
                 setPin({ x: c.x, y: c.y });
               }}
               onClear={() => setPin(null)}
+              lineMode={lineMode}
+              onLineMode={setLineMode}
+              line={line}
+              network={network}
+              stationNames={stationNames}
+              scenarios={lineApi.scenarios}
+              onRemoveStation={lineApi.removeStation}
+              onMoveStation={lineApi.moveStation}
+              onAlignment={lineApi.setAlignment}
+              onCosts={lineApi.setCosts}
+              onRename={lineApi.rename}
+              onSave={() => {
+                lineApi.save();
+                flash("Line saved on this device");
+              }}
+              onCopyLink={copyLink}
+              onClearLine={lineApi.clear}
+              onOpenScenario={(id) => {
+                const opened = lineApi.open(id);
+                if (opened) {
+                  setMode(opened.mode);
+                  setLineMode(true);
+                }
+              }}
+              onDeleteScenario={lineApi.remove}
+              compareHref={lineCode ? `/compare?city=${cityId}&a=${encodeURIComponent(lineCode)}` : null}
             />
           )}
         </aside>

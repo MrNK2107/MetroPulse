@@ -3,6 +3,10 @@
 For a live demo to a metro corporation, a mobility consultancy or a judging panel. Everything runs
 in the browser from `npm run dev`; there is no backend, network call or API key to fail on stage.
 
+> 2.0 adds three beats after Siting: **Line mode** (build a corridor, see the cost sketch), **Your
+> data** (load a stations CSV and watch coverage change), and **Compare** (two lines, one table).
+> They are scripted at the end of this file.
+
 ## Before you start
 
 ```bash
@@ -101,7 +105,7 @@ commissioner, in one sitting."
 | Question | Answer |
 |---|---|
 | Is this real data? | Not yet. Every screen says it is a sample model. The detector, siting and scoring are the production algorithms; the demand field is synthetic until a city's data is connected. |
-| How accurate are the boardings? | Uncalibrated. They come from fixed capture rates per mode. Calibration against observed counts, with error bars, is on the roadmap. |
+| How accurate are the boardings? | Out of the box, uncalibrated: fixed capture rates per mode. Load a counts CSV under Your data and, with three or more matched stations, boardings are scaled to the observed median with the spread shown in the formula. Fitted error bars are on the roadmap. |
 | Why not use an LLM to explain alerts? | Explanations come from deterministic rules so they are auditable and reproducible. Language models may phrase numbers, never produce them. |
 | Where does it run? | In the browser. No GPU, no server for the core loop, no map-tile subscription. A state data centre deployment is possible for the Authority plan. |
 | What does it cost? | See the pricing section on the landing page and in [`PRODUCT.md`](PRODUCT.md). |
@@ -114,3 +118,21 @@ commissioner, in one sitting."
   and `siting`, and `incident` is 1-based.
 - **Chennai opens instead of the city you linked:** the city id is unknown and the desk fell back
   to Chennai. Use an id from the city picker (lowercase, `delhi_ncr` for Delhi).
+
+## 4:00 - Line mode, Your data, Compare (90 s, the 2.0 beats)
+
+- On **Siting**, click **Line**. Click three points along a corridor (or press **Suggest a corridor**).
+  Read the network figures: boardings net of the line's own cannibalisation, new share, length,
+  the spacing warning if two stops are too close, the cost sketch and **cost per daily boarding**.
+  "Every figure shows its formula, and the cost table is editable, so a DPR team can put their own
+  rates in."
+- Press **Save line**, then **Copy link**. "The link carries the line itself; nothing is stored on a
+  server."
+- Click **Your data** in the header. Drop a stations CSV (five rows is enough). The banner changes
+  to *Your data · Stations: 5 from stations.csv* and the map now shows your stations as the
+  existing hubs. "Coverage and cannibalisation are now measured against this network. With a
+  counts CSV, the boardings scale to the observed numbers and the formula says so."
+- Press **Compare**. Two lines side by side, a delta column, and **Download CSV** gives the
+  alternatives table a DPR annex needs.
+- Close on `/city/chennai`: "Every city has a public page, and the same numbers are an API call
+  away."

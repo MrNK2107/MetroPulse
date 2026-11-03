@@ -2,6 +2,49 @@
 
 All notable changes to MetroPulse are documented here. Format follows [Conventional Changelog](https://www.conventionalcommits.org/).
 
+## [2.0.0] - 2026-11-03
+
+From demo to desk. The loop (see, notice, decide, persuade) now runs on a city's own data, builds
+lines rather than single stops, compares alternatives, and has a public face per city plus a JSON
+API. Spec: `docs/superpowers/specs/2026-11-03-startup-grade-design.md`.
+
+### Added
+- **Your data** (desk header): load a GeoJSON boundary, stations from a GTFS static zip or a CSV,
+  and observed daily counts as a CSV. Files are parsed in the browser and only derived data is kept
+  in `localStorage`; nothing is uploaded. The banner states what was loaded and from where.
+- **Calibration**: with three or more matched stations per mode, siting boardings are scaled by the
+  median observed/modelled ratio, with the inter-quartile spread shown as a ± band in the formula.
+- **Line mode** on Siting: stations accumulate into an ordered line; network boardings net of the
+  line's own cannibalisation, union walk-band coverage, length, spacing warnings against a per-mode
+  band, an editable capital-cost sketch with its source, cost per daily boarding, and a network
+  score with its formula. "Suggest a line" loads the three greedy picks.
+- **Scenario library**: save, rename, open and delete lines on this device; JSON export and import;
+  self-contained share links (`/desk?city=&s=`) that carry the line in the URL.
+- **Compare** (`/compare`): two lines side by side with a signed delta column and a DPR alternatives
+  table downloadable as CSV or Markdown.
+- **Briefing with a proposed line** (`/brief?city=&s=`): the per-station table and cost sketch
+  replace the recommended sites.
+- **City pages** (`/city/{id}`, 30 static pages) with Open Graph cards, a sitemap and robots rules.
+- **JSON API v1** (`/api/v1/*`): cities, city summary, incidents, site score, suggestions and a POST
+  scenario evaluator, all in the `{ success, data, error, meta }` envelope, cacheable and open to
+  any origin. Documented at `/developers`.
+- `/privacy` page; Playwright smoke suite (`npm run e2e`) run in CI against the production build.
+- Repository files: Apache-2.0 `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, CODEOWNERS, Dependabot,
+  issue and PR templates, ADRs in `docs/adr/`, `NEEDS_INPUT.md` for owner decisions.
+
+### Changed
+- The city model takes the user's boundary and stations (`getCityModel(city, data)`); without data
+  every 1.x number is unchanged (pinned by tests).
+- Existing coverage serves each hub with its own mode's walk band.
+- `placeName`, `fmtInt` and the hour-of-week helpers moved into `frontend/src/lib/pulse/` so server
+  pages and the API can use them.
+
+### Removed
+- The retired simulator's dormant backend modules (`app/rag`, `app/simulation`, `engine/grid.py`,
+  the translator, prediction generator, scenario parser and friends) and their tests.
+  `app/llm.py` replaces `app/simulation/llm.py`. The May 2026 spec, plan and status documents moved
+  to `docs/archive/`.
+
 ## [Unreleased]
 
 ### The mobility desk replaces the simulator

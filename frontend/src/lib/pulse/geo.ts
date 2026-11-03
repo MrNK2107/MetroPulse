@@ -116,12 +116,17 @@ export function buildHexGrid(city: City, edgeKm = EDGE_KM): HexGrid {
     return [q, r];
   };
 
-  const xs = boundary.map((p) => p.x);
-  const ys = boundary.map((p) => p.y);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
+  // Plain loops: spreading a ring with hundreds of thousands of vertices into Math.min overflows the stack.
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of boundary) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
   const rMin = Math.floor(minY / (edgeKm * 1.5)) - 1;
   const rMax = Math.ceil(maxY / (edgeKm * 1.5)) + 1;
 

@@ -2,12 +2,13 @@
 
 import { memo, useMemo, useRef } from "react";
 import type { HexGrid, Point, Anchor } from "@/lib/pulse/geo";
+import type { Station } from "@/lib/pulse/import/types";
 
 export interface Marker {
   id: string;
   at: Point;
   label: string;
-  kind: "pin" | "pick" | "incident";
+  kind: "pin" | "pick" | "incident" | "station";
   text?: string;
 }
 
@@ -21,6 +22,10 @@ interface Props {
   walk?: Set<number>;
   feeder?: Set<number>;
   markers?: Marker[];
+  /** The user's stations. When given, the configured transport anchors are not drawn. */
+  hubs?: Station[];
+  /** A proposed line, drawn through these points in order. */
+  line?: Point[];
   onPick?: (p: Point) => void;
   className?: string;
 }
@@ -74,6 +79,8 @@ function HexMapInner({
   walk,
   feeder,
   markers = [],
+  hubs: userHubs,
+  line,
   onPick,
   className,
 }: Props) {
@@ -84,14 +91,22 @@ function HexMapInner({
       const pts = grid.corners(c);
       return "M" + pts.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join("L") + "Z";
     });
-    const xs = grid.boundary.map((p) => p.x);
-    const ys = grid.boundary.map((p) => -p.y);
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const p of grid.boundary) {
+      if (p.x < x0) x0 = p.x;
+      if (p.x > x1) x1 = p.x;
+      if (-p.y < y0) y0 = -p.y;
+      if (-p.y > y1) y1 = -p.y;
+    }
     const pad = 1.5;
-    const minX = Math.min(...xs) - pad;
-    const minY = Math.min(...ys) - pad;
+    const minX = x0 - pad;
+    const minY = y0 - pad;
     // extra room on the right: anchor labels run rightwards from their dot
-    const w = Math.max(...xs) - Math.min(...xs) + 2 * pad + 0.12 * (Math.max(...xs) - Math.min(...xs));
-    const h = Math.max(...ys) - Math.min(...ys) + 2 * pad;
+    const w = x1 - x0 + 2 * pad + 0.12 * (x1 - x0);
+    const h = y1 - y0 + 2 * pad;
     const boundary = "M" + grid.boundary.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join("L") + "Z";
     return { paths, viewBox: `${minX} ${minY} ${w} ${h}`, boundary, size: Math.max(w, h) };
   }, [grid]);
@@ -106,6 +121,7 @@ function HexMapInner({
     () => {
       const byName = new Map<string, Anchor>();
       for (const a of anchors) {
+        if (userHubs && a.type === "transport") continue;
         const seen = byName.get(a.name);
         if (!seen || (a.type === "transport" && seen.type !== "transport")) byName.set(a.name, a);
       }
@@ -113,8 +129,15 @@ function HexMapInner({
         .map((a) => ({ a, p: grid.project(a.lat, a.lng) }))
         .filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0);
     },
-    [anchors, grid]
+    [anchors, grid, userHubs]
   );
+
+  // The user's stations: labelled when there are few, tooltips only when there are many.
+  const stations = useMemo(
+    () => (userHubs ?? []).map((h) => ({ h, p: grid.project(h.lat, h.lng) })).filter(({ p }) => grid.within(p.x, p.y, 1.5).length > 0),
+    [userHubs, grid]
+  );
+  const labelStations = stations.length <= 12;
 
   const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!onPick) return;
@@ -201,8 +224,58 @@ function HexMapInner({
         )}
       </g>
       <g>
+        {stations.map(({ h, p }, k) =>
+          h.mode === "metro" ? (
+            <rect
+              key={`s${k}`}
+              x={p.x - fs * 0.35}
+              y={-p.y - fs * 0.35}
+              width={fs * 0.7}
+              height={fs * 0.7}
+              fill="#F4EFE6"
+              stroke="#1E3A8A"
+              strokeWidth={fs * 0.18}
+            >
+              <title>{`${h.name} (existing hub)`}</title>
+            </rect>
+          ) : (
+            <circle key={`s${k}`} cx={p.x} cy={-p.y} r={fs * 0.22} fill="#1E3A8A">
+              <title data-hub="">{`${h.name} (existing ${h.mode === "brt" ? "BRT stop" : "bus halt"})`}</title>
+            </circle>
+          )
+        )}
+      </g>
+      {line && line.length > 1 && (
+        <g aria-label="Proposed line">
+          <polyline
+            points={line.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join(" ")}
+            fill="none"
+            stroke="#F4EFE6"
+            strokeWidth={fs * 0.7}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <polyline
+            points={line.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join(" ")}
+            fill="none"
+            stroke="#1E3A8A"
+            strokeWidth={fs * 0.38}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </g>
+      )}
+      <g>
         {markers.map((m) =>
-          m.kind === "pin" ? (
+          m.kind === "station" ? (
+            <g key={m.id} transform={`translate(${m.at.x},${-m.at.y})`}>
+              <circle r={fs * 1.0} fill="#1E3A8A" stroke="#F4EFE6" strokeWidth={fs * 0.25} />
+              <text textAnchor="middle" dy={fs * 0.38} fontSize={fs * 1.05} fontFamily="var(--font-display), serif" fontWeight={700} fill="#F4EFE6">
+                {m.text}
+              </text>
+              <title>{m.label}</title>
+            </g>
+          ) : m.kind === "pin" ? (
             <g key={m.id} transform={`translate(${m.at.x},${-m.at.y})`}>
               <circle r={fs * 0.9} fill="#1E3A8A" stroke="#F4EFE6" strokeWidth={fs * 0.25} />
               <circle r={fs * 0.3} fill="#F4EFE6" />
@@ -241,6 +314,23 @@ function HexMapInner({
       </g>
       {/* Labels sit above the markers and step right of any marker that would cover them. */}
       <g>
+        {labelStations &&
+          stations.map(({ h, p }, k) => (
+            <text
+              key={`ts${k}`}
+              x={labelX(p)}
+              y={-p.y + fs * 0.35}
+              fontSize={fs}
+              fontFamily="var(--font-mono), monospace"
+              fill="#16130F"
+              stroke="#F4EFE6"
+              strokeWidth={fs * 0.16}
+              paintOrder="stroke"
+              style={{ pointerEvents: "none" }}
+            >
+              {h.name}
+            </text>
+          ))}
         {hubs.map(({ a, p }) => (
           <text
             key={`t${a.name}`}

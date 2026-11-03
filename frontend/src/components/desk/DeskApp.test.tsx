@@ -121,3 +121,121 @@ describe("nearPlace", () => {
     expect(nearPlace("0.8 km N of Chennai Central")).toBe("0.8 km N of Chennai Central");
   });
 });
+
+describe("DeskApp with the user's data", () => {
+  it("replaces the sample banner with the data status and opens the drawer", async () => {
+    window.localStorage.setItem(
+      "metropulse.citydata.chennai.v1",
+      JSON.stringify({
+        version: 1,
+        cityId: "chennai",
+        hubs: { source: "stations.csv", stations: [{ name: "Central", lat: 13.0827, lng: 80.2707, mode: "metro" }, { name: "Egmore", lat: 13.0732, lng: 80.2609, mode: "metro" }] },
+        loadedAt: "2026-11-03T00:00:00.000Z",
+      })
+    );
+    try {
+      render(<DeskApp initialCity="chennai" />);
+      expect(await screen.findByText(/stations: 2 from stations\.csv/i)).toBeInTheDocument();
+      expect(screen.queryByText(/sample city model/i)).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /your data/i }));
+      expect(screen.getByRole("dialog", { name: /your data/i })).toBeInTheDocument();
+    } finally {
+      window.localStorage.clear();
+    }
+  });
+});
+
+describe("DeskApp line mode", () => {
+  const line = {
+    id: "abcd2345",
+    cityId: "chennai",
+    name: "Shared line",
+    mode: "metro" as const,
+    alignment: "elevated" as const,
+    stations: [
+      { lat: 13.0418, lng: 80.2341 },
+      { lat: 13.0418, lng: 80.2452 },
+    ],
+    createdAt: "2026-11-03T00:00:00.000Z",
+    updatedAt: "2026-11-03T00:00:00.000Z",
+  };
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("opens a shared line with its network score and keeps it in the address bar", () => {
+    window.history.replaceState(null, "", "/desk?city=chennai");
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialScenario={line} />);
+    expect(screen.getByText(/proposed line · 2 stations/i)).toBeInTheDocument();
+    expect(screen.getByText(/score = 50 x min\(1,/i)).toBeInTheDocument();
+    expect(window.location.search).toBe("?city=chennai&tab=siting&s=m.e.13.0418%2C80.2341%3B13.0418%2C80.2452");
+  });
+
+  it("adds stations with map clicks in line mode and saves the line", async () => {
+    render(<DeskApp initialCity="chennai" initialTab="siting" />);
+    await userEvent.click(screen.getByRole("radio", { name: /line/i }));
+    const map = screen.getByRole("img", { name: /hexagon map/i });
+    act(() => {
+      fireEvent.click(map, { clientX: 0, clientY: 0 });
+    });
+    act(() => {
+      fireEvent.click(map, { clientX: 0, clientY: 0 });
+    });
+    expect(screen.getByText(/proposed line · 2 stations/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /save line/i }));
+    expect(JSON.parse(window.localStorage.getItem("metropulse.scenarios.v1")!).scenarios).toHaveLength(1);
+  });
+
+  it("says when a shared line could not be read", () => {
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialScenario={null} />);
+    expect(screen.getAllByText(/that shared line could not be read/i).length).toBeGreaterThan(0);
+  });
+});
+
+describe("DeskApp review fixes", () => {
+  const ring: [number, number][] = [[80.2, 13.0], [80.34, 13.0], [80.34, 13.16], [80.2, 13.16], [80.2, 13.0]];
+  const store = (data: object) => window.localStorage.setItem("metropulse.citydata.chennai.v1", JSON.stringify(data));
+  afterEach(() => window.localStorage.clear());
+
+  it("survives a suggest=1 reload when a boundary is stored, and drops the stale suggestions", async () => {
+    store({ version: 1, cityId: "chennai", boundary: { source: "b.geojson", ring }, loadedAt: "2026-11-03T00:00:00.000Z" });
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialSuggest />);
+    expect(await screen.findByText(/boundary: b\.geojson/i)).toBeInTheDocument();
+    expect(screen.queryAllByRole("listitem", { name: /suggested site/i })).toHaveLength(0);
+    expect(screen.getByRole("img", { name: /hexagon map/i })).toBeInTheDocument();
+  });
+
+  it("falls back to the sample outline when a stored boundary cannot build a usable grid", async () => {
+    const tiny: [number, number][] = [[80.27, 13.08], [80.275, 13.08], [80.275, 13.085], [80.27, 13.085], [80.27, 13.08]];
+    store({ version: 1, cityId: "chennai", boundary: { source: "tiny.geojson", ring: tiny }, loadedAt: "2026-11-03T00:00:00.000Z" });
+    render(<DeskApp initialCity="chennai" />);
+    expect((await screen.findAllByText(/boundary could not be used/i)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/boundary: tiny\.geojson/i)).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("metropulse.citydata.chennai.v1") ?? "null")).toBeNull();
+  });
+
+  it("keeps a shared BRT line as BRT", () => {
+    const brt = {
+      id: "abcd2345", cityId: "chennai", name: "Shared line", mode: "brt" as const, alignment: "elevated" as const,
+      stations: [{ lat: 13.0418, lng: 80.2341 }, { lat: 13.0418, lng: 80.2452 }],
+      createdAt: "2026-11-03T00:00:00.000Z", updatedAt: "2026-11-03T00:00:00.000Z",
+    };
+    window.history.replaceState(null, "", "/desk?city=chennai");
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialScenario={brt} />);
+    expect(screen.getByRole("radio", { name: /^brt$/i })).toHaveAttribute("aria-checked", "true");
+    expect(window.location.search).toContain("s=b.e.");
+  });
+
+  it("moves the mode picker when a saved feeder line is opened", async () => {
+    window.localStorage.setItem(
+      "metropulse.scenarios.v1",
+      JSON.stringify({ version: 1, scenarios: [{ id: "feed0001", cityId: "chennai", name: "Feeder loop", mode: "feeder", alignment: "at-grade", stations: [{ lat: 13.0418, lng: 80.2341 }], createdAt: "2026-11-03T00:00:00.000Z", updatedAt: "2026-11-03T00:00:00.000Z" }] })
+    );
+    render(<DeskApp initialCity="chennai" initialTab="siting" />);
+    await userEvent.click(screen.getByRole("radio", { name: /^line$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /open feeder loop/i }));
+    expect(screen.getByRole("radio", { name: /^feeder$/i })).toHaveAttribute("aria-checked", "true");
+    expect(window.location.search).toContain("s=f.g.");
+  });
+});

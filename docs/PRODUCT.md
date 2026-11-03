@@ -92,9 +92,9 @@ works offline, deterministically and for free.
   it in an appraisal meeting.
 - **Built for Indian planning artefacts.** DPR alternatives analysis, CMP catchments, the
   NTOD 500–800 m walk band, and briefings sized for how decisions are actually circulated.
-- **Runs in the browser.** The core loop (model, detector, siting, briefing) is plain TypeScript
-  that runs client-side, in about a second per city. No GPU, no LLM, no server, no map-tile
-  subscription.
+- **Runs in the browser.** The core loop (model, detector, siting, lines, compare, briefing) is
+  plain TypeScript that runs client-side, in about a second per city. No GPU, no LLM, no server, no
+  map-tile subscription. A city's own files are parsed in the browser and never uploaded.
 
 ## Honesty about data (today)
 
@@ -123,9 +123,9 @@ price-per-study variant (₹1.5 lakh per study) for one-off DPRs.
 
 | Horizon | What | Why |
 |---|---|---|
-| **Now (shipped)** | Pulse playback, explained alerts, station siting with area-weighted catchments and greedy suggestions, print-ready briefings, shareable deep links to any desk view, sample model for 30 cities, India Twin (Census and VIIRS receipts), policy agent | The core loop, demonstrable offline |
-| **Next (0–3 months)** | Data connectors: GTFS static (stations and routes replace the config hubs), survey traffic-analysis zones, AFC CSV import. Ward boundaries. Multi-station network scenarios ("a line, not a stop"). Saved scenarios | Turn illustrative numbers into a city's own numbers |
-| **Later (3–9 months)** | Calibration against observed counts with error bars on ridership. GTFS-RT and ICCC live feeds. Alert routing (email, WhatsApp Business). Per-user auth and org workspaces. Offline "ask the city" answers grounded in the model | Move from planning tool to weekly operating tool |
+| **Now (shipped, 2.0)** | Pulse playback, explained alerts, station siting with area-weighted catchments and greedy suggestions, **line scenarios** with cost sketch and spacing checks, a local scenario library with share links, **compare** with a DPR alternatives table, print-ready briefings (with or without a proposed line), **your data in the browser** (GeoJSON boundary, GTFS or CSV stations, counts CSV with calibration), 30 public city pages, a JSON API, sample model for 30 cities, India Twin (Census and VIIRS receipts), policy agent | The core loop, usable on a real engagement with the city's own stations and counts |
+| **Next (0–3 months)** | Workspaces: sign-in, cloud-saved scenarios, team sharing, unbranded briefings (the Desk plan). Survey traffic-analysis zones and OD matrices to replace the synthetic demand field between stations. Ward boundaries | Turn calibration into a measured demand field, and sell seats |
+| **Later (3–9 months)** | Error bars on ridership from calibration spread. GTFS-RT and ICCC live feeds. Alert routing (email, WhatsApp Business). SSO and org workspaces. Offline "ask the city" answers grounded in the model | Move from planning tool to weekly operating tool |
 | **Vision** | A city's mobility system of record: every proposal, every alert and every briefing versioned and comparable over years | The DPR becomes a living document |
 
 ## What we will not build

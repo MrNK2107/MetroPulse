@@ -1,15 +1,12 @@
-"""Scenario-first MetroPulse models.
+"""Shared MetroPulse models: sector vocabulary, parsed scenarios and case studies.
 
-The WebSocket API uses Pydantic models. The hot simulation path uses small
-dataclasses and NumPy arrays so the monthly loop remains deterministic.
+Used by the agent's scenario parser (``engine.nl_engine``), its tools and ``app.db``.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any, Literal
 
-import numpy as np
 from pydantic import BaseModel, Field
 
 
@@ -33,23 +30,6 @@ SECTOR_LABELS: dict[str, str] = {
     "public_admin": "Public Administration",
 }
 
-SECTOR_INDEX: dict[str, int] = {name: i for i, name in enumerate(SECTOR_NAMES)}
-N_SECTORS = len(SECTOR_NAMES)
-
-PIPELINE_STAGES = (
-    "parsing",
-    "predicting",
-    "simulating",
-    "retrieving",
-    "synthesizing",
-    "done",
-)
-
-
-class StartScenarioMessage(BaseModel):
-    type: Literal["START"]
-    scenario: str = Field(min_length=4, max_length=2000)
-
 
 class ParsedScenario(BaseModel):
     city: str
@@ -61,24 +41,6 @@ class ParsedScenario(BaseModel):
     keywords: list[str] = Field(default_factory=list)
     confidence: str = "medium"
     assumptions: list[str] = Field(default_factory=list)
-
-
-class SectorPrediction(BaseModel):
-    direction: Literal["up", "down", "stable"] = "stable"
-    magnitude: Literal["low", "moderate", "high"] = "low"
-    confidence: Literal["high", "medium", "low"] = "medium"
-    rationale: str = ""
-
-
-class Prediction(BaseModel):
-    headline: str = ""
-    employment_impact: dict[str, SectorPrediction] = Field(default_factory=dict)
-    real_estate_impact: dict[str, Any] = Field(default_factory=dict)
-    transit_impact: dict[str, Any] = Field(default_factory=dict)
-    most_affected_areas: list[str] = Field(default_factory=list)
-    counter_intuitive: list[str] = Field(default_factory=list)
-    overall_confidence: Literal["high", "medium", "low"] = "medium"
-    reasoning: str = ""
 
 
 class CityProfile(BaseModel):
@@ -135,128 +97,3 @@ class CaseRetrievalAudit(BaseModel):
     returned_count: int = 0
     omitted_weak_count: int = 0
     retrieval_mode: Literal["strict"] = "strict"
-
-
-@dataclass
-class SimulationParams:
-    city: str
-    sector_deltas: dict[str, float]
-    policies_active: list[str]
-    public_works_zone: dict[str, Any] | None
-    horizon_months: int
-    city_config: Any
-    assumptions: list[str] = field(default_factory=list)
-    realtime_snapshot: Any | None = None
-    evidence_pack: dict[str, Any] | None = None
-    coefficient_adjustments: dict[str, Any] = field(default_factory=dict)
-    coefficient_factors: dict[str, float] = field(default_factory=dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "city": self.city,
-            "sector_deltas": self.sector_deltas,
-            "policies_active": self.policies_active,
-            "public_works_zone": self.public_works_zone,
-            "horizon_months": self.horizon_months,
-            "assumptions": self.assumptions,
-            "snapshot_id": getattr(self.realtime_snapshot, "id", None),
-            "mode": "real_time" if getattr(self.realtime_snapshot, "is_realtime", False) else "demo",
-            "evidence_pack": self.evidence_pack,
-            "coefficient_adjustments": self.coefficient_adjustments,
-        }
-
-
-@dataclass
-class GridState:
-    h3_indices: list[str]
-    cell_centers: np.ndarray
-    K: np.ndarray
-    E_formal: np.ndarray
-    E_informal: np.ndarray
-    R: np.ndarray
-    T: np.ndarray
-    H: np.ndarray
-    F: np.ndarray
-    M: np.ndarray
-    baselines: dict[str, np.ndarray | float]
-    slum_flag: np.ndarray
-    sector_weights: np.ndarray
-    constants: dict[str, float]
-    city_center: tuple[float, float]
-    neighbor_pairs: list[tuple[int, int, float]] | None = None
-    neighbor_i_idx: np.ndarray | None = None
-    neighbor_j_idx: np.ndarray | None = None
-    neighbor_weights: np.ndarray | None = None
-    zone_flags: dict[str, np.ndarray] = field(default_factory=dict)
-    last_delta_k: np.ndarray | None = None
-    last_delta_e: np.ndarray | None = None
-    active_effects: list[str] = field(default_factory=list)
-    public_dist_cache: dict[int, np.ndarray] = field(default_factory=dict)
-    snapshot_id: str | None = None
-    data_mode: str = "demo"
-    source_manifest: dict[str, Any] = field(default_factory=dict)
-    snapshot_quality_score: float = 0.0
-
-    overlay_summary: dict[str, Any] = field(default_factory=dict)
-    metric_metadata: dict[str, Any] = field(default_factory=dict)
-    migration_balance: float = 0.0
-
-    # Per-cell confidence arrays (same shape as the metric arrays)
-    confidence_K: np.ndarray | None = None
-    confidence_R: np.ndarray | None = None
-    confidence_T: np.ndarray | None = None
-    confidence_H: np.ndarray | None = None
-    confidence_F: np.ndarray | None = None
-    confidence_M: np.ndarray | None = None
-    data_origins: dict[str, str] = field(default_factory=dict)
-
-    @property
-    def n_cells(self) -> int:
-        return len(self.h3_indices)
-
-    @property
-    def n_sectors(self) -> int:
-        return self.K.shape[1]
-
-
-class HexCellState(BaseModel):
-    h3Index: str
-    economicActivity: float
-    delta: float
-    jobDensity: float
-    jobDensityInformal: float
-    realEstateIndex: float
-    congestion: float
-    housingAffordability: float
-    floodRisk: float
-    migrationPressure: float
-    visualCue: str
-    proof: str
-
-
-class AggregateMetrics(BaseModel):
-    gdpDelta: float
-    unemploymentRate: float
-    realEstateIndex: float
-    transitCongestion: float
-    informalEmployment: float
-    housingAffordability: float
-    floodDisruption: float
-    migrationBalance: float
-
-
-class SimulationFrame(BaseModel):
-    month: int
-    timestamp: str
-    cells: list[HexCellState]
-    metrics: AggregateMetrics
-    activeLoop: str
-    proof: dict[str, Any] = Field(default_factory=dict)
-
-
-# ── NL Conversation WebSocket messages ─────────────────────────────────────
-
-
-class InputResponseMessage(BaseModel):
-    type: Literal["INPUT_RESPONSE"] = "INPUT_RESPONSE"
-    text: str

@@ -16,7 +16,9 @@
  * whole feeder band, which spreads picks out into a network).
  */
 import type { HexGrid, Point } from "./geo";
-import { CityModel, HOURS_PER_WEEK } from "./model";
+import type { CityModel } from "./model";
+import type { Calibration } from "./calibrate";
+import { HOURS_PER_WEEK } from "./time";
 
 export type ModeId = "metro" | "brt" | "feeder";
 
@@ -116,12 +118,11 @@ function serve(cover: Coverage, c: Catchment) {
   for (let k = 0; k < c.cells.length; k++) if (c.weights[k] > cover[c.cells[k]]) cover[c.cells[k]] = c.weights[k];
 }
 
-/** Existing hubs: the city's transport anchors, each with a metro walk band. */
+/** Existing hubs (the user's stations, or the city's transport anchors), each with its own mode's walk band. */
 export function existingCoverage(model: CityModel): Coverage {
   const cover = new Float32Array(model.grid.cells.length);
-  for (const a of model.city.anchors) {
-    if (a.type !== "transport") continue;
-    serve(cover, catchment(model.grid, model.grid.project(a.lat, a.lng), MODES.metro.walkKm));
+  for (const h of model.hubs) {
+    serve(cover, catchment(model.grid, model.grid.project(h.lat, h.lng), MODES[h.mode].walkKm));
   }
   return cover;
 }
@@ -158,8 +159,16 @@ function captureRates(walk: Catchment, feeder: Catchment, mode: Mode): number[] 
   });
 }
 
-export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered?: Coverage): SiteResult {
+export function scoreSite(
+  model: CityModel,
+  site: Point,
+  modeId: ModeId,
+  covered?: Coverage,
+  calibration?: Calibration
+): SiteResult {
   const mode = MODES[modeId];
+  const factor = calibration?.factor[modeId] ?? 1;
+  const calibrated = calibration !== undefined && calibration.stations[modeId] >= 3;
   const walk = catchment(model.grid, site, mode.walkKm);
   const feeder = catchment(model.grid, site, mode.feederKm);
   const rates = captureRates(walk, feeder, mode);
@@ -176,11 +185,11 @@ export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered
   const hourly = new Array<number>(24).fill(0);
   feeder.cells.forEach((c, k) => {
     const rate = rates[k];
-    const b = model.dailyTrips[c] * rate;
+    const b = model.dailyTrips[c] * rate * factor;
     boardings += b;
     fresh += b * (1 - (covered ? covered[c] : 0));
     // weekday hourly shape (Mon-Fri average)
-    for (let h = 0; h < 120; h++) hourly[h % 24] += (model.baselineMean[c * HOURS_PER_WEEK + h] * rate) / 5;
+    for (let h = 0; h < 120; h++) hourly[h % 24] += (model.baselineMean[c * HOURS_PER_WEEK + h] * rate * factor) / 5;
   });
   let peakHour = 0;
   for (let h = 1; h < 24; h++) if (hourly[h] > hourly[peakHour]) peakHour = h;
@@ -202,7 +211,12 @@ export function scoreSite(model: CityModel, site: Point, modeId: ModeId, covered
     score,
     formula:
       `score = 60 x min(1, ${Math.round(boardings).toLocaleString("en-IN")} / ${mode.referenceBoardings.toLocaleString("en-IN")})` +
-      ` + 40 x ${newShare.toFixed(2)} = ${score}`,
+      ` + 40 x ${newShare.toFixed(2)} = ${score}` +
+      (calibrated
+        ? `; boardings × ${factor.toFixed(2)} (calibrated on ${calibration.stations[modeId]} stations, IQR ±${Math.round(
+            calibration.iqr[modeId] * 100
+          )}%)`
+        : ""),
   };
 }
 
@@ -215,7 +229,8 @@ export function suggestSites(
   model: CityModel,
   modeId: ModeId,
   k = 3,
-  start: Coverage = existingCoverage(model)
+  start: Coverage = existingCoverage(model),
+  calibration?: Calibration
 ): Suggestion[] {
   const mode = MODES[modeId];
   const { grid } = model;
@@ -243,7 +258,7 @@ export function suggestSites(
       }
     }
     if (best < 0) break;
-    picks.push({ cell: best, result: scoreSite(model, grid.cells[best], modeId, covered) });
+    picks.push({ cell: best, result: scoreSite(model, grid.cells[best], modeId, covered, calibration) });
     // the new station now serves its whole catchment
     serve(covered, bands[best].feeder);
   }
@@ -271,6 +286,6 @@ export function transitDesertShare(model: CityModel, covered: Coverage = existin
  */
 export function walkCoverage(model: CityModel, sites: SiteResult[] = []): number {
   const cover = existingCoverage(model);
-  for (const s of sites) serve(cover, catchment(model.grid, s.site, MODES.metro.walkKm));
+  for (const s of sites) serve(cover, catchment(model.grid, s.site, MODES[s.mode].walkKm));
   return residentShare(model, cover);
 }

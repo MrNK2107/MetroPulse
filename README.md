@@ -8,16 +8,19 @@ It scores a proposed metro, BRT or feeder stop in seconds, and it turns the week
 commissioner can read on a phone.
 
 It opens on 30 Indian cities, runs entirely in the browser, needs no sign-up, no server and no
-language model, and every number on screen shows how it was computed.
+language model, and every number on screen shows how it was computed. Load a city's own boundary,
+stations and counts and the desk runs on them, without uploading a byte. Draw a line, not a stop,
+and compare two.
 
 <img src="docs/screenshots/landing.png" alt="MetroPulse landing page: 'Test the station before you pour the concrete', beside a live hexagon demand map of Chennai" width="900">
 
-> **Honest about data.** The desk runs on the **MetroPulse sample city model**: a seeded, synthetic
-> demand field built from each city's real anchor points (CBDs, job hubs, transport hubs,
-> residential centres in `data/cities/*.yaml`) and its published population, inside a sample city
-> outline. The sample week contains scripted incidents so the detector has something to find. Every
-> screen and every briefing says so. **The algorithms are real; the numbers are illustrative until a
-> city's own data is connected.**
+> **Honest about data.** Out of the box the desk runs on the **MetroPulse sample city model**: a
+> seeded, synthetic demand field built from each city's real anchor points (CBDs, job hubs,
+> transport hubs, residential centres in `data/cities/*.yaml`) and its published population, inside
+> a sample city outline. The sample week contains scripted incidents so the detector has something
+> to find. Every screen and every briefing says so. **The algorithms are real; the numbers are
+> illustrative until a city's own data is loaded under Your data** (boundary, stations, counts), and
+> even then the demand field between stations is a model until survey or OD data replace it.
 
 ---
 
@@ -79,6 +82,58 @@ The address bar always holds the current view, so copying it shares that view:
 
 ---
 
+## Your data: three files, nothing uploaded
+
+Open **Your data** in the desk header. Each file is parsed in the browser and only the derived data
+(a boundary ring, a list of stations, daily counts per station) is kept in `localStorage` on that
+device. There is no upload endpoint.
+
+| File | Formats | What changes |
+|---|---|---|
+| Boundary | GeoJSON Polygon, MultiPolygon, Feature or FeatureCollection (largest polygon wins; a polygon far from the city is rejected with the distance) | The hexagon grid is built on your outline instead of the sample one |
+| Stations | GTFS static zip (`stops`, `routes`, `trips`, `stop_times`; mode from route type) or a CSV with `name, lat, lng[, mode]` | Your stations become the existing hubs for coverage and cannibalisation, each with its own mode's walk band |
+| Counts | CSV `station, daily_boardings`, or `station, date, boardings`, or `station, hour, boardings` | With 3 or more matched stations per mode, siting boardings are scaled by the median observed/modelled ratio; the formula shows the factor and the inter-quartile spread |
+
+The drawer reports what was kept and dropped, shows an observed-versus-modelled table with the
+per-station error, and lists count rows it could not match to a station.
+
+<img src="docs/screenshots/desk-your-data.png" alt="The Your data drawer open on the desk with a stations CSV loaded and its report" width="900">
+
+## Lines, not stops
+
+Switch Siting to **Line**. Stations accumulate in order; each is scored net of the existing hubs
+and the stations before it, so the line's boardings are its own. The panel shows network
+boardings, new share, union walk-band coverage, length, station spacing against a per-mode band
+(metro 0.8-2.0 km) with warnings, an editable capital-cost sketch (₹ crore per km and per station
+by alignment, with its source stated), cost per daily boarding, and a network score with its
+formula. **Suggest a corridor** starts at the best single site and adds up to three stations, each
+inside the spacing band of the last and chosen for the new boardings it adds.
+
+Lines are saved on this device (JSON export and import), and a **share link** carries the line in
+the URL itself: `/desk?city=chennai&s=m.e.13.0418,80.2341;13.0418,80.2452`.
+
+<img src="docs/screenshots/desk-line.png" alt="Line mode on the Chennai desk: a three-station line drawn on the map with its network figures, station list and cost sketch" width="900">
+
+## Compare alternatives
+
+`/compare?city=<id>&a=<line>&b=<line>` puts two lines side by side with a signed delta column and
+downloads the **alternatives table** (option, mode, stations, length, boardings, new share,
+coverage, cost, cost per boarding, score) as CSV or Markdown, the shape a DPR annex uses. The
+briefing takes a line too: `/brief?city=chennai&s=<line>` replaces the recommended sites with the
+proposed line's station table and cost sketch.
+
+<img src="docs/screenshots/compare.png" alt="The compare page: two Chennai lines on small maps, the alternatives table with a delta column and download buttons" width="900">
+
+## City pages and the API
+
+Every city has a static page, `/city/<id>`, with the briefing headline, the headline figures, the
+top incidents and the suggested sites, plus Open Graph cards and a sitemap. The same numbers are
+served as JSON under `/api/v1/*` in the `{ success, data, error, meta }` envelope, cacheable and
+open to any origin: cities, city summary, incidents, site score, suggestions and a POST scenario
+evaluator. The running app documents them at `/developers`.
+
+<img src="docs/screenshots/city-page.png" alt="The public Mumbai city page: headline, four figures, this week's incidents and the recommended metro sites" width="900">
+
 ## Try it in two minutes
 
 The desk is frontend-only. No backend, database or API key is needed.
@@ -89,7 +144,8 @@ npm install
 npm run dev            # http://localhost:3000
 ```
 
-Open `/` for the landing page, `/desk` for the desk and `/brief?city=<id>` for a briefing. A
+Open `/` for the landing page, `/desk` for the desk, `/brief?city=<id>` for a briefing,
+`/compare?city=<id>` to compare lines, `/city/<id>` for a city page and `/developers` for the API. A
 five-minute walkthrough for a live demo is in [`docs/DEMO.md`](docs/DEMO.md). The product brief
 (positioning, customers, pricing, roadmap) is in [`docs/PRODUCT.md`](docs/PRODUCT.md).
 
@@ -107,9 +163,19 @@ frontend/src/lib/pulse/
               and time → rule-traced explanations
   siting.ts   area-weighted walk/feeder catchments, capture rates per mode, cannibalisation
               against existing hubs, score formula, greedy multi-site suggestion, coverage
+  scenario.ts line scenarios: ordered stations scored net of each other, length, spacing band,
+              cost sketch, network score, URL encoding for share links
+  calibrate.ts median observed/modelled ratio per mode from loaded counts (3+ stations), IQR spread
+  summary.ts  the city summary the city pages, the API and the briefing headline share
+  alternatives.ts  the DPR alternatives table as CSV and Markdown
+  import/     parsers: csv.ts (RFC 4180), geojson.ts, gtfs.ts (fflate), stations.ts, counts.ts
+  userdata.ts / scenarioStore.ts   browser stores (localStorage, in-memory fallback)
 frontend/src/components/
-  desk/       DeskApp (tabs, URL state), HexMap (SVG), Timeline, AlertFeed, SitingPanel
-  brief/      Briefing (print stylesheet)
+  desk/       DeskApp (tabs, URL state), HexMap (SVG), Timeline, AlertFeed, SitingPanel,
+              LinePanel, DataDrawer, useLineScenario
+  brief/      Briefing (print stylesheet); compare/ Compare
+frontend/src/app/
+  city/[id]   30 static city pages + Open Graph image; api/v1/*  JSON API route handlers
 ```
 
 | Engine | Rule |
@@ -160,8 +226,8 @@ build needs 7 source files, some behind a login; see [Data](#data)).
 | Case studies (RAG) | 20, served by `GET /api/case-studies` |
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
-| Backend tests | 870 pytest tests (unit and integration), all passing on 2026-11-02, no network access |
-| Frontend tests | 149 Jest + Testing Library tests: the desk engines (projection, model, detector, siting), desk, map, timeline and briefing components, landing page, and the agent chat client |
+| Backend tests | 929 pytest tests (unit and integration), all passing on 2026-11-03, no network access |
+| Frontend tests | 289 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 6 Playwright smoke tests against the production build |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---
@@ -199,7 +265,7 @@ Some design decisions:
   retries a 1013 with backoff (1, 2, then 4 s, at most 3 retries). Error frames carry no exception
   text.
 
-More detail: [`docs/twin/`](docs/twin), [`docs/RAG_ENGINE.md`](docs/RAG_ENGINE.md) (parked module),
+More detail: [`docs/twin/`](docs/twin), [`docs/archive/`](docs/archive) (simulator-era documents, including the parked RAG engine),
 [`docs/DATA_CREDIBILITY.md`](docs/DATA_CREDIBILITY.md), [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) covers components, data flow, the agent pipeline,
 storage, external services and known limits, with mermaid diagrams.
@@ -314,10 +380,11 @@ cd backend
 python -m pytest tests -q          # unit + integration
 
 cd frontend
-npm run test                       # jest (npm run test:ci in CI; locally `npx jest --maxWorkers=2`)
+npm run test                       # jest (npm run test:ci in CI; locally `npx jest --maxWorkers=1` on small machines)
 npm run lint
 npm run type-check
-npm run build
+npm run build                      # NODE_OPTIONS=--max-old-space-size=2048 on small machines
+npm run e2e                        # Playwright smoke suite against the build (npm run e2e:install once)
 ```
 
 The backend suite is hermetic: `tests/conftest.py` ignores the Supabase and LLM settings in
@@ -331,7 +398,8 @@ backend with `RATE_LIMIT_PER_MINUTE=0`: the default limit of 240 requests per mi
 below a benchmark's request rate, and the script stops with exit status 2 on the first 429.
 `backend/tests/load/locustfile.py` load-tests `/ws/agent` (PING/PONG, no LLM calls): set
 `AGENT_WS_TOKEN` and run `locust -f tests/load/locustfile.py --host=http://localhost:8000` from `backend/`.
-CI (`.github/workflows/ci.yml`) runs the backend tests, then lint, type-check and Jest on the frontend.
+CI (`.github/workflows/ci.yml`) runs the backend tests, then lint, type-check and Jest on the
+frontend, then builds the frontend and runs the Playwright smoke suite; deploys wait for all three.
 
 ## Project structure
 
@@ -340,13 +408,11 @@ backend/
   app/
     routes/        health, regions, case_studies, realtime, twin
     ws/agent.py    /ws/agent (auth, connection limit, streaming)
-    rag/           retriever, evidence pack, coefficient extractor (not wired into the running app)
-    simulation/    llm.py (provider switch, used by the agent); confidence, overlay and
-                   explainability are leftovers from the retired simulator
+    llm.py         provider switch (MiMo, OpenAI, Gemini, Ollama), used by the agent
     realtime.py    6 ingestion connectors
   engine/
     agent/         UrbanAgent, tools, prompts, memory
-    nl_engine/     regex + spaCy intent router, conversation state
+    nl_engine/     regex + spaCy intent router (the agent's parse_scenario tool)
   twin/
     places/        LGD loading, name resolver, boundaries, crosswalk, H3 link
     pipeline/      census2011, viirs
@@ -354,33 +420,39 @@ backend/
   scripts/twin_build.py
   tests/           unit/, integration/, fixtures/twin/
 frontend/src/
-  app/             page.tsx (landing), desk/, brief/, twin/ (India Twin map)
-  lib/pulse/       sample city model, incident detector, station siting (see How it works)
-  components/desk/ DeskApp, HexMap, Timeline, AlertFeed, SitingPanel
-  components/brief/Briefing.tsx
+  app/             page.tsx (landing), desk/, brief/, compare/, city/[id]/, developers/, privacy/,
+                   api/v1/ (JSON API), twin/ (India Twin map), sitemap.ts, robots.ts
+  lib/pulse/       sample city model, detector, siting, scenarios, calibration, parsers, stores
+  lib/api/         envelope.ts (the API response shape)
+  components/desk/ DeskApp, HexMap, Timeline, AlertFeed, SitingPanel, LinePanel, DataDrawer
+  components/brief/Briefing.tsx; components/compare/Compare.tsx
   components/twin/ IndiaMap, PlaceSearch, PlaceCard, TwinNotBuilt
   components/agent/AgentChat.tsx
   lib/             agentChat.ts (protocol), twinApi.ts
   store/twinStore.ts
 data/              cities/, sez/, transit/, slums/, flood/, twin/{manual,seed}
 scripts/           export_sample_cities.py (city configs -> desk JSON)
-docs/              twin/, benchmarks.md, LIMITATIONS.md, ...
+docs/              adr/, archive/, twin/, benchmarks.md, LIMITATIONS.md, PRODUCT.md, DEMO.md, ...
+frontend/e2e/      Playwright smoke suite and the README screenshot script
 ```
 
 ## Known gaps
 
-- The desk runs on the sample city model. Connectors for a city's own data (GTFS stations,
-  survey zones, AFC taps) are the next step; until then its numbers are illustrative.
-- The sample outlines are drawn around each city's anchors, not administrative boundaries, and
-  each city has one mapped interchange, so "existing coverage" is a lower bound.
+- The demand field between stations is still the sample model. Loading a boundary, stations and
+  counts makes coverage, cannibalisation and the siting scale yours; the hour-by-hour field only
+  becomes yours when survey zones or OD matrices are connected (next on the roadmap).
+- Calibration scales boardings by one factor per mode. It is not a fitted model and has no error
+  bars beyond the inter-quartile spread it reports.
+- The capital-cost sketch is an editable table of order-of-magnitude figures, not an estimate.
+- Saved lines and loaded data live in one browser. There are no accounts or cloud workspaces yet.
 - Every sample week carries the same three kinds of scripted incident.
-
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
 - No real-data twin build has been published yet. See [Data](#data).
 - `POST /api/ingest` is open by default: anyone who can reach the API can trigger outbound news
-  fetches. Set `INGEST_TOKEN` in `backend/.env` to require a token (off by default so nothing
-  changes for existing setups).
+  fetches. Set `INGEST_TOKEN` in `backend/.env` to require a token.
+- The public JSON API has no rate limit of its own; the host's limits apply.
 - The agent's ReAct prompt grows with each step and is resent in full. On slow local models, no
   run has reached `AGENT_RESULT` yet.
 - The modelling limitations are listed in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
-- There is no `LICENSE` file yet.
+- Decisions waiting on the owner (licence, pricing wording, terms, security contact, production
+  domain) are in [`NEEDS_INPUT.md`](NEEDS_INPUT.md).

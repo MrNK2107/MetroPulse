@@ -1,4 +1,4 @@
-"""app.simulation.llm.call_llm: provider dispatch, request shape and timeouts (no network)."""
+"""app.llm.call_llm: provider dispatch, request shape and timeouts (no network)."""
 from __future__ import annotations
 
 import asyncio
@@ -8,7 +8,7 @@ import types
 import httpx
 import pytest
 
-from app.simulation import llm
+from app import llm
 
 
 @pytest.fixture

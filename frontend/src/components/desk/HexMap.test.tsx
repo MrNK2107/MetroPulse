@@ -53,3 +53,21 @@ describe("HexMap", () => {
     expect(onPick).toHaveBeenCalledWith({ x: 0, y: 0 });
   });
 });
+
+describe("HexMap with the user's stations", () => {
+  it("draws metro stations as squares and bus halts as dots, and skips transport anchors", () => {
+    const city = getCity("chennai")!;
+    const grid = buildHexGrid(city);
+    const hubs = [
+      { name: "Central", lat: 13.0827, lng: 80.2707, mode: "metro" as const },
+      { name: "Mylapore Halt", lat: 13.03, lng: 80.27, mode: "feeder" as const },
+    ];
+    const { container } = render(
+      <HexMap title="t" grid={grid} anchors={city.anchors} values={new Float32Array(grid.cells.length)} scaleMax={1} hubs={hubs} />
+    );
+    expect(container.querySelector("rect title")?.textContent).toBe("Central (existing hub)");
+    expect(container.querySelector("circle title[data-hub]")?.textContent ?? container.textContent).toContain("Mylapore Halt");
+    const transport = city.anchors.find((a) => a.type === "transport")!;
+    expect(container.textContent).not.toContain(`${transport.name} (existing hub)`);
+  });
+});

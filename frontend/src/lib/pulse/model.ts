@@ -11,18 +11,13 @@
  * The algorithms downstream are real. These numbers are illustrative.
  */
 import { buildHexGrid, City, HexGrid, Point, Anchor } from "./geo";
+import type { Station } from "./import/types";
+import { CityData, cityDataKey } from "./userdata";
 
-export const HOURS_PER_WEEK = 168;
-export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+import { HOURS_PER_WEEK } from "./time";
+import { calibrate, Calibration, UNCALIBRATED } from "./calibrate";
 
-export function dayHourLabel(h: number): string {
-  const d = Math.floor(h / 24) % 7;
-  return `${DAYS[d]} ${String(h % 24).padStart(2, "0")}:00`;
-}
-
-export function hourLabel(h: number): string {
-  return `${String(h % 24).padStart(2, "0")}:00`;
-}
+export { HOURS_PER_WEEK, DAYS, dayHourLabel, hourLabel } from "./time";
 
 export interface ScriptedIncident {
   kind: "surge" | "drop";
@@ -47,6 +42,12 @@ export interface CityModel {
   baselineMean: Float32Array;
   thisWeek: Float32Array;
   scripted: ScriptedIncident[];
+  /** Existing stations: the user's, or the city's transport anchors as metro stations. */
+  hubs: Station[];
+  /** The user's own data this model was built from, if any. */
+  data: CityData | null;
+  /** Boardings scale factors from observed counts; UNCALIBRATED without counts. */
+  calibration: Calibration;
   cityHourly(week: Float32Array): number[];
   rankCellsByDailyTrips(): number[];
   nearestAnchor(p: Point): { anchor: Anchor; km: number };
@@ -129,22 +130,42 @@ function pickAnchor(anchors: Anchor[], types: string[], fallback: number): Ancho
 }
 
 const cache = new Map<string, CityModel>();
+/** Each model holds several Float32Arrays of cells x 168; keep only the most recent few. */
+const CACHE_LIMIT = 8;
+
+export function modelCacheSize(): number {
+  return cache.size;
+}
 
 /** Memoised: the model is deterministic per city. */
-export function getCityModel(city: City): CityModel {
-  let m = cache.get(city.id);
+export function getCityModel(city: City, data?: CityData | null): CityModel {
+  const key = `${city.id}:${cityDataKey(data)}`;
+  let m = cache.get(key);
   if (!m) {
-    m = buildCityModel(city);
-    cache.set(city.id, m);
+    m = buildCityModel(city, data);
+    cache.set(key, m);
+    while (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
   }
   return m;
 }
 
-export function buildCityModel(city: City): CityModel {
+/** The city's configured transport anchors, as metro stations. */
+export function anchorHubs(city: City): Station[] {
+  return city.anchors.filter((a) => a.type === "transport").map((a) => ({ name: a.name, lat: a.lat, lng: a.lng, mode: "metro" }));
+}
+
+export function buildCityModel(baseCity: City, data?: CityData | null): CityModel {
+  const city: City = data?.boundary ? { ...baseCity, boundary: data.boundary.ring } : baseCity;
   const grid = buildHexGrid(city);
   const n = grid.cells.length;
   const rand = mulberry32(seedFrom(city.id));
-  const anchors = city.anchors.map((a) => ({ a, p: grid.project(a.lat, a.lng) }));
+  const hubs: Station[] = data?.hubs ? data.hubs.stations : anchorHubs(city);
+  const hubPoints = hubs.map((h) => grid.project(h.lat, h.lng));
+  // Place names come from the configured anchors; the user's stations replace the transport anchors.
+  const named: Anchor[] = data?.hubs
+    ? [...city.anchors.filter((a) => a.type !== "transport"), ...hubs.map((h) => ({ name: h.name, type: "transport", lat: h.lat, lng: h.lng, weight: 0 }))]
+    : city.anchors;
+  const anchors = named.map((a) => ({ a, p: grid.project(a.lat, a.lng) }));
   const extent = Math.sqrt(n * grid.cellAreaKm2);
 
   const residents = new Float32Array(n);
@@ -158,13 +179,14 @@ export function buildCityModel(city: City): CityModel {
     let lei = 0;
     let hb = 0;
     for (const { a, p } of anchors) {
+      if (a.type === "transport") continue; // hubs are handled below
       const d = Math.hypot(c.x - p.x, c.y - p.y);
       if (RESIDENTIAL_TYPES.has(a.type)) res += 1.5 * a.weight * gauss(d, 2.5);
       if (a.type === "cbd") res += 0.4 * a.weight * gauss(d, 2);
       if (JOB_TYPES.has(a.type)) job += a.weight * gauss(d, 1.6);
       if (LEISURE_TYPES.has(a.type)) lei += a.weight * gauss(d, 1.5);
-      if (a.type === "transport") hb += gauss(d, 0.9);
     }
+    for (const p of hubPoints) hb += gauss(Math.hypot(c.x - p.x, c.y - p.y), 0.9);
     residents[c.index] = res * (0.7 + 0.6 * rand());
     jobs[c.index] = job * (0.7 + 0.6 * rand());
     leisure[c.index] = lei + 0.002;
@@ -264,7 +286,7 @@ export function buildCityModel(city: City): CityModel {
   }
 
   let ranked: number[] | null = null;
-  return {
+  const model: CityModel = {
     city,
     grid,
     residents,
@@ -274,6 +296,9 @@ export function buildCityModel(city: City): CityModel {
     baselineMean,
     thisWeek,
     scripted,
+    hubs,
+    data: data ?? null,
+    calibration: UNCALIBRATED,
     cityHourly(week) {
       const out = new Array<number>(HOURS_PER_WEEK).fill(0);
       for (let c = 0; c < n; c++)
@@ -297,6 +322,8 @@ export function buildCityModel(city: City): CityModel {
       return { anchor: best.a, km: bd };
     },
   };
+  if (data?.counts && data.hubs) model.calibration = calibrate(model, data.counts.rows);
+  return model;
 }
 
 const scaleCache = new WeakMap<CityModel, number>();

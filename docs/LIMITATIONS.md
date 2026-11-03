@@ -43,10 +43,25 @@ coverage" share of a proposal is overstated.
 Each city's outline is drawn around its anchors and population and cut at the coast for coastal
 cities. It is not the municipal or metropolitan boundary.
 
-### 6. No calibration, no error bars
+### 6. Calibration scales; it does not fit
 
-Nothing on the desk has been validated against ridership, AFC taps or survey counts yet. That is
-the next step on the roadmap (`docs/PRODUCT.md`): connect a city's own data, then calibrate.
+With a city's counts loaded (Your data), the siting boardings for a mode are multiplied by the
+median observed/modelled ratio over the matched stations (three or more). The spread of those
+ratios is reported as an inter-quartile band. This corrects the level of the numbers, not their
+shape: the demand field between stations is still the sample model, and there are no fitted error
+bars. Treat a calibrated number as "scaled to this city's counts", not as a forecast.
+
+### 6a. The capital-cost sketch is an assumption table
+
+Line costs come from editable per-km and per-station figures by alignment, labelled with their
+source (order-of-magnitude figures from published Indian metro DPRs and MoHUA appraisals, 2024).
+They are there to rank alternatives on cost per boarding, not to estimate a project.
+
+### 6b. Your boundary and stations change the geometry, not the demand
+
+A loaded boundary moves the grid; loaded stations become the existing hubs (so coverage and
+cannibalisation reflect your network); but residents, jobs and hourly demand are still spread from
+the configured anchors and published population. Survey zones or OD matrices are the next step.
 
 ## The India Twin
 
@@ -88,7 +103,7 @@ score means more negative coverage, not a measured decline. No current screen sh
 
 ## In short
 
-- **The algorithms are real; the desk numbers are illustrative** until a city's own data is
-  connected.
+- **The algorithms are real; the desk numbers are illustrative** until a city's own boundary,
+  stations and counts are loaded, and the demand field is a model until OD data replace it.
 - **Twin values carry receipts.** Check the source, period and trust label before you quote one.
 - **Use it to explore and to frame a study,** not as the study's final numbers.

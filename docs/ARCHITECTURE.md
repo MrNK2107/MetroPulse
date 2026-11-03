@@ -10,8 +10,7 @@ not the original plan. MetroPulse has two user-facing parts:
    urban-policy questions about 30 Indian cities using 5 read-only tools.
 
 The earlier month-by-month simulator (primary/secondary/tertiary loops, `/ws/simulate`,
-simulation frames) has been retired. Some of its modules are still in the tree, but the running
-app does not import them (see [Dormant code](#dormant-code)).
+simulation frames) has been retired and its modules were removed from the tree in 2.0.0.
 
 ## Components
 
@@ -25,7 +24,7 @@ app does not import them (see [Dormant code](#dormant-code)).
 | Twin store | Versioned Parquet files read with DuckDB, `CURRENT.json` pointer | `data/twin/published` |
 | App DB (optional) | Supabase Postgres + pgvector; in-memory fallback when unset | `backend/app/db.py`, `supabase/migrations` |
 | Twin DB mirror (optional) | Postgres/PostGIS via psycopg2 | `backend/twin/store/pg_sync.py` |
-| LLM | One of `mimo` (default), `openai`, `gemini`, `ollama` | `backend/app/simulation/llm.py` |
+| LLM | One of `mimo` (default), `openai`, `gemini`, `ollama` | `backend/app/llm.py` |
 
 ### Backend modules in use
 
@@ -44,13 +43,13 @@ backend/
 │   ├── realtime.py        6 connectors (Google News RSS, GDELT, 3 news-sentiment proxies,
 │   │                      static census from city YAML) and run_ingestion_cycle()
 │   ├── realtime_models.py SnapshotData, SourceStatus, SnapshotQuality
+│   ├── llm.py             call_llm: provider dispatch for the agent
 │   ├── routes/            health, regions, case_studies, realtime, twin
-│   ├── simulation/        llm.py (call_llm); confidence.py and overlay.py are imported
-│   │                      through the package __init__ but no route uses them
 │   └── ws/agent.py        /ws/agent socket and GET /api/agent/status
 ├── engine/
 │   ├── agent/             UrbanAgent, AgentTools, AgentMemory, prompts
 │   ├── nl_engine/         IntentRouter, RegexParser, SpacyParser, domain_maps
+│   │                      (used only by the agent's parse_scenario tool)
 │   ├── config.py          CityConfig: loads data/cities/<city>.yaml (30 cities)
 │   └── models.py          ParsedScenario, sector names and labels
 └── twin/
@@ -61,11 +60,24 @@ backend/
     └── store/             parquet_store, catalog, atomic publish, schema, pg_sync
 ```
 
+`twin/pipeline/census2011.py`, `twin/pipeline/viirs.py` and `twin/store/pg_sync.py` are used,
+but only by the build CLI.
+
 ### Frontend
 
 ```
 frontend/src/
-├── app/page.tsx                     Map page: map, search, place panel, agent chat
+├── app/page.tsx                     Landing page (computed from the sample model at build time)
+├── app/desk, brief, compare         The desk (Pulse, Alerts, Siting with Stop/Line), briefing, compare
+├── app/city/[id]                    30 static city pages + on-request Open Graph image
+├── app/api/v1/*                     JSON API route handlers (envelope in lib/api/envelope.ts)
+├── app/developers, privacy          API docs, privacy statement
+├── lib/pulse/*                      Browser engines: model, alerts, siting, scenario, calibrate,
+│                                    summary, alternatives, import/ parsers, userdata and
+│                                    scenarioStore (localStorage with in-memory fallback)
+├── components/desk/*                DeskApp, HexMap, Timeline, AlertFeed, SitingPanel, LinePanel,
+│                                    DataDrawer, useLineScenario
+├── app/twin/page.tsx                India Twin map page: map, search, place panel, agent chat
 ├── components/twin/IndiaMap.tsx     deck.gl GeoJsonLayer over /api/twin/boundaries/{level}
 ├── components/twin/PlaceSearch.tsx  /api/twin/places/resolve
 ├── components/twin/PlaceCard.tsx    Indicators with receipts for the selected place
@@ -240,7 +252,7 @@ Details that matter when changing it:
   - `query_case_studies`: with Supabase, an embedding plus the pgvector `match_case_studies`
     RPC; otherwise keyword ranking over the 20 built-in case studies.
   - `get_city_profile`, `compare_sectors`, `list_cities`: read `data/cities/*.yaml`.
-- **LLM call** (`app/simulation/llm.py`): `LLM_PROVIDER` picks the backend. Each call has an
+- **LLM call** (`app/llm.py`): `LLM_PROVIDER` picks the backend. Each call has an
   `LLM_TIMEOUT_MS` limit (default 25 s). OpenAI uses JSON mode. MiMo gets a "JSON only"
   system message. Ollama uses `/api/chat` with `stream: false` and sends `options.num_ctx` from
   `OLLAMA_NUM_CTX` (default 8192; 0 leaves the server default, which can be very large).
@@ -277,16 +289,6 @@ behaviour most are `AGENT_WS_TOKEN`, `INGEST_TOKEN`, `WS_MAX_CONNECTIONS`, `LLM_
 `TWIN_DATA_DIR`, `NEWS_REFRESH_SECONDS` and `SEED_CASE_STUDIES_ON_STARTUP`. The frontend reads
 `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL`.
 
-## Dormant code
-
-These modules are in the tree but are not imported by `app.main` or the agent: `app/rag/*`,
-`app/source_ingestion.py`, `app/simulation/explainability.py`, `app/core/provenance.py`,
-`engine/grid.py`, `engine/prediction_generator.py`, `engine/scenario_parser.py`,
-`engine/simulation_explainability.py`, `engine/translator.py`,
-`engine/nl_engine/conversation.py` and `engine/nl_engine/group_scorer.py`. Most still have unit
-tests. `twin/pipeline/census2011.py`, `twin/pipeline/viirs.py` and `twin/store/pg_sync.py`
-are used, but only by the build CLI.
-
 ## Known limits
 
 - **No twin data in a fresh clone.** The build needs 7 manual downloads, and 3 of them need a
@@ -316,3 +318,16 @@ are used, but only by the build CLI.
   districts created after 2011 are estimates.
 
 For data and modelling caveats, see `docs/LIMITATIONS.md` and `docs/DATA_CREDIBILITY.md`.
+
+## The desk's data path (2.0)
+
+Nothing a user loads leaves the browser. `DataDrawer` parses a GeoJSON boundary, a GTFS zip or a
+stations CSV, and a counts CSV with the parsers in `lib/pulse/import/`; only the derived
+`CityData` (ring, stations, daily counts) is written to `localStorage` under
+`metropulse.citydata.<city>.v1`. `getCityModel(city, data)` rebuilds the hexagon grid on the user's
+boundary, uses their stations as the existing hubs (each with its own mode's walk band) and, when
+counts match three or more stations of a mode, computes a calibration factor that `scoreSite`
+applies and prints in its formula. Without data the model is bit-identical to 1.x (pinned in
+`model.test.ts`). Lines (`lib/pulse/scenario.ts`) are saved under `metropulse.scenarios.v1` and
+encoded into share links as `s=<mode>.<alignment>.<lat,lng;...>`. The JSON API serves the sample
+model only; it never sees a user's data (ADR 0002, 0004).
