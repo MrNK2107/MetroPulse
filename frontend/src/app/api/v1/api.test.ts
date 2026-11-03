@@ -97,3 +97,30 @@ describe("API v1", () => {
     expect((await res.json()).error.code).toBe("not_found");
   });
 });
+
+describe("API v1 input hardening", () => {
+  it("rejects a prototype key as a mode with a 400 envelope", async () => {
+    const res = await siteScore(req("/api/v1/cities/chennai/site-score?lat=13.04&lng=80.23&mode=constructor"), ctx("chennai"));
+    expect(res.status).toBe(400);
+    const s = await suggest(req("/api/v1/cities/chennai/suggest?mode=toString"), ctx("chennai"));
+    expect(s.status).toBe(400);
+  });
+
+  it("rejects a null body and a partial cost table on the scenario endpoint", async () => {
+    const nul = await scenario(req("/api/v1/cities/chennai/scenario", { method: "POST", body: "null" }), ctx("chennai"));
+    expect(nul.status).toBe(400);
+    const partial = await scenario(
+      req("/api/v1/cities/chennai/scenario", {
+        method: "POST",
+        body: JSON.stringify({ mode: "metro", stations: [{ lat: 13.0418, lng: 80.2341 }], costs: { perKmCr: { elevated: 1 } } }),
+      }),
+      ctx("chennai")
+    );
+    expect(partial.status).toBe(400);
+    const bad = await scenario(
+      req("/api/v1/cities/chennai/scenario", { method: "POST", body: JSON.stringify({ mode: "metro", stations: [{ lat: 13.0418, lng: 80.2341 }], costs: "cheap" }) }),
+      ctx("chennai")
+    );
+    expect(bad.status).toBe(400);
+  });
+});

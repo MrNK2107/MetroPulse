@@ -1,4 +1,4 @@
-import { strToU8, zipSync } from "fflate";
+import { strFromU8, strToU8, zipSync } from "fflate";
 import { buildGtfsZip } from "./__fixtures__/gtfs";
 import { parseGtfsZip } from "./gtfs";
 
@@ -50,5 +50,20 @@ describe("parseGtfsZip", () => {
     const noStops = zipSync({ "routes.txt": strToU8("route_id,route_type\nR1,1\n") });
     expect(parseGtfsZip(noStops, CHENNAI)).toEqual({ ok: false, error: expect.stringMatching(/stops\.txt/) });
     expect(parseGtfsZip(new Uint8Array([1, 2, 3]), CHENNAI).ok).toBe(false);
+  });
+});
+
+describe("parseGtfsZip on heavy feeds", () => {
+  it("ignores shapes.txt and reads a stop_times with quoted fields", () => {
+    const base = buildGtfsZip();
+    const files = (require("fflate") as typeof import("fflate")).unzipSync(base);
+    const st = strFromU8(files["stop_times.txt"]).replace(/\r\n/g, "\n").split("\n");
+    // add a quoted headsign column with a comma, and a shapes.txt that is not valid CSV
+    const rows = st.map((l, i) => (l ? (i === 0 ? l + ",stop_headsign" : l + ',"Central, via Mount Rd"') : l));
+    files["stop_times.txt"] = strToU8(rows.join("\r\n"));
+    files["shapes.txt"] = strToU8('"""unterminated,\n'.repeat(1000));
+    const zip = zipSync(files, { level: 0 });
+    const r = parseGtfsZip(zip, CHENNAI);
+    expect(r.ok && r.value.filter((s) => s.mode === "metro")).toHaveLength(6);
   });
 });

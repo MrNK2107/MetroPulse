@@ -64,3 +64,31 @@ describe("ringAreaKm2", () => {
     expect(a).toBeLessThan(2000);
   });
 });
+
+describe("boundary sanity", () => {
+  const circle = (n: number, rKm: number): [number, number][] => {
+    const out: [number, number][] = [];
+    for (let i = 0; i < n; i++) {
+      const t = (2 * Math.PI * i) / n;
+      out.push([80.2707 + (rKm * Math.cos(t)) / 108.4, 13.0827 + (rKm * Math.sin(t)) / 110.57]);
+    }
+    out.push(out[0]);
+    return out;
+  };
+
+  it("downsamples a 200,000-vertex ring to at most 5,000 vertices and keeps its area", () => {
+    const r = parseBoundaryGeoJson(JSON.stringify({ type: "Polygon", coordinates: [circle(200000, 15)] }), CHENNAI);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.length).toBeLessThanOrEqual(5001);
+    expect(ringAreaKm2(r.value)).toBeGreaterThan(690);
+    expect(r.report.join(" ")).toMatch(/simplified/);
+  });
+
+  it("rejects a boundary smaller than 5 km² or larger than 10,000 km², saying which", () => {
+    const tiny = parseBoundaryGeoJson(JSON.stringify({ type: "Polygon", coordinates: [circle(32, 0.8)] }), CHENNAI);
+    expect(tiny).toEqual({ ok: false, error: expect.stringMatching(/only [\d.]+ km²/) });
+    const huge = parseBoundaryGeoJson(JSON.stringify({ type: "Polygon", coordinates: [circle(64, 80)] }), CHENNAI);
+    expect(huge).toEqual({ ok: false, error: expect.stringMatching(/km², above the/) });
+  });
+});

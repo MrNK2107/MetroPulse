@@ -176,6 +176,7 @@ export function newScenarioId(): string {
 const MODE_CODE: Record<ModeId, string> = { metro: "m", brt: "b", feeder: "f" };
 const ALIGN_CODE: Record<Alignment, string> = { elevated: "e", underground: "u", "at-grade": "g" };
 const MAX_KM_FROM_CENTRE = 100;
+export const MAX_STATIONS = 60;
 
 /** `m.e.13.0418,80.2341;13.0418,80.2452`: mode, alignment, then lat,lng pairs to four decimals. */
 export function encodeScenario(s: Scenario): string {
@@ -197,7 +198,7 @@ export function decodeScenario(text: string, cityId: string, centre?: [number, n
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
     stations.push({ lat, lng });
   }
-  if (stations.length === 0) return null;
+  if (stations.length === 0 || stations.length > MAX_STATIONS) return null;
   const c = centre ?? cityCentre(cityId);
   if (!c) return null;
   const kx = 111.32 * Math.cos((c[0] * Math.PI) / 180);

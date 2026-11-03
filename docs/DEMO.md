@@ -105,7 +105,7 @@ commissioner, in one sitting."
 | Question | Answer |
 |---|---|
 | Is this real data? | Not yet. Every screen says it is a sample model. The detector, siting and scoring are the production algorithms; the demand field is synthetic until a city's data is connected. |
-| How accurate are the boardings? | Uncalibrated. They come from fixed capture rates per mode. Calibration against observed counts, with error bars, is on the roadmap. |
+| How accurate are the boardings? | Out of the box, uncalibrated: fixed capture rates per mode. Load a counts CSV under Your data and, with three or more matched stations, boardings are scaled to the observed median with the spread shown in the formula. Fitted error bars are on the roadmap. |
 | Why not use an LLM to explain alerts? | Explanations come from deterministic rules so they are auditable and reproducible. Language models may phrase numbers, never produce them. |
 | Where does it run? | In the browser. No GPU, no server for the core loop, no map-tile subscription. A state data centre deployment is possible for the Authority plan. |
 | What does it cost? | See the pricing section on the landing page and in [`PRODUCT.md`](PRODUCT.md). |

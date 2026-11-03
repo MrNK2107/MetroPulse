@@ -8,6 +8,11 @@ import { fail, ok, ParseResult } from "./types";
 export type LngLat = [number, number];
 
 const MAX_CENTRE_KM = 150;
+/** A city planning area: Greater Mumbai is about 600 km², Delhi about 1,500 km². */
+export const MIN_AREA_KM2 = 5;
+export const MAX_AREA_KM2 = 10000;
+/** Rings with more vertices than this are thinned; the grid and the map need far fewer. */
+export const MAX_VERTICES = 5000;
 const KM_PER_DEG_LAT = 110.57;
 
 function kmPerDegLng(lat: number): number {
@@ -105,6 +110,24 @@ export function parseBoundaryGeoJson(text: string, centre: [number, number]): Pa
   }
   if (!best) return fail(invalid ? "Every ring has fewer than 4 points or coordinates out of range" : "No usable ring");
 
+  let simplifiedFrom = 0;
+  if (best.length - 1 > MAX_VERTICES) {
+    const open = best.slice(0, -1);
+    const step = Math.ceil(open.length / MAX_VERTICES);
+    const thin = open.filter((_, i) => i % step === 0);
+    simplifiedFrom = open.length;
+    best = [...thin, thin[0]];
+    bestArea = ringAreaKm2(best);
+  }
+  if (bestArea < MIN_AREA_KM2) {
+    return fail(`This boundary covers only ${bestArea.toFixed(1)} km²; a city planning area is usually hundreds of km². Is it the right feature?`);
+  }
+  if (bestArea > MAX_AREA_KM2) {
+    return fail(
+      `This boundary covers ${Math.round(bestArea).toLocaleString("en-IN")} km², above the ${MAX_AREA_KM2.toLocaleString("en-IN")} km² limit. Is it a state or a district?`
+    );
+  }
+
   const [cLat, cLng] = centre;
   const n = best.length - 1;
   const mLng = best.slice(0, n).reduce((s, p) => s + p[0], 0) / n;
@@ -113,6 +136,7 @@ export function parseBoundaryGeoJson(text: string, centre: [number, number]): Pa
   if (km > MAX_CENTRE_KM) return fail(`This boundary is about ${Math.round(km)} km from the city centre; is it the right file?`);
 
   const report = [`Boundary: ${Math.round(bestArea).toLocaleString("en-IN")} km², ${n} vertices`];
+  if (simplifiedFrom) report.push(`Outline simplified from ${simplifiedFrom.toLocaleString("en-IN")} to ${n} vertices`);
   if (rings.length > 1) report.push(`${rings.length} polygons in the file; the largest was used`);
   if (invalid) report.push(`${invalid} ring${invalid === 1 ? "" : "s"} ignored (too few points or coordinates out of range)`);
   return ok(best, report);

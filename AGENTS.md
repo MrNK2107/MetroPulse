@@ -8,7 +8,7 @@ Mobility-intelligence desk for Indian cities (Pulse, Alerts, Siting, Briefing; r
 - Twin data: `cd backend && python scripts/twin_build.py check|build`
 - Backend tests: `cd backend && pytest tests/unit tests/integration` (906 tests; needs `python -m spacy download en_core_web_sm`)
 - Frontend: `cd frontend && npm run dev`
-- Frontend tests: `cd frontend && npm run test` (259 Jest tests; CI uses `npm run test:ci`; locally under a memory cap use `npx jest --maxWorkers=1`)
+- Frontend tests: `cd frontend && npm run test` (271 Jest tests; CI uses `npm run test:ci`; locally under a memory cap use `npx jest --maxWorkers=1`)
 - End-to-end: `cd frontend && npm run build && npm run e2e` (Playwright, Chromium; `npm run e2e:install` once). Build with `NODE_OPTIONS=--max-old-space-size=2048` on small machines
 - Lint/typecheck: `cd frontend && npm run lint && npm run type-check`
 
@@ -30,7 +30,7 @@ The legacy city simulator is retired (pre-change state: git tag `legacy-metropul
 ## Security
 
 ### Path Traversal Sanitization
-`CityConfig.load()` and `CityConfig.load_geojson()` validate `city_name` with `re.fullmatch(r'[a-zA-Z0-9_]+', city_name)` to prevent directory traversal attacks. Zone file paths in `grid.py` also reject `..` patterns.
+`CityConfig.load()` and `CityConfig.load_geojson()` validate `city_name` with `re.fullmatch(r'[a-zA-Z0-9_]+', city_name)` to prevent directory traversal attacks. The simulator's `grid.py` is gone (2.0.0); the twin's file paths are validated in `backend/twin/`.
 
 ### WebSocket Auth and Connection Limit
 `/ws/agent` is the only WebSocket endpoint (`app/ws/agent.py`, mounted in `app/main.py`). It is **disabled unless `AGENT_WS_TOKEN` is set**; clients send the token as `?token=` or `Authorization: Bearer`, compared with `hmac.compare_digest`. Bad/missing token closes with 1008 before accept. At most `WS_MAX_CONNECTIONS` (default 10) concurrent sessions; extras close with 1013. Client-facing errors are generic (no exception text). Tests: `tests/integration/test_ws_agent.py`. Supabase-Auth-based per-user auth (spec §4) is still to do; the shared token is the interim gate.

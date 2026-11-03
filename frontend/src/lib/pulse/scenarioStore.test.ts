@@ -69,3 +69,12 @@ describe("scenario library", () => {
     getItem.mockRestore();
   });
 });
+
+describe("getScenario by city", () => {
+  it("does not hand a saved line to another city", () => {
+    saveScenario(make("aaaaaaaa", "pune"));
+    expect(getScenario("aaaaaaaa", "chennai")).toBeNull();
+    expect(getScenario("aaaaaaaa", "pune")?.cityId).toBe("pune");
+    expect(getScenario("aaaaaaaa")?.cityId).toBe("pune");
+  });
+});

@@ -226,7 +226,7 @@ build needs 7 source files, some behind a login; see [Data](#data)).
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
 | Backend tests | 906 pytest tests (unit and integration), all passing on 2026-11-03, no network access |
-| Frontend tests | 259 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 6 Playwright smoke tests against the production build |
+| Frontend tests | 271 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 6 Playwright smoke tests against the production build |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---

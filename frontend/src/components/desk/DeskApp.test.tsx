@@ -192,3 +192,50 @@ describe("DeskApp line mode", () => {
     expect(screen.getAllByText(/that shared line could not be read/i).length).toBeGreaterThan(0);
   });
 });
+
+describe("DeskApp review fixes", () => {
+  const ring: [number, number][] = [[80.2, 13.0], [80.34, 13.0], [80.34, 13.16], [80.2, 13.16], [80.2, 13.0]];
+  const store = (data: object) => window.localStorage.setItem("metropulse.citydata.chennai.v1", JSON.stringify(data));
+  afterEach(() => window.localStorage.clear());
+
+  it("survives a suggest=1 reload when a boundary is stored, and drops the stale suggestions", async () => {
+    store({ version: 1, cityId: "chennai", boundary: { source: "b.geojson", ring }, loadedAt: "2026-11-03T00:00:00.000Z" });
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialSuggest />);
+    expect(await screen.findByText(/boundary: b\.geojson/i)).toBeInTheDocument();
+    expect(screen.queryAllByRole("listitem", { name: /suggested site/i })).toHaveLength(0);
+    expect(screen.getByRole("img", { name: /hexagon map/i })).toBeInTheDocument();
+  });
+
+  it("falls back to the sample outline when a stored boundary cannot build a usable grid", async () => {
+    const tiny: [number, number][] = [[80.27, 13.08], [80.275, 13.08], [80.275, 13.085], [80.27, 13.085], [80.27, 13.08]];
+    store({ version: 1, cityId: "chennai", boundary: { source: "tiny.geojson", ring: tiny }, loadedAt: "2026-11-03T00:00:00.000Z" });
+    render(<DeskApp initialCity="chennai" />);
+    expect((await screen.findAllByText(/boundary could not be used/i)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/boundary: tiny\.geojson/i)).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("metropulse.citydata.chennai.v1") ?? "null")).toBeNull();
+  });
+
+  it("keeps a shared BRT line as BRT", () => {
+    const brt = {
+      id: "abcd2345", cityId: "chennai", name: "Shared line", mode: "brt" as const, alignment: "elevated" as const,
+      stations: [{ lat: 13.0418, lng: 80.2341 }, { lat: 13.0418, lng: 80.2452 }],
+      createdAt: "2026-11-03T00:00:00.000Z", updatedAt: "2026-11-03T00:00:00.000Z",
+    };
+    window.history.replaceState(null, "", "/desk?city=chennai");
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialScenario={brt} />);
+    expect(screen.getByRole("radio", { name: /^brt$/i })).toHaveAttribute("aria-checked", "true");
+    expect(window.location.search).toContain("s=b.e.");
+  });
+
+  it("moves the mode picker when a saved feeder line is opened", async () => {
+    window.localStorage.setItem(
+      "metropulse.scenarios.v1",
+      JSON.stringify({ version: 1, scenarios: [{ id: "feed0001", cityId: "chennai", name: "Feeder loop", mode: "feeder", alignment: "at-grade", stations: [{ lat: 13.0418, lng: 80.2341 }], createdAt: "2026-11-03T00:00:00.000Z", updatedAt: "2026-11-03T00:00:00.000Z" }] })
+    );
+    render(<DeskApp initialCity="chennai" initialTab="siting" />);
+    await userEvent.click(screen.getByRole("radio", { name: /^line$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /open feeder loop/i }));
+    expect(screen.getByRole("radio", { name: /^feeder$/i })).toHaveAttribute("aria-checked", "true");
+    expect(window.location.search).toContain("s=f.g.");
+  });
+});

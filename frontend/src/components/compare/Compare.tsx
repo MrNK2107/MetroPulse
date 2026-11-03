@@ -53,7 +53,7 @@ export function Compare({ cityId, a, b }: { cityId: string; a?: string; b?: stri
 
   useEffect(() => {
     setUserData(loadCityData(city.id));
-    const resolve = (text?: string) => (text ? getScenario(text) ?? decodeScenario(text, city.id) : undefined);
+    const resolve = (text?: string) => (text ? getScenario(text, city.id) ?? decodeScenario(text, city.id) : undefined);
     setResolved({ a: resolve(a), b: resolve(b) });
     setLibrary(listScenarios(city.id));
   }, [a, b, city.id]);
@@ -86,7 +86,7 @@ export function Compare({ cityId, a, b }: { cityId: string; a?: string; b?: stri
   };
 
   const values = useMemo(() => new Float32Array(model.grid.cells.length).map((_, c) => model.dailyTrips[c]), [model]);
-  const scaleMax = useMemo(() => Math.max(...Array.from(values)) || 1, [values]);
+  const scaleMax = useMemo(() => values.reduce((m, v) => (v > m ? v : m), 0) || 1, [values]);
 
   return (
     <div className="paper-grain min-h-screen text-ink">

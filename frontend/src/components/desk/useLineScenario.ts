@@ -68,12 +68,14 @@ export function useLineScenario(model: CityModel, mode: ModeId, initial?: Scenar
     refresh();
   }, [line, refresh]);
 
-  const open = useCallback((id: string): boolean => {
-    const s = getScenario(id);
-    if (!s) return false;
-    setLine(s);
-    return true;
-  }, []);
+  const open = useCallback(
+    (id: string): Scenario | null => {
+      const s = getScenario(id, cityId);
+      if (s) setLine(s);
+      return s;
+    },
+    [cityId]
+  );
 
   const remove = useCallback(
     (id: string) => {

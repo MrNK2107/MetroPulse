@@ -114,3 +114,12 @@ describe("scenario helpers", () => {
     expect(s.stations[0].lat).toBeCloseTo(first.lat, 4);
   });
 });
+
+describe("decodeScenario limits", () => {
+  it("rejects a link with more than 60 stations", () => {
+    const pts = Array.from({ length: 61 }, (_, k) => `13.${String(1000 + k).slice(1)},80.2341`).join(";");
+    expect(decodeScenario(`m.e.${pts}`, "chennai")).toBeNull();
+    const ok = Array.from({ length: 60 }, (_, k) => `13.${String(1000 + k).slice(1)},80.2341`).join(";");
+    expect(decodeScenario(`m.e.${ok}`, "chennai")?.stations).toHaveLength(60);
+  });
+});

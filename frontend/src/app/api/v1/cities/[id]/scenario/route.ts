@@ -1,8 +1,23 @@
-import { Alignment, DEFAULT_COSTS, evaluateScenario, Scenario } from "@/lib/pulse/scenario";
+import { Alignment, CostTable, DEFAULT_COSTS, evaluateScenario, Scenario } from "@/lib/pulse/scenario";
 import { MODES, ModeId } from "@/lib/pulse/siting";
 import { fail, nearCity, ok, preflight, withCity } from "@/lib/api/envelope";
 
 const ALIGNMENTS = new Set<Alignment>(["elevated", "underground", "at-grade"]);
+
+/** A cost table is two records over the three alignments, every value a finite number >= 0. */
+function validCosts(c: unknown): c is CostTable {
+  if (!c || typeof c !== "object") return false;
+  const t = c as Record<string, unknown>;
+  for (const key of ["perKmCr", "perStationCr"]) {
+    const rec = t[key];
+    if (!rec || typeof rec !== "object") return false;
+    for (const a of ALIGNMENTS) {
+      const v = (rec as Record<string, unknown>)[a];
+      if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return false;
+    }
+  }
+  return true;
+}
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   let body: Partial<Scenario>;
@@ -11,9 +26,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   } catch {
     return fail(400, "bad_request", "The body must be JSON");
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return fail(400, "bad_request", "The body must be a JSON object");
+  if (body.costs !== undefined && !validCosts(body.costs)) {
+    return fail(400, "bad_request", "costs must be { perKmCr, perStationCr }, each with finite non-negative elevated, underground and at-grade values");
+  }
   const mode = (body.mode ?? "metro") as ModeId;
   const alignment = (body.alignment ?? "elevated") as Alignment;
-  if (!(mode in MODES)) return fail(400, "bad_request", `mode must be one of ${Object.keys(MODES).join(", ")}`);
+  if (!Object.hasOwn(MODES, mode)) return fail(400, "bad_request", `mode must be one of ${Object.keys(MODES).join(", ")}`);
   if (!ALIGNMENTS.has(alignment)) return fail(400, "bad_request", "alignment must be elevated, underground or at-grade");
   const stations = Array.isArray(body.stations) ? body.stations : [];
   if (stations.length === 0 || stations.length > 60) return fail(400, "bad_request", "stations must list 1 to 60 {lat, lng} points");

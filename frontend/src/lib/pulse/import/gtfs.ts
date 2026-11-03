@@ -15,9 +15,50 @@ const MAX_KM = 60;
 const DUP_KM = 0.15;
 const KM_PER_DEG_LAT = 110.57;
 
+const NEEDED = ["stops.txt", "routes.txt", "trips.txt", "stop_times.txt"];
+
+function fileKey(files: Record<string, Uint8Array>, name: string): string | undefined {
+  return Object.keys(files).find((k) => k === name || k.endsWith("/" + name));
+}
+
 function table(files: Record<string, Uint8Array>, name: string) {
-  const key = Object.keys(files).find((k) => k === name || k.endsWith("/" + name));
+  const key = fileKey(files, name);
   return key ? parseCsv(strFromU8(files[key])) : null;
+}
+
+/**
+ * stop_times.txt is by far the largest file (millions of rows in a city bus feed). Only
+ * trip_id and stop_id are needed, so it is scanned line by line without building a full table;
+ * a line with a quote character falls back to the full CSV reader.
+ */
+function stopTripPairs(files: Record<string, Uint8Array>): { pairs: [string, string][]; header: string[] } | null {
+  const key = fileKey(files, "stop_times.txt");
+  if (!key) return null;
+  const text = strFromU8(files[key]);
+  const firstBreak = text.indexOf("\n");
+  const headerLine = (firstBreak < 0 ? text : text.slice(0, firstBreak)).replace(/^\uFEFF/, "");
+  const header = parseCsv(headerLine + "\n").header;
+  const iTrip = findColumn(header, ["trip_id"]);
+  const iStop = findColumn(header, ["stop_id"]);
+  const pairs: [string, string][] = [];
+  if (iTrip < 0 || iStop < 0 || firstBreak < 0) return { pairs, header };
+  let start = firstBreak + 1;
+  const n = text.length;
+  while (start < n) {
+    let end = text.indexOf("\n", start);
+    if (end < 0) end = n;
+    let line = text.slice(start, end);
+    start = end + 1;
+    if (line.endsWith("\r")) line = line.slice(0, -1);
+    if (line === "") continue;
+    let fields: string[];
+    if (line.indexOf('"') < 0) fields = line.split(",");
+    else fields = parseCsv("a\n" + line + "\n").rows[0] ?? [];
+    const trip = fields[iTrip];
+    const stop = fields[iStop];
+    if (trip !== undefined && stop !== undefined) pairs.push([trip.trim(), stop.trim()]);
+  }
+  return { pairs, header };
 }
 
 function normName(s: string): string {
@@ -27,7 +68,8 @@ function normName(s: string): string {
 export function parseGtfsZip(bytes: Uint8Array, centre: [number, number]): ParseResult<Station[]> {
   let files: Record<string, Uint8Array>;
   try {
-    files = unzipSync(bytes);
+    // Inflate only the four files that matter; shapes.txt alone can be most of a feed.
+    files = unzipSync(bytes, { filter: (f) => NEEDED.some((n) => f.name === n || f.name.endsWith("/" + n)) });
   } catch {
     return fail("This file is not a zip archive");
   }
@@ -47,7 +89,7 @@ export function parseGtfsZip(bytes: Uint8Array, centre: [number, number]): Parse
   const stopTypes = new Map<string, Set<number>>();
   const routes = table(files, "routes.txt");
   const trips = table(files, "trips.txt");
-  const stopTimes = table(files, "stop_times.txt");
+  const stopTimes = stopTripPairs(files);
   const report: string[] = [];
   if (routes && trips && stopTimes) {
     const rId = findColumn(routes.header, ["route_id"]);
@@ -59,13 +101,11 @@ export function parseGtfsZip(bytes: Uint8Array, centre: [number, number]): Parse
     const tTrip = findColumn(trips.header, ["trip_id"]);
     const tRoute = findColumn(trips.header, ["route_id"]);
     for (const r of trips.rows) if (tTrip >= 0 && tRoute >= 0) tripRoute.set(r[tTrip], r[tRoute]);
-    const sTrip = findColumn(stopTimes.header, ["trip_id"]);
-    const sStop = findColumn(stopTimes.header, ["stop_id"]);
-    for (const r of stopTimes.rows) {
-      const rt = routeType.get(tripRoute.get(r[sTrip]) ?? "");
+    for (const [trip, stop] of stopTimes.pairs) {
+      const rt = routeType.get(tripRoute.get(trip) ?? "");
       if (rt === undefined) continue;
-      let set = stopTypes.get(r[sStop]);
-      if (!set) stopTypes.set(r[sStop], (set = new Set()));
+      let set = stopTypes.get(stop);
+      if (!set) stopTypes.set(stop, (set = new Set()));
       set.add(rt);
     }
   } else {

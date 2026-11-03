@@ -8,7 +8,7 @@ export function GET(req: Request, { params }: { params: { id: string } }) {
   const lng = numberParam(url, "lng");
   const mode = (url.searchParams.get("mode") ?? "metro") as ModeId;
   if (lat === null || lng === null) return fail(400, "bad_request", "lat and lng are required numeric query parameters");
-  if (!(mode in MODES)) return fail(400, "bad_request", `mode must be one of ${Object.keys(MODES).join(", ")}`);
+  if (!Object.hasOwn(MODES, mode)) return fail(400, "bad_request", `mode must be one of ${Object.keys(MODES).join(", ")}`);
   return withCity(params.id, (model) => {
     if (!nearCity(model, lat, lng)) return fail(400, "bad_request", "The point is more than 100 km from the city centre");
     const site = model.grid.project(lat, lng);

@@ -221,3 +221,43 @@ Backend 870/870 (memcap 2 GB, peak 0.82 GB). Frontend jest 149/149 (`--maxWorker
 - The duplicated anchors are also counted twice by the demand model (double weight for those places in 17 cities). Deduping in `scripts/export_sample_cities.py` changes those cities' numbers and needs the detector tests rechecked; a modelling decision, not done.
 - No LICENSE (NEEDS_INPUT). INGEST_TOKEN policy, Fly secrets and `data/` in the Fly image are still open.
 - Internal files for publishing: see `_night_run/2026-11-02-night/notes/metropulse.md`.
+
+---
+
+# Run 2026-11-03: MetroPulse 2.0, from demo to desk (branch `startup/2026-11-03`, from `integrate/desk-on-main`)
+
+Brief: "transform this project into a complete startup grade one", full authority. Spec and plan
+were written first (`docs/superpowers/specs/2026-11-03-startup-grade-design.md`,
+`docs/superpowers/plans/2026-11-03-startup-grade.md`), then executed task by task with a test
+written and watched to fail before each piece of code.
+
+## What changed
+1. **Your data** drawer on the desk: GeoJSON boundary, GTFS static zip or stations CSV, counts CSV.
+   Parsed in the browser (`lib/pulse/import/`), only derived data kept in `localStorage`
+   (`userdata.ts`), model built on the user's boundary and hubs (`getCityModel(city, data)`),
+   calibration factor per mode from observed counts (`calibrate.ts`) shown in the siting formula.
+2. **Line mode** on Siting (`scenario.ts`, `LinePanel.tsx`, `useLineScenario.ts`): ordered stations
+   scored net of each other, spacing band, editable cost sketch with its source, network score;
+   local library with JSON import/export (`scenarioStore.ts`); share links `?s=m.e.lat,lng;...`.
+3. **Compare** page with a DPR alternatives table (CSV, Markdown); **briefing** takes a line.
+4. **City pages** (30, static) with on-request OG images, sitemap, robots; **JSON API** `/api/v1/*`
+   in the backend's envelope; `/developers`, `/privacy`.
+5. **Repository**: dormant simulator modules and their tests deleted from the backend,
+   `app/llm.py` replaces `app/simulation/llm.py`, stale specs and the night-run notes archived here,
+   Apache-2.0 `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, CODEOWNERS, Dependabot, templates,
+   four ADRs, `NEEDS_INPUT.md`, Playwright smoke suite in CI, version 2.0.0, CHANGELOG.
+
+## Verified
+Backend 906/906 (hermetic). Frontend Jest 259/259 with one worker, lint and type-check clean,
+`next build` OK with a 2 GB heap (30 city pages static), Playwright 6/6 against the build.
+Screenshots in `docs/screenshots/` (`desk-line`, `desk-your-data`, `compare`, `city-page`) were
+taken from the production build with `frontend/e2e/screenshots.ts`.
+
+## Left
+- Workspaces (sign-in, cloud-saved scenarios, team sharing) are the next milestone; local-first only today.
+- The demand field between stations is still the sample model; calibration scales, it does not fit.
+- "Suggest a line" joins the three greedy picks (spread out by design), so it proposes a hub
+  network, not a corridor; a corridor-constrained suggestion is a follow-up.
+- Owner decisions in `NEEDS_INPUT.md`: licence, pricing wording, terms, security contact,
+  `INGEST_TOKEN` policy, production domain.
+- Branch not pushed; no PR opened (the owner decides when to merge).

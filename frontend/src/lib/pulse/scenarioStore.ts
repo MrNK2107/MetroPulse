@@ -9,22 +9,20 @@ const KEY = "metropulse.scenarios.v1";
 const MODES = new Set(["metro", "brt", "feeder"]);
 const ALIGNMENTS = new Set(["elevated", "underground", "at-grade"]);
 
-let memory: Scenario[] | null = null;
+/** The last list written this session; the answer when storage cannot be read. */
+let memory: Scenario[] = [];
 
 function readAll(): Scenario[] {
-  if (memory) return memory;
-  let list: Scenario[] = [];
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) {
-      const d = JSON.parse(raw) as { version?: number; scenarios?: unknown[] };
-      if (d?.version === 1 && Array.isArray(d.scenarios)) list = d.scenarios.filter(isScenario);
-    }
+    if (!raw) return memory.length ? memory : [];
+    const d = JSON.parse(raw) as { version?: number; scenarios?: unknown[] };
+    if (d?.version === 1 && Array.isArray(d.scenarios)) return d.scenarios.filter(isScenario);
+    return [];
   } catch {
-    /* blocked or corrupt: start empty */
+    /* blocked or corrupt: what this session wrote */
+    return memory;
   }
-  memory = list;
-  return list;
 }
 
 function writeAll(list: Scenario[]): void {
@@ -63,8 +61,10 @@ export function listScenarios(cityId?: string): Scenario[] {
     .map(({ s }) => s);
 }
 
-export function getScenario(id: string): Scenario | null {
-  return readAll().find((s) => s.id === id) ?? null;
+/** With a cityId, a line saved for another city is not returned (it would be scored on the wrong model). */
+export function getScenario(id: string, cityId?: string): Scenario | null {
+  const s = readAll().find((x) => x.id === id) ?? null;
+  return s && (!cityId || s.cityId === cityId) ? s : null;
 }
 
 /** Upsert by id; `updatedAt` is set to now. */

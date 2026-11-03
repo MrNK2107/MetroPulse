@@ -91,14 +91,22 @@ function HexMapInner({
       const pts = grid.corners(c);
       return "M" + pts.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join("L") + "Z";
     });
-    const xs = grid.boundary.map((p) => p.x);
-    const ys = grid.boundary.map((p) => -p.y);
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const p of grid.boundary) {
+      if (p.x < x0) x0 = p.x;
+      if (p.x > x1) x1 = p.x;
+      if (-p.y < y0) y0 = -p.y;
+      if (-p.y > y1) y1 = -p.y;
+    }
     const pad = 1.5;
-    const minX = Math.min(...xs) - pad;
-    const minY = Math.min(...ys) - pad;
+    const minX = x0 - pad;
+    const minY = y0 - pad;
     // extra room on the right: anchor labels run rightwards from their dot
-    const w = Math.max(...xs) - Math.min(...xs) + 2 * pad + 0.12 * (Math.max(...xs) - Math.min(...xs));
-    const h = Math.max(...ys) - Math.min(...ys) + 2 * pad;
+    const w = x1 - x0 + 2 * pad + 0.12 * (x1 - x0);
+    const h = y1 - y0 + 2 * pad;
     const boundary = "M" + grid.boundary.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join("L") + "Z";
     return { paths, viewBox: `${minX} ${minY} ${w} ${h}`, boundary, size: Math.max(w, h) };
   }, [grid]);

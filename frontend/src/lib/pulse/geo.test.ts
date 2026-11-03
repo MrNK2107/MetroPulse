@@ -16,3 +16,17 @@ describe("buildHexGrid projection", () => {
     }
   });
 });
+
+describe("hex grid on a very detailed ring", () => {
+  it("builds without a stack overflow on a 200,000-vertex boundary", () => {
+    const city = getCity("chennai")!;
+    const ring: [number, number][] = [];
+    for (let i = 0; i < 200000; i++) {
+      const t = (2 * Math.PI * i) / 200000;
+      ring.push([80.2707 + (12 * Math.cos(t)) / 108.4, 13.0827 + (12 * Math.sin(t)) / 110.57]);
+    }
+    ring.push(ring[0]);
+    const grid = buildHexGrid({ ...city, boundary: ring });
+    expect(grid.cells.length).toBeGreaterThan(400);
+  });
+});

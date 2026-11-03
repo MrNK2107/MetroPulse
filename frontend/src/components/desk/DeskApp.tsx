@@ -84,7 +84,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
   const [hour, setHour] = useState(init.hour);
   const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState<Incident | null>(init.selected);
-  const [mode, setMode] = useState<ModeId>("metro");
+  const [mode, setMode] = useState<ModeId>(initialScenario?.mode ?? "metro");
   const [pin, setPin] = useState<Point | null>(init.pin);
   const [suggestions, setSuggestions] = useState<Suggestion[]>(init.suggestions);
   const lastCity = useRef(startCity);
@@ -95,9 +95,32 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
   const [notice, setNotice] = useState("");
 
   const city = getCity(cityId)!;
-  // The user's own data lives in this browser only, so it is read after mount.
+  // The user's own data lives in this browser only, so it is read after mount. A stored
+  // boundary is treated as untrusted: if it cannot build a usable grid it is dropped, so a bad
+  // file can never make the desk unreachable.
   useEffect(() => {
-    setData(loadCityData(cityId));
+    let loaded = loadCityData(cityId);
+    if (!loaded) return;
+    const cityNow = getCity(cityId)!;
+    let usable = false;
+    try {
+      usable = getCityModel(cityNow, loaded).grid.cells.length >= 10;
+    } catch {
+      usable = false;
+    }
+    if (!usable && loaded.boundary) {
+      const { boundary: _b, ...rest } = loaded;
+      loaded = rest.hubs || rest.counts ? { ...rest, loadedAt: new Date().toISOString() } : null;
+      if (loaded) saveCityData(loaded);
+      else clearCityData(cityId);
+      flash("Your boundary could not be used; back to the sample outline");
+    }
+    setData(loaded);
+    // Anything computed on the sample model before the data arrived refers to the wrong grid.
+    setSuggestions([]);
+    setPin(null);
+    setSelected((cur) => (cur && loaded ? detectIncidents(getCityModel(cityNow, loaded)).find((i) => i.id === cur.id) ?? null : cur));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cityId]);
   const model = useMemo(() => getCityModel(city, data), [city, data]);
   const status = dataStatus(model);
@@ -182,7 +205,11 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
     if (openedRef.current) return;
     openedRef.current = true;
     if (initialScenario === null) flash("That shared line could not be read");
-    if (initialScenarioId && !lineApi.open(initialScenarioId)) flash("That saved line is not on this device");
+    if (initialScenarioId) {
+      const opened = lineApi.open(initialScenarioId);
+      if (opened) setMode(opened.mode);
+      else flash("That saved line is not on this device");
+    }
   }, [initialScenario, initialScenarioId, lineApi, flash]);
 
   const copyLink = useCallback(() => {
@@ -244,9 +271,10 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
         out.push({ id: `st${k}`, at: model.grid.project(s.lat, s.lng), kind: "station", text: String(k + 1), label: `Station ${k + 1}` })
       );
     } else if (tab === "siting") {
-      suggestions.forEach((s, k) =>
-        out.push({ id: `pick${k}`, at: model.grid.cells[s.cell], kind: "pick", text: String(k + 1), label: `Suggested site ${k + 1}` })
-      );
+      suggestions.forEach((s, k) => {
+        const cell = model.grid.cells[s.cell];
+        if (cell) out.push({ id: `pick${k}`, at: cell, kind: "pick", text: String(k + 1), label: `Suggested site ${k + 1}` });
+      });
       if (pin) out.push({ id: "pin", at: pin, kind: "pin", label: "Your proposed site" });
     }
     return out;
@@ -537,7 +565,11 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               onCopyLink={copyLink}
               onClearLine={lineApi.clear}
               onOpenScenario={(id) => {
-                if (lineApi.open(id)) setLineMode(true);
+                const opened = lineApi.open(id);
+                if (opened) {
+                  setMode(opened.mode);
+                  setLineMode(true);
+                }
               }}
               onDeleteScenario={lineApi.remove}
               compareHref={lineCode ? `/compare?city=${cityId}&a=${encodeURIComponent(lineCode)}` : null}

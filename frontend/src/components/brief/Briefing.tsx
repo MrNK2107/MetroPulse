@@ -45,7 +45,7 @@ export function Briefing({ cityId, scenario, scenarioId }: BriefingProps) {
   const [line, setLine] = useState<Scenario | null>(scenario ?? null);
   useEffect(() => {
     setUserData(loadCityData(city.id));
-    if (scenarioId) setLine(getScenario(scenarioId));
+    if (scenarioId) setLine(getScenario(scenarioId, city.id));
   }, [city.id, scenarioId]);
   const model = getCityModel(city, userData);
   const network = useMemo(() => (line && line.stations.length > 0 ? evaluateScenario(model, line) : null), [model, line]);
