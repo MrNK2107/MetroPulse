@@ -144,3 +144,51 @@ describe("DeskApp with the user's data", () => {
     }
   });
 });
+
+describe("DeskApp line mode", () => {
+  const line = {
+    id: "abcd2345",
+    cityId: "chennai",
+    name: "Shared line",
+    mode: "metro" as const,
+    alignment: "elevated" as const,
+    stations: [
+      { lat: 13.0418, lng: 80.2341 },
+      { lat: 13.0418, lng: 80.2452 },
+    ],
+    createdAt: "2026-11-03T00:00:00.000Z",
+    updatedAt: "2026-11-03T00:00:00.000Z",
+  };
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("opens a shared line with its network score and keeps it in the address bar", () => {
+    window.history.replaceState(null, "", "/desk?city=chennai");
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialScenario={line} />);
+    expect(screen.getByText(/proposed line · 2 stations/i)).toBeInTheDocument();
+    expect(screen.getByText(/score = 50 x min\(1,/i)).toBeInTheDocument();
+    expect(window.location.search).toBe("?city=chennai&tab=siting&s=m.e.13.0418%2C80.2341%3B13.0418%2C80.2452");
+  });
+
+  it("adds stations with map clicks in line mode and saves the line", async () => {
+    render(<DeskApp initialCity="chennai" initialTab="siting" />);
+    await userEvent.click(screen.getByRole("radio", { name: /line/i }));
+    const map = screen.getByRole("img", { name: /hexagon map/i });
+    act(() => {
+      fireEvent.click(map, { clientX: 0, clientY: 0 });
+    });
+    act(() => {
+      fireEvent.click(map, { clientX: 0, clientY: 0 });
+    });
+    expect(screen.getByText(/proposed line · 2 stations/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /save line/i }));
+    expect(JSON.parse(window.localStorage.getItem("metropulse.scenarios.v1")!).scenarios).toHaveLength(1);
+  });
+
+  it("says when a shared line could not be read", () => {
+    render(<DeskApp initialCity="chennai" initialTab="siting" initialScenario={null} />);
+    expect(screen.getAllByText(/that shared line could not be read/i).length).toBeGreaterThan(0);
+  });
+});

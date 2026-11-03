@@ -2,8 +2,9 @@
 
 import { hourLabel } from "@/lib/pulse/model";
 import { MODES, ModeId, SiteResult, Suggestion } from "@/lib/pulse/siting";
+import { LinePanel, LinePanelProps } from "./LinePanel";
 
-interface Props {
+interface Props extends Partial<LinePanelProps> {
   mode: ModeId;
   onMode: (m: ModeId) => void;
   result: SiteResult | null;
@@ -14,6 +15,9 @@ interface Props {
   /** Pin suggestion k (0-based) so its full score and catchment show. */
   onPickSuggestion?: (k: number) => void;
   onClear: () => void;
+  /** Line mode: pins accumulate into a line of stations. */
+  lineMode?: boolean;
+  onLineMode?: (on: boolean) => void;
 }
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString("en-IN");
@@ -28,11 +32,35 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-export function SitingPanel({ mode, onMode, result, placeName, suggestions, suggestionNames, onSuggest, onPickSuggestion, onClear }: Props) {
+export function SitingPanel(props: Props) {
+  const { mode, onMode, result, placeName, suggestions, suggestionNames, onSuggest, onPickSuggestion, onClear, lineMode = false, onLineMode } = props;
   const m = MODES[mode];
   const maxHourly = result ? Math.max(...result.hourly) : 1;
+  const noop = () => {};
   return (
     <div className="space-y-4">
+      <div role="radiogroup" aria-label="Siting mode" className="grid grid-cols-2 border border-ink">
+        {(
+          [
+            ["stop", "Stop", "Score one station"],
+            ["line", "Line", "Build a line of stations"],
+          ] as const
+        ).map(([id, label, title]) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={lineMode === (id === "line")}
+            title={title}
+            onClick={() => onLineMode?.(id === "line")}
+            className={`px-2 py-1 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal ${
+              lineMode === (id === "line") ? "bg-ink text-paper" : "hover:bg-paper-deep"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div role="radiogroup" aria-label="Mode" className="grid grid-cols-3 border border-ink">
         {(Object.keys(MODES) as ModeId[]).map((id) => (
           <button
@@ -53,6 +81,27 @@ export function SitingPanel({ mode, onMode, result, placeName, suggestions, sugg
         Walk band {m.walkKm * 1000} m · feeder band {m.feederKm} km
       </p>
 
+      {lineMode ? (
+        <LinePanel
+          line={props.line ?? null}
+          network={props.network ?? null}
+          stationNames={props.stationNames ?? []}
+          scenarios={props.scenarios ?? []}
+          onRemoveStation={props.onRemoveStation ?? noop}
+          onMoveStation={props.onMoveStation ?? noop}
+          onAlignment={props.onAlignment ?? noop}
+          onCosts={props.onCosts ?? noop}
+          onRename={props.onRename ?? noop}
+          onSave={props.onSave ?? noop}
+          onCopyLink={props.onCopyLink ?? noop}
+          onClearLine={props.onClearLine ?? noop}
+          onSuggest={onSuggest}
+          onOpenScenario={props.onOpenScenario ?? noop}
+          onDeleteScenario={props.onDeleteScenario ?? noop}
+          compareHref={props.compareHref ?? null}
+        />
+      ) : (
+        <>
       {!result && (
         <p className="border border-dashed border-ink/40 p-3 text-sm text-ink-soft">
           Click the map to drop a pin. MetroPulse draws the walk and feeder catchments and scores the site.
@@ -134,6 +183,8 @@ export function SitingPanel({ mode, onMode, result, placeName, suggestions, sugg
           </ol>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ export interface Marker {
   id: string;
   at: Point;
   label: string;
-  kind: "pin" | "pick" | "incident";
+  kind: "pin" | "pick" | "incident" | "station";
   text?: string;
 }
 
@@ -24,6 +24,8 @@ interface Props {
   markers?: Marker[];
   /** The user's stations. When given, the configured transport anchors are not drawn. */
   hubs?: Station[];
+  /** A proposed line, drawn through these points in order. */
+  line?: Point[];
   onPick?: (p: Point) => void;
   className?: string;
 }
@@ -78,6 +80,7 @@ function HexMapInner({
   feeder,
   markers = [],
   hubs: userHubs,
+  line,
   onPick,
   className,
 }: Props) {
@@ -234,9 +237,37 @@ function HexMapInner({
           )
         )}
       </g>
+      {line && line.length > 1 && (
+        <g aria-label="Proposed line">
+          <polyline
+            points={line.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join(" ")}
+            fill="none"
+            stroke="#F4EFE6"
+            strokeWidth={fs * 0.7}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <polyline
+            points={line.map((p) => `${p.x.toFixed(3)},${(-p.y).toFixed(3)}`).join(" ")}
+            fill="none"
+            stroke="#1E3A8A"
+            strokeWidth={fs * 0.38}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </g>
+      )}
       <g>
         {markers.map((m) =>
-          m.kind === "pin" ? (
+          m.kind === "station" ? (
+            <g key={m.id} transform={`translate(${m.at.x},${-m.at.y})`}>
+              <circle r={fs * 1.0} fill="#1E3A8A" stroke="#F4EFE6" strokeWidth={fs * 0.25} />
+              <text textAnchor="middle" dy={fs * 0.38} fontSize={fs * 1.05} fontFamily="var(--font-display), serif" fontWeight={700} fill="#F4EFE6">
+                {m.text}
+              </text>
+              <title>{m.label}</title>
+            </g>
+          ) : m.kind === "pin" ? (
             <g key={m.id} transform={`translate(${m.at.x},${-m.at.y})`}>
               <circle r={fs * 0.9} fill="#1E3A8A" stroke="#F4EFE6" strokeWidth={fs * 0.25} />
               <circle r={fs * 0.3} fill="#F4EFE6" />
