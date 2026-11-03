@@ -19,7 +19,7 @@
     "@deck.gl/react": "^9.3.2",
     "@deck.gl/widgets": "^9.3.2",
     "@loaders.gl/core": "^4.4.2",
-    "@luma.gl/core": "^9.3.3",
+    "@luma.gl/core": "^9.4.2",
     "@luma.gl/engine": "^9.3.3",
     "@supabase/supabase-js": "^2.118.0",
     "fflate": "^0.8.3",
