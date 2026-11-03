@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { strToU8, zipSync } from "fflate";
 
 const LINE = "m.e.13.0827,80.2707;13.0500,80.2500";
 
@@ -26,6 +27,26 @@ test.describe("MetroPulse smoke", () => {
     await expect(page.getByText(/score = 50 x min\(1,/i)).toBeVisible();
     await expect(page).toHaveURL(/[?&]s=m\.e\./);
     await expect(page.getByRole("button", { name: /copy link/i }).first()).toBeVisible();
+  });
+
+  test("a GTFS zip is parsed in the background and becomes the existing hubs", async ({ page }) => {
+    const stops = ["stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station"];
+    for (let k = 0; k < 8; k++) stops.push(`S${k},Metro Stop ${k},${13.05 + 0.01 * k},${80.24 + 0.005 * k},0,`);
+    const CRLF = String.fromCharCode(13, 10);
+    const times = stops.slice(1).map((_, k) => `T1,08:00:00,08:00:00,S${k},${k}`);
+    const zip = zipSync({
+      "stops.txt": strToU8(stops.join(CRLF) + CRLF),
+      "routes.txt": strToU8(["route_id,route_short_name,route_type", "R1,Blue,1"].join(CRLF) + CRLF),
+      "trips.txt": strToU8(["route_id,service_id,trip_id", "R1,WK,T1"].join(CRLF) + CRLF),
+      "stop_times.txt": strToU8(["trip_id,arrival_time,departure_time,stop_id,stop_sequence", ...times].join(CRLF) + CRLF),
+    });
+    await page.goto("/desk?city=chennai");
+    await page.getByRole("button", { name: /your data/i }).click();
+    await page.getByLabel(/stations file/i).setInputFiles({ name: "feed.zip", mimeType: "application/zip", buffer: Buffer.from(zip) });
+    await expect(page.getByText(/8 stations read \(8 metro/i)).toBeVisible();
+    await page.getByRole("button", { name: /close your data/i }).click();
+    await expect(page.getByText(/stations: 8 from feed\.zip/i)).toBeVisible();
+    await page.evaluate(() => window.localStorage.clear());
   });
 
   test("compare page renders two options and the delta column", async ({ page }) => {

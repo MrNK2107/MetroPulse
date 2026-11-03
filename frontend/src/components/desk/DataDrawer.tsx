@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { City } from "@/lib/pulse/geo";
 import type { CityModel } from "@/lib/pulse/model";
 import { parseBoundaryGeoJson, ringAreaKm2 } from "@/lib/pulse/import/geojson";
-import { parseGtfsZip } from "@/lib/pulse/import/gtfs";
+import { parseGtfsOffThread } from "@/lib/pulse/import/gtfsWorkerClient";
 import { parseStationsCsv } from "@/lib/pulse/import/stations";
 import { parseCountsCsv } from "@/lib/pulse/import/counts";
 import { parseZonesCsv } from "@/lib/pulse/import/zones";
@@ -177,7 +177,7 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
       } else if (id === "hubs") {
         if (/\.zip$/i.test(file.name)) {
           const bytes = await readFile(file, "bytes");
-          apply(id, parseGtfsZip(bytes, city.center), (stations) => ({ hubs: { source: file.name, stations } }));
+          apply(id, await parseGtfsOffThread(bytes, city.center), (stations) => ({ hubs: { source: file.name, stations } }));
         } else {
           const text = await readFile(file, "text");
           apply(id, parseStationsCsv(text), (stations) => ({ hubs: { source: file.name, stations } }));
