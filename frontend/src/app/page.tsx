@@ -227,6 +227,12 @@ export default function Landing() {
             <Link href="/twin" className="hover:text-signal">
               India Twin
             </Link>
+            <Link href="/developers" className="hover:text-signal">
+              Developers
+            </Link>
+            <Link href="/privacy" className="hover:text-signal">
+              Privacy
+            </Link>
           </div>
         </div>
       </footer>
