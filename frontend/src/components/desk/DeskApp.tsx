@@ -19,6 +19,7 @@ import { CityData, clearCityData, loadCityData, saveCityData } from "@/lib/pulse
 import { DataDrawer, dataStatus } from "./DataDrawer";
 import { encodeScenario, Scenario, scenarioFromSuggestions } from "@/lib/pulse/scenario";
 import { useLineScenario } from "./useLineScenario";
+import { placeName } from "@/lib/pulse/placeName";
 
 type Tab = "pulse" | "alerts" | "siting";
 const TAB_ORDER: Tab[] = ["pulse", "alerts", "siting"];
@@ -28,21 +29,7 @@ const TABS: { id: Tab; label: string; verb: string }[] = [
   { id: "siting", label: "Siting", verb: "Decide" },
 ];
 
-const COMPASS = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"];
-
-export function placeName(model: CityModel, p: Point): string {
-  const { anchor, km } = model.nearestAnchor(p);
-  if (km < 0.35) return anchor.name;
-  const a = model.grid.project(anchor.lat, anchor.lng);
-  const ang = (Math.atan2(p.y - a.y, p.x - a.x) * 180) / Math.PI;
-  const dir = COMPASS[Math.round(((ang + 360) % 360) / 45) % 8];
-  return `${km.toFixed(1)} km ${dir} of ${anchor.name}`;
-}
-
-/** "near T Nagar", but "0.8 km N of Chennai Central" (that is already a position). */
-export function nearPlace(name: string): string {
-  return /^\d/.test(name) ? name : `near ${name}`;
-}
+export { placeName, nearPlace } from "@/lib/pulse/placeName";
 
 export interface DeskAppProps {
   initialCity: string;

@@ -7,11 +7,12 @@ import { getCityModel, HOURS_PER_WEEK, dayHourLabel, hourLabel } from "@/lib/pul
 import { detectIncidents } from "@/lib/pulse/alerts";
 import { existingCoverage, MODES, suggestSites, walkCoverage } from "@/lib/pulse/siting";
 import { HexMap } from "@/components/desk/HexMap";
-import { nearPlace, placeName } from "@/components/desk/DeskApp";
+import { placeName } from "@/lib/pulse/placeName";
 import { fmtInt } from "@/components/desk/SitingPanel";
 import { Wordmark } from "@/components/desk/Wordmark";
 import { CityData, describeCityData, loadCityData } from "@/lib/pulse/userdata";
 import { COST_SOURCE, evaluateScenario, Scenario } from "@/lib/pulse/scenario";
+import { nextStationPhrase } from "@/lib/pulse/summary";
 import { getScenario } from "@/lib/pulse/scenarioStore";
 
 function Figure({ label, value, note }: { label: string; value: string; note: string }) {
@@ -105,7 +106,7 @@ export function Briefing({ cityId, scenario, scenarioId }: BriefingProps) {
             {city.name}: {data.incidents.length} incidents this week, and{" "}
             {line && network
               ? `${line.name} would carry ${fmtInt(network.boardings)} boardings a day`
-              : `the next station belongs ${best ? nearPlace(placeName(model, model.grid.cells[best.cell])) : "near the core"}`}
+              : nextStationPhrase(best ? placeName(model, model.grid.cells[best.cell]) : null)}
           </h1>
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
             {city.name}&rsquo;s {fmtInt(city.population)} residents make about {fmtInt(data.dailyTrips / 2)} trips on an average
