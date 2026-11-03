@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email **security@metropulse.in** with a description, the affected version or commit, and steps to
+Email **GitHub's private vulnerability reporting on this repository (Security tab → Report a vulnerability). It reaches the maintainers without a public issue.
 reproduce. Please do not open a public issue for a vulnerability. We aim to acknowledge a report within
 three working days and to agree a disclosure date with you before anything is published.
 
@@ -43,3 +43,11 @@ and clearing it from the desk or the browser removes it.
 
 The backend test suite never touches the network: `backend/tests/conftest.py` blocks every non-loopback
 connection, so a test cannot leak data or depend on a live service by accident.
+
+## Workspaces (optional)
+
+When `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set, the desk offers magic-link
+sign-in and syncs saved lines to a `scenarios` table. The anon key is public; access is enforced by
+row-level security (`supabase/migrations/010_scenarios.sql`): a user reads and writes only rows where
+`user_id = auth.uid()`. Nothing a user loads under Your data (boundary, stations, counts, zones) is
+sent to the workspace; only saved lines are.

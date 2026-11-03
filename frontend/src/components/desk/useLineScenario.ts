@@ -88,7 +88,7 @@ export function useLineScenario(model: CityModel, mode: ModeId, initial?: Scenar
   const replace = useCallback((s: Scenario | null) => setLine(s), []);
   const clear = useCallback(() => setLine(null), []);
 
-  return { line, network, scenarios, addStation, removeStation, moveStation, setAlignment, setCosts, rename, save, open, remove, replace, clear };
+  return { line, network, scenarios, addStation, removeStation, moveStation, setAlignment, setCosts, rename, save, open, remove, replace, clear, refresh };
 }
 
 export type LineApi = ReturnType<typeof useLineScenario>;

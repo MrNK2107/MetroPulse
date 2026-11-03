@@ -8,7 +8,7 @@ Mobility-intelligence desk for Indian cities (Pulse, Alerts, Siting, Briefing; r
 - Twin data: `cd backend && python scripts/twin_build.py check|build`
 - Backend tests: `cd backend && pytest tests/unit tests/integration` (929 tests; needs `python -m spacy download en_core_web_sm`)
 - Frontend: `cd frontend && npm run dev`
-- Frontend tests: `cd frontend && npm run test` (289 Jest tests; CI uses `npm run test:ci`; locally under a memory cap use `npx jest --maxWorkers=1`)
+- Frontend tests: `cd frontend && npm run test` (304 Jest tests; CI uses `npm run test:ci`; locally under a memory cap use `npx jest --maxWorkers=1`)
 - End-to-end: `cd frontend && npm run build && npm run e2e` (Playwright, Chromium; `npm run e2e:install` once). Build with `NODE_OPTIONS=--max-old-space-size=2048` on small machines
 - Lint/typecheck: `cd frontend && npm run lint && npm run type-check`
 

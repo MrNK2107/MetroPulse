@@ -37,8 +37,10 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-display text-xl font-semibold">Accounts and tracking</h2>
             <p className="mt-1 text-ink-soft">
-              There are no accounts and no analytics. The desk does not set cookies. The web server sees the ordinary request logs
-              any website sees.
+              There are no accounts by default and no analytics. The desk does not set cookies. The web server sees the ordinary
+              request logs any website sees. If the operator has enabled workspaces, you can choose to sign in with a magic link;
+              then the lines you save are stored in that workspace under your email, and nothing else is. Files you load stay on
+              your device either way.
             </p>
           </section>
           <section>

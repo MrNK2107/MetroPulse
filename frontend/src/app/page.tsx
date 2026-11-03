@@ -266,6 +266,9 @@ export default function Landing() {
             <Link href="/privacy" className="hover:text-signal">
               Privacy
             </Link>
+            <Link href="/terms" className="hover:text-signal">
+              Terms
+            </Link>
           </div>
         </div>
       </footer>

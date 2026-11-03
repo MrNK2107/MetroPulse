@@ -130,6 +130,13 @@ npm run type-check
 
 ---
 
+### Cloud workspace (optional)
+
+1. Create a Supabase project and run `supabase/migrations/010_scenarios.sql` in its SQL editor.
+2. Enable email (magic link) sign-in under Authentication.
+3. Put the project URL and anon key in `frontend/.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`. The desk header then shows **Sign in**.
+
 ### End-to-end smoke tests (optional)
 
 ```bash

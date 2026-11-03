@@ -2,6 +2,26 @@
 
 All notable changes to MetroPulse are documented here. Format follows [Conventional Changelog](https://www.conventionalcommits.org/).
 
+## [2.1.0] - 2026-11-03
+
+### Added
+- **Zones** in Your data: a survey-zone CSV replaces the synthetic residents and jobs with the city's
+  own totals, spread around each zone centroid.
+- **Workspaces (beta)**: with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` set, magic-link
+  sign-in and two-way sync of saved lines to a `scenarios` table under row-level security
+  (`supabase/migrations/010_scenarios.sql`). Local-only without them.
+- **Suggest a corridor**: a spacing-constrained suggestion that builds a line, not a hub network.
+- `/terms` (plain-language draft), `app/desk/error.tsx` recovery page.
+
+### Changed
+- GTFS feeds are parsed in a Web Worker with an inline fallback; only the four needed files are
+  inflated and `stop_times.txt` is scanned line by line.
+- Boundaries are thinned to 5,000 vertices and must cover 5 to 10,000 km²; a stored boundary that
+  cannot build a grid is dropped instead of breaking the desk.
+- The API rejects prototype keys as modes, null bodies and partial cost tables.
+- Store reads prefer the in-memory copy only after a failed write; saved lines are scoped to a city.
+- `SECURITY.md` points at GitHub private vulnerability reporting.
+
 ## [2.0.0] - 2026-11-03
 
 From demo to desk. The loop (see, notice, decide, persuade) now runs on a city's own data, builds

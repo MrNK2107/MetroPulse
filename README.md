@@ -93,11 +93,28 @@ device. There is no upload endpoint.
 | Boundary | GeoJSON Polygon, MultiPolygon, Feature or FeatureCollection (largest polygon wins; a polygon far from the city is rejected with the distance) | The hexagon grid is built on your outline instead of the sample one |
 | Stations | GTFS static zip (`stops`, `routes`, `trips`, `stop_times`; mode from route type) or a CSV with `name, lat, lng[, mode]` | Your stations become the existing hubs for coverage and cannibalisation, each with its own mode's walk band |
 | Counts | CSV `station, daily_boardings`, or `station, date, boardings`, or `station, hour, boardings` | With 3 or more matched stations per mode, siting boardings are scaled by the median observed/modelled ratio; the formula shows the factor and the inter-quartile spread |
+| Zones | CSV `zone, lat, lng, residents, jobs[, radius_km]` | Residents and jobs per hexagon come from your zones instead of the synthetic field |
 
 The drawer reports what was kept and dropped, shows an observed-versus-modelled table with the
 per-station error, and lists count rows it could not match to a station.
 
 <img src="docs/screenshots/desk-your-data.png" alt="The Your data drawer open on the desk with a stations CSV loaded and its report" width="900">
+
+### Zones: your residents and jobs
+
+A survey-zone CSV (`zone, lat, lng, residents, jobs[, radius_km]`, one row per TAZ or ward) replaces
+the synthetic residents and jobs: each zone is spread over the hexagons around its centroid and its
+totals are kept, so the demand field between stations becomes the city's own. The hourly shape stays
+the model's profile until counts by hour are connected.
+
+### Workspaces (beta)
+
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` and the desk offers magic-link
+sign-in. Signed in, saved lines sync both ways with your workspace (newest wins) and follow you across
+devices; row-level security keeps each user's rows to that user (`supabase/migrations/010_scenarios.sql`).
+Without the env values the desk is local-only, exactly as before.
+
+GTFS feeds are parsed in a Web Worker, so a large city bus feed does not freeze the desk.
 
 ## Lines, not stops
 
@@ -168,7 +185,9 @@ frontend/src/lib/pulse/
   calibrate.ts median observed/modelled ratio per mode from loaded counts (3+ stations), IQR spread
   summary.ts  the city summary the city pages, the API and the briefing headline share
   alternatives.ts  the DPR alternatives table as CSV and Markdown
-  import/     parsers: csv.ts (RFC 4180), geojson.ts, gtfs.ts (fflate), stations.ts, counts.ts
+  import/     parsers: csv.ts (RFC 4180), geojson.ts, gtfs.ts (fflate, in a Web Worker), stations.ts,
+              counts.ts, zones.ts
+  cloud/      optional workspace: supabase.ts (client + store), scenarioSync.ts (two-way merge), useCloud.ts
   userdata.ts / scenarioStore.ts   browser stores (localStorage, in-memory fallback)
 frontend/src/components/
   desk/       DeskApp (tabs, URL state), HexMap (SVG), Timeline, AlertFeed, SitingPanel,
@@ -227,7 +246,7 @@ build needs 7 source files, some behind a login; see [Data](#data)).
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
 | Backend tests | 929 pytest tests (unit and integration), all passing on 2026-11-03, no network access |
-| Frontend tests | 289 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 6 Playwright smoke tests against the production build |
+| Frontend tests | 304 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 7 Playwright smoke tests against the production build |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---
@@ -438,13 +457,14 @@ frontend/e2e/      Playwright smoke suite and the README screenshot script
 
 ## Known gaps
 
-- The demand field between stations is still the sample model. Loading a boundary, stations and
-  counts makes coverage, cannibalisation and the siting scale yours; the hour-by-hour field only
-  becomes yours when survey zones or OD matrices are connected (next on the roadmap).
+- Without a zones file the demand field between stations is the sample model. With zones loaded,
+  residents and jobs are yours but the hour-by-hour shape is still the model's profile; counts by
+  hour and OD matrices would complete it.
 - Calibration scales boardings by one factor per mode. It is not a fitted model and has no error
   bars beyond the inter-quartile spread it reports.
 - The capital-cost sketch is an editable table of order-of-magnitude figures, not an estimate.
-- Saved lines and loaded data live in one browser. There are no accounts or cloud workspaces yet.
+- Loaded data lives in one browser. Saved lines sync to a workspace only when the operator enables
+  the optional Supabase sign-in (beta).
 - Every sample week carries the same three kinds of scripted incident.
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).
 - No real-data twin build has been published yet. See [Data](#data).

@@ -9,13 +9,15 @@ const KEY = "metropulse.scenarios.v1";
 const MODES = new Set(["metro", "brt", "feeder"]);
 const ALIGNMENTS = new Set(["elevated", "underground", "at-grade"]);
 
-/** The last list written this session; the answer when storage cannot be read. */
+/** The last list written this session; the answer only while storage cannot take or give it. */
 let memory: Scenario[] = [];
+let unsynced = false;
 
 function readAll(): Scenario[] {
+  if (unsynced) return memory;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return memory.length ? memory : [];
+    if (!raw) return [];
     const d = JSON.parse(raw) as { version?: number; scenarios?: unknown[] };
     if (d?.version === 1 && Array.isArray(d.scenarios)) return d.scenarios.filter(isScenario);
     return [];
@@ -29,8 +31,9 @@ function writeAll(list: Scenario[]): void {
   memory = list;
   try {
     window.localStorage.setItem(KEY, JSON.stringify({ version: 1, scenarios: list }));
+    unsynced = false;
   } catch {
-    /* blocked: the memory copy holds it for this session */
+    unsynced = true; // the memory copy is the truth until a write succeeds
   }
 }
 
@@ -71,6 +74,13 @@ export function getScenario(id: string, cityId?: string): Scenario | null {
 export function saveScenario(s: Scenario): void {
   const list = readAll().filter((x) => x.id !== s.id);
   list.push({ ...s, updatedAt: new Date().toISOString() });
+  writeAll(list);
+}
+
+/** Upsert without touching `updatedAt`: for copies that arrive with their own timestamp (cloud sync, imports). */
+export function putScenario(s: Scenario): void {
+  const list = readAll().filter((x) => x.id !== s.id);
+  list.push({ ...s });
   writeAll(list);
 }
 

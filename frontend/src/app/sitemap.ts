@@ -6,7 +6,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  const pages: MetadataRoute.Sitemap = ["", "/desk", "/developers", "/privacy", "/twin"].map((p) => ({
+  const pages: MetadataRoute.Sitemap = ["", "/desk", "/developers", "/privacy", "/terms", "/twin"].map((p) => ({
     url: `${SITE_URL}${p}`,
     lastModified: now,
     changeFrequency: "weekly",

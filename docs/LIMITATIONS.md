@@ -57,11 +57,13 @@ Line costs come from editable per-km and per-station figures by alignment, label
 source (order-of-magnitude figures from published Indian metro DPRs and MoHUA appraisals, 2024).
 They are there to rank alternatives on cost per boarding, not to estimate a project.
 
-### 6b. Your boundary and stations change the geometry, not the demand
+### 6b. Zones give the desk your residents and jobs, not your hours
 
-A loaded boundary moves the grid; loaded stations become the existing hubs (so coverage and
-cannibalisation reflect your network); but residents, jobs and hourly demand are still spread from
-the configured anchors and published population. Survey zones or OD matrices are the next step.
+A loaded boundary moves the grid and loaded stations become the existing hubs. With a zones file,
+residents and jobs per hexagon come from your zone totals (each zone spread around its centroid with
+a Gaussian of the given radius, 1.2 km by default). The hourly shape of demand is still the model's
+weekday and weekend profiles, and leisure and hub demand are still anchor-based. Counts by hour or an
+OD matrix would complete the picture.
 
 ## The India Twin
 

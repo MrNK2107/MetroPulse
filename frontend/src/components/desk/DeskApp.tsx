@@ -20,6 +20,8 @@ import { DataDrawer, dataStatus } from "./DataDrawer";
 import { encodeScenario, Scenario, suggestCorridor } from "@/lib/pulse/scenario";
 import { useLineScenario } from "./useLineScenario";
 import { placeName } from "@/lib/pulse/placeName";
+import { useCloud } from "@/lib/cloud/useCloud";
+import { AccountMenu } from "@/components/account/AccountMenu";
 
 type Tab = "pulse" | "alerts" | "siting";
 const TAB_ORDER: Tab[] = ["pulse", "alerts", "siting"];
@@ -126,6 +128,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
   const status = dataStatus(model);
   const lineApi = useLineScenario(model, mode, initialScenario);
   const { line, network } = lineApi;
+  const cloud = useCloud(cityId, () => lineApi.refresh());
   const incidents = useMemo(() => detectIncidents(model), [model]);
   const covered = useMemo(() => existingCoverage(model), [model]);
   const scaleMax = useMemo(() => demandScaleMax(model), [model]);
@@ -361,6 +364,7 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
           </Link>
         </nav>
         <div className="no-print flex items-center gap-2">
+          <AccountMenu cloud={cloud} />
           <button
             type="button"
             onClick={() => setDataOpen(true)}
@@ -559,7 +563,8 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               onRename={lineApi.rename}
               onSave={() => {
                 lineApi.save();
-                flash("Line saved on this device");
+                if (line) void cloud.pushLine(line);
+                flash(cloud.user ? "Line saved and synced to your workspace" : "Line saved on this device");
               }}
               onCopyLink={copyLink}
               onClearLine={lineApi.clear}
@@ -570,7 +575,10 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
                   setLineMode(true);
                 }
               }}
-              onDeleteScenario={lineApi.remove}
+              onDeleteScenario={(id) => {
+                lineApi.remove(id);
+                void cloud.removeLine(id);
+              }}
               compareHref={lineCode ? `/compare?city=${cityId}&a=${encodeURIComponent(lineCode)}` : null}
             />
           )}

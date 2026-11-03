@@ -43,7 +43,7 @@ async def health_check(db: DatabaseClient = Depends(get_db)):
         "success": True,
         "data": {
             "status": "healthy",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "db_status": db_status,
         },
         "error": None,

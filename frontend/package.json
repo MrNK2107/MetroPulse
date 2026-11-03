@@ -1,6 +1,6 @@
 {
   "name": "metropulse-frontend",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -21,6 +21,7 @@
     "@loaders.gl/core": "^4.4.2",
     "@luma.gl/core": "^9.3.3",
     "@luma.gl/engine": "^9.3.3",
+    "@supabase/supabase-js": "^2.118.0",
     "fflate": "^0.8.3",
     "next": "^14.2.35",
     "react": "^18.3.0",

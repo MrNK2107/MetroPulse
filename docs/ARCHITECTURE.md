@@ -323,11 +323,13 @@ For data and modelling caveats, see `docs/LIMITATIONS.md` and `docs/DATA_CREDIBI
 
 Nothing a user loads leaves the browser. `DataDrawer` parses a GeoJSON boundary, a GTFS zip or a
 stations CSV, and a counts CSV with the parsers in `lib/pulse/import/`; only the derived
-`CityData` (ring, stations, daily counts) is written to `localStorage` under
+`CityData` (ring, stations, daily counts, zones) is written to `localStorage` under
 `metropulse.citydata.<city>.v1`. `getCityModel(city, data)` rebuilds the hexagon grid on the user's
 boundary, uses their stations as the existing hubs (each with its own mode's walk band) and, when
 counts match three or more stations of a mode, computes a calibration factor that `scoreSite`
 applies and prints in its formula. Without data the model is bit-identical to 1.x (pinned in
 `model.test.ts`). Lines (`lib/pulse/scenario.ts`) are saved under `metropulse.scenarios.v1` and
-encoded into share links as `s=<mode>.<alignment>.<lat,lng;...>`. The JSON API serves the sample
-model only; it never sees a user's data (ADR 0002, 0004).
+encoded into share links as `s=<mode>.<alignment>.<lat,lng;...>`. GTFS zips are parsed in a Web Worker
+(`import/gtfs.worker.ts`, inline fallback). The JSON API serves the sample model only; it never sees a
+user's data (ADR 0002, 0004). The optional workspace (`lib/cloud/`) syncs saved lines, and only those,
+to a Supabase `scenarios` table under row-level security when the public env values are set.
