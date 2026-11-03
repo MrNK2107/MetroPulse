@@ -154,8 +154,17 @@ export function anchorHubs(city: City): Station[] {
   return city.anchors.filter((a) => a.type === "transport").map((a) => ({ name: a.name, lat: a.lat, lng: a.lng, mode: "metro" }));
 }
 
+/** Default spread of a survey zone around its centroid, km (about one TAZ in a dense Indian city). */
+export const ZONE_RADIUS_KM = 1.2;
+
 export function buildCityModel(baseCity: City, data?: CityData | null): CityModel {
-  const city: City = data?.boundary ? { ...baseCity, boundary: data.boundary.ring } : baseCity;
+  const zones = data?.zones?.rows ?? null;
+  const zonePopulation = zones ? zones.reduce((a, z) => a + z.residents, 0) : 0;
+  const city: City = {
+    ...baseCity,
+    ...(data?.boundary ? { boundary: data.boundary.ring } : {}),
+    ...(zones && zonePopulation > 0 ? { population: Math.round(zonePopulation) } : {}),
+  };
   const grid = buildHexGrid(city);
   const n = grid.cells.length;
   const rand = mulberry32(seedFrom(city.id));
@@ -192,8 +201,31 @@ export function buildCityModel(baseCity: City, data?: CityData | null): CityMode
     leisure[c.index] = lei + 0.002;
     hub[c.index] = hb;
   }
-  normalise(residents, city.population);
-  normalise(jobs, city.population * 0.4);
+  if (zones) {
+    // The user's zones replace the synthetic residents and jobs: each zone is spread over the
+    // hexagons within three radii of its centroid with Gaussian weights, keeping its totals.
+    residents.fill(0);
+    jobs.fill(0);
+    for (const z of zones) {
+      const p = grid.project(z.lat, z.lng);
+      const sd = z.radiusKm && z.radiusKm > 0 ? z.radiusKm : ZONE_RADIUS_KM;
+      const near = grid.within(p.x, p.y, 3 * sd);
+      let sum = 0;
+      const w = near.map((c) => {
+        const v = gauss(Math.hypot(grid.cells[c].x - p.x, grid.cells[c].y - p.y), sd);
+        sum += v;
+        return v;
+      });
+      if (sum <= 0) continue;
+      near.forEach((c, k) => {
+        residents[c] += (z.residents * w[k]) / sum;
+        jobs[c] += (z.jobs * w[k]) / sum;
+      });
+    }
+  } else {
+    normalise(residents, city.population);
+    normalise(jobs, city.population * 0.4);
+  }
   normalise(leisure, city.population * 0.25);
   normalise(hub, city.population * 0.15);
 

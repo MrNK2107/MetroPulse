@@ -7,6 +7,7 @@
  * (private windows, quota, policies) the data lives in memory for the session.
  */
 import type { Station } from "./import/types";
+import type { Zone } from "./import/zones";
 
 export interface CityData {
   version: 1;
@@ -14,6 +15,8 @@ export interface CityData {
   boundary?: { source: string; ring: [number, number][] };
   hubs?: { source: string; stations: Station[] };
   counts?: { source: string; rows: { station: string; dailyBoardings: number }[] };
+  /** Survey zones: residents and jobs per zone centroid replace the synthetic field. */
+  zones?: { source: string; rows: Zone[] };
   loadedAt: string;
 }
 
@@ -104,5 +107,6 @@ export function describeCityData(data: CityData | null | undefined): string {
     const n = data.counts.rows.length;
     parts.push(`Counts: ${n} station${n === 1 ? "" : "s"} from ${data.counts.source}`);
   }
+  if (data.zones) parts.push(`Zones: ${data.zones.rows.length} from ${data.zones.source}`);
   return parts.join(" · ");
 }

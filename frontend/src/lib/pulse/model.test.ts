@@ -125,3 +125,33 @@ describe("model cache", () => {
     expect(modelCacheSize()).toBeLessThanOrEqual(8);
   });
 });
+
+describe("city model with the user's zones", () => {
+  const city = getCity("chennai")!;
+  const zones = [
+    { name: "Core", lat: 13.0827, lng: 80.2707, residents: 400000, jobs: 600000 },
+    { name: "South", lat: 12.99, lng: 80.22, residents: 300000, jobs: 50000 },
+  ];
+  const data = { version: 1 as const, cityId: "chennai", zones: { source: "zones.csv", rows: zones }, loadedAt: "2026-11-03T00:00:00.000Z" };
+
+  it("spreads each zone's residents and jobs over nearby hexagons and keeps the totals", () => {
+    const m = buildCityModel(city, data);
+    expect(Array.from(m.residents).reduce((a, b) => a + b, 0)).toBeCloseTo(700000, -1);
+    expect(Array.from(m.jobs).reduce((a, b) => a + b, 0)).toBeCloseTo(650000, -1);
+    const core = m.grid.cellAt(m.grid.project(13.0827, 80.2707).x, m.grid.project(13.0827, 80.2707).y)!;
+    const south = m.grid.cellAt(m.grid.project(12.99, 80.22).x, m.grid.project(12.99, 80.22).y)!;
+    expect(m.jobs[core]).toBeGreaterThan(m.jobs[south] * 3);
+    expect(m.residents[south]).toBeGreaterThan(m.residents[core] * 0.5);
+    expect(m.city.population).toBe(700000);
+    expect(m.dailyTrips.reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+  });
+
+  it("leaves a cell far from every zone empty", () => {
+    const m = buildCityModel(city, data);
+    const far = m.grid.cells.reduce((best, c) => {
+      const d = Math.min(...zones.map((z) => Math.hypot(c.x - m.grid.project(z.lat, z.lng).x, c.y - m.grid.project(z.lat, z.lng).y)));
+      return d > best.d ? { d, c } : best;
+    }, { d: -1, c: m.grid.cells[0] });
+    expect(m.residents[far.c.index]).toBe(0);
+  });
+});

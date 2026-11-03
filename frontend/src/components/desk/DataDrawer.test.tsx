@@ -30,13 +30,14 @@ function setup(data: CityData | null) {
 }
 
 describe("DataDrawer", () => {
-  it("shows the three sections with nothing loaded", () => {
+  it("shows the four sections with nothing loaded", () => {
     setup(null);
     const dialog = screen.getByRole("dialog", { name: /your data/i });
     expect(within(dialog).getByRole("heading", { name: /boundary/i })).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /stations/i })).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: /counts/i })).toBeInTheDocument();
-    expect(within(dialog).getAllByText(/nothing loaded/i)).toHaveLength(3);
+    expect(within(dialog).getAllByText(/nothing loaded/i)).toHaveLength(4);
+    expect(within(dialog).getByRole("heading", { name: /zones/i })).toBeInTheDocument();
   });
 
   it("loads a stations CSV, reports it and hands the data back", async () => {
@@ -113,5 +114,17 @@ describe("DataDrawer with two uploads in quick succession", () => {
     fireEvent.change(screen.getByLabelText(/stations file/i), { target: { files: [new File([stationsCsv], "stations.csv", { type: "text/csv" })] } });
     await screen.findByText(/2 stations from stations\.csv/i);
     await screen.findByText(/b\.geojson/i);
+  });
+});
+
+describe("DataDrawer zones", () => {
+  it("loads a zones CSV and hands back the rows", async () => {
+    const { onChange } = setup(null);
+    const file = new File(["zone,lat,lng,residents,jobs\nA,13.08,80.27,1000,2000\nB,13.05,80.25,500,100\n"], "zones.csv", { type: "text/csv" });
+    await userEvent.upload(screen.getByLabelText(/zones file/i), file);
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    const data = onChange.mock.calls[0][0] as CityData;
+    expect(data.zones?.rows).toHaveLength(2);
+    expect(screen.getByText(/2 zones read/i)).toBeInTheDocument();
   });
 });

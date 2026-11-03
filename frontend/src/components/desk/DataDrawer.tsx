@@ -7,6 +7,7 @@ import { parseBoundaryGeoJson, ringAreaKm2 } from "@/lib/pulse/import/geojson";
 import { parseGtfsZip } from "@/lib/pulse/import/gtfs";
 import { parseStationsCsv } from "@/lib/pulse/import/stations";
 import { parseCountsCsv } from "@/lib/pulse/import/counts";
+import { parseZonesCsv } from "@/lib/pulse/import/zones";
 import type { ParseResult } from "@/lib/pulse/import/types";
 import { CityData, describeCityData } from "@/lib/pulse/userdata";
 import { downloadText } from "@/lib/pulse/export";
@@ -21,7 +22,7 @@ interface Props {
   onClose: () => void;
 }
 
-type SectionId = "boundary" | "hubs" | "counts";
+type SectionId = "boundary" | "hubs" | "counts" | "zones";
 
 /** The banner line: what is loaded, plus the calibration when there is one. */
 export function dataStatus(model: CityModel): string {
@@ -181,6 +182,9 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
           const text = await readFile(file, "text");
           apply(id, parseStationsCsv(text), (stations) => ({ hubs: { source: file.name, stations } }));
         }
+      } else if (id === "zones") {
+        const text = await readFile(file, "text");
+        apply(id, parseZonesCsv(text), (rows) => ({ zones: { source: file.name, rows } }));
       } else {
         const text = await readFile(file, "text");
         apply(id, parseCountsCsv(text), (rows) => ({ counts: { source: file.name, rows } }));
@@ -198,7 +202,7 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
     delete next[id];
     setReports((x) => ({ ...x, [id]: [] }));
     setErrors((e) => ({ ...e, [id]: undefined }));
-    onChange(next.boundary || next.hubs || next.counts ? next : null);
+    onChange(next.boundary || next.hubs || next.counts || next.zones ? next : null);
   };
 
   const cal = model.calibration;
@@ -206,6 +210,7 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
   const boundaryLabel = data?.boundary ? `${data.boundary.source} · ${fmtInt(ringAreaKm2(data.boundary.ring))} km²` : null;
   const hubsLabel = data?.hubs ? `${data.hubs.stations.length} stations from ${data.hubs.source}` : null;
   const countsLabel = data?.counts ? `${data.counts.rows.length} stations from ${data.counts.source}` : null;
+  const zonesLabel = data?.zones ? `${data.zones.rows.length} zones from ${data.zones.source}` : null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="presentation">
@@ -262,6 +267,18 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
             busy={busy === "hubs"}
             onFile={(f) => load("hubs", f)}
             onRemove={() => remove("hubs")}
+          />
+          <Section
+            id="zones"
+            title="Zones"
+            blurb="Survey zones (TAZ, wards) as a CSV: zone, lat, lng, residents, jobs[, radius_km]. Residents and jobs per hexagon then come from your zones instead of the sample field; the hourly shape stays the model's."
+            accept=".csv,text/csv"
+            current={zonesLabel}
+            report={reports.zones ?? []}
+            error={errors.zones ?? null}
+            busy={busy === "zones"}
+            onFile={(f) => load("zones", f)}
+            onRemove={() => remove("zones")}
           />
           <Section
             id="counts"
