@@ -260,4 +260,4 @@ taken from the production build with `frontend/e2e/screenshots.ts`.
   network, not a corridor; a corridor-constrained suggestion is a follow-up.
 - Owner decisions in `NEEDS_INPUT.md`: licence, pricing wording, terms, security contact,
   `INGEST_TOKEN` policy, production domain.
-- Branch not pushed; no PR opened (the owner decides when to merge).
+- Merged to main on the owner's choice, pushed with tags v2.0.0 and v2.1.0; CI (tests, e2e, deploy job) green on origin/main.
