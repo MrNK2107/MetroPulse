@@ -11,6 +11,8 @@ import { nearPlace, placeName } from "@/components/desk/DeskApp";
 import { fmtInt } from "@/components/desk/SitingPanel";
 import { Wordmark } from "@/components/desk/Wordmark";
 import { CityData, describeCityData, loadCityData } from "@/lib/pulse/userdata";
+import { COST_SOURCE, evaluateScenario, Scenario } from "@/lib/pulse/scenario";
+import { getScenario } from "@/lib/pulse/scenarioStore";
 
 function Figure({ label, value, note }: { label: string; value: string; note: string }) {
   return (
@@ -28,19 +30,30 @@ function pct(x: number): string {
   return `${v < 10 ? v.toFixed(1) : Math.round(v)}%`;
 }
 
-export function Briefing({ cityId }: { cityId: string }) {
+export interface BriefingProps {
+  cityId: string;
+  /** A proposed line from the link; the briefing then reports it instead of suggesting sites. */
+  scenario?: Scenario | null;
+  /** A saved line's id, resolved on this device after mount. */
+  scenarioId?: string;
+}
+
+export function Briefing({ cityId, scenario, scenarioId }: BriefingProps) {
   const city = getCity(cityId) ?? getCity("chennai")!;
   const [userData, setUserData] = useState<CityData | null>(null);
+  const [line, setLine] = useState<Scenario | null>(scenario ?? null);
   useEffect(() => {
     setUserData(loadCityData(city.id));
-  }, [city.id]);
+    if (scenarioId) setLine(getScenario(scenarioId));
+  }, [city.id, scenarioId]);
   const model = getCityModel(city, userData);
+  const network = useMemo(() => (line && line.stations.length > 0 ? evaluateScenario(model, line) : null), [model, line]);
   const data = useMemo(() => {
     const covered = existingCoverage(model);
     const incidents = detectIncidents(model);
-    const sites = suggestSites(model, "metro", 3, covered, model.calibration);
+    const sites = network ? [] : suggestSites(model, "metro", 3, covered, model.calibration);
     const coverNow = walkCoverage(model);
-    const coverAfter = walkCoverage(model, sites.map((s) => s.result));
+    const coverAfter = network ? network.coverageAfter : walkCoverage(model, sites.map((s) => s.result));
     const hubs = model.hubs.length <= 6 ? model.hubs.map((h) => h.name) : [`${model.hubs.length} stations`];
     const hourly = model.cityHourly(model.baselineMean);
     let peak = 0;
@@ -55,7 +68,11 @@ export function Briefing({ cityId }: { cityId: string }) {
     let max = 0;
     values.forEach((v) => (max = Math.max(max, v)));
     return { incidents, sites, coverNow, coverAfter, hubs, peak, dailyTrips, cores, values, max };
-  }, [model]);
+  }, [model, network]);
+  const stationNames = useMemo(
+    () => (line ? line.stations.map((s, k) => s.name ?? placeName(model, model.grid.project(s.lat, s.lng))) : []),
+    [line, model]
+  );
 
   const surge = data.incidents.filter((i) => i.kind === "surge").length;
   const drop = data.incidents.length - surge;
@@ -85,12 +102,18 @@ export function Briefing({ cityId }: { cityId: string }) {
             </span>
           </div>
           <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] sm:text-5xl">
-            {city.name}: {data.incidents.length} incidents this week, and the next station belongs {best ? nearPlace(placeName(model, model.grid.cells[best.cell])) : "near the core"}
+            {city.name}: {data.incidents.length} incidents this week, and{" "}
+            {line && network
+              ? `${line.name} would carry ${fmtInt(network.boardings)} boardings a day`
+              : `the next station belongs ${best ? nearPlace(placeName(model, model.grid.cells[best.cell])) : "near the core"}`}
           </h1>
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
             {city.name}&rsquo;s {fmtInt(city.population)} residents make about {fmtInt(data.dailyTrips / 2)} trips on an average
             weekday, peaking at {hourLabel(data.peak)}. Only {pct(data.coverNow)} of them live within {MODES.metro.walkKm * 1000} m
-            of a mapped interchange ({data.hubs.join(", ")}); the three recommended metro sites below would raise that to{" "}
+            of a mapped interchange ({data.hubs.join(", ")});{" "}
+            {line && network
+              ? `the proposed ${line.name} (${line.stations.length} stations, ${network.lengthKm.toFixed(1)} km, ${line.alignment}) would raise that to`
+              : "the three recommended metro sites below would raise that to"}{" "}
             {pct(data.coverAfter)}. This week the detector found {surge} surge
             {surge === 1 ? "" : "s"} and {drop} drop{drop === 1 ? "" : "s"} against the four-week baseline.
           </p>
@@ -102,7 +125,7 @@ export function Briefing({ cityId }: { cityId: string }) {
           <Figure
             label="Walk-band coverage"
             value={`${pct(data.coverNow)} → ${pct(data.coverAfter)}`}
-            note={`residents within ${MODES.metro.walkKm} km: today → with the 3 sites`}
+            note={`residents within ${MODES.metro.walkKm} km: today → with ${line ? line.name : "the 3 sites"}`}
           />
           <Figure label="Incidents" value={String(data.incidents.length)} note={`${surge} surge${surge === 1 ? "" : "s"} · ${drop} drop${drop === 1 ? "" : "s"}`} />
         </div>
@@ -115,13 +138,25 @@ export function Briefing({ cityId }: { cityId: string }) {
               anchors={city.anchors}
               values={data.values}
               scaleMax={data.max}
-              markers={data.sites.map((s, k) => ({
-                id: `s${k}`,
-                at: model.grid.cells[s.cell],
-                kind: "pick" as const,
-                text: String(k + 1),
-                label: `Recommended site ${k + 1}`,
-              }))}
+              markers={
+                line
+                  ? line.stations.map((s, k) => ({
+                      id: `st${k}`,
+                      at: model.grid.project(s.lat, s.lng),
+                      kind: "station" as const,
+                      text: String(k + 1),
+                      label: `Station ${k + 1}`,
+                    }))
+                  : data.sites.map((s, k) => ({
+                      id: `s${k}`,
+                      at: model.grid.cells[s.cell],
+                      kind: "pick" as const,
+                      text: String(k + 1),
+                      label: `Recommended site ${k + 1}`,
+                    }))
+              }
+              line={line ? line.stations.map((s) => model.grid.project(s.lat, s.lng)) : undefined}
+              hubs={userData?.hubs ? model.hubs : undefined}
               className="h-full w-full"
             />
           </div>
@@ -129,7 +164,7 @@ export function Briefing({ cityId }: { cityId: string }) {
             <p className="font-display text-lg font-semibold leading-snug">Where the city moves</p>
             <p className="text-ink-soft">
               Average weekday trips per hexagon (about 0.74 km² each). Darker is busier. Squares are existing transport hubs,
-              numbered rings are the recommended metro sites.
+              {line ? " numbered discs are the stations of the proposed line." : " numbered rings are the recommended metro sites."}
             </p>
             <table className="w-full text-left text-[13px]">
               <caption className="pb-1 text-left font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">
@@ -170,6 +205,58 @@ export function Briefing({ cityId }: { cityId: string }) {
           </div>
         </section>
 
+        {line && network ? (
+          <section aria-labelledby="brief-line" className="mt-10 break-inside-avoid">
+            <h2 id="brief-line" className="border-b-2 border-ink pb-1 font-display text-2xl font-semibold">
+              Proposed line: {line.name}
+            </h2>
+            <p className="mt-2 text-sm text-ink-soft">
+              {line.stations.length} {MODES[line.mode].label.toLowerCase()}s over {network.lengthKm.toFixed(1)} km, {line.alignment}. Each
+              station is scored net of the existing hubs and the stations before it. Network score {network.score}/100.
+            </p>
+            <table aria-label="Stations on the proposed line" className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
+                  <th className="py-1 pr-2 font-normal">#</th>
+                  <th className="py-1 font-normal">Station</th>
+                  <th className="py-1 text-right font-normal">Boardings / day</th>
+                  <th className="py-1 text-right font-normal">New</th>
+                  <th className="py-1 text-right font-normal">To next</th>
+                </tr>
+              </thead>
+              <tbody>
+                {network.stations.map((s, k) => (
+                  <tr key={k} className="border-t border-ink/20">
+                    <td className="py-1.5 pr-2 font-display text-lg font-bold text-supply">{k + 1}</td>
+                    <td className="py-1.5">
+                      {stationNames[k]}
+                      {s.spacingWarning && <span className="block text-xs text-signal-deep">{s.spacingWarning}</span>}
+                    </td>
+                    <td className="py-1.5 text-right font-mono tabular">{fmtInt(s.dailyBoardings)}</td>
+                    <td className="py-1.5 text-right font-mono tabular">{Math.round(s.newShare * 100)}%</td>
+                    <td className="py-1.5 text-right font-mono tabular">{s.spacingKmToNext === undefined ? "–" : `${s.spacingKmToNext.toFixed(1)} km`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+              {[
+                ["Daily boardings", fmtInt(network.boardings)],
+                ["New share", `${Math.round(network.newShare * 100)}%`],
+                ["Capital cost", `₹${fmtInt(network.costCr)} cr`],
+                ["Per daily boarding", `₹${network.costPerBoardingLakh.toFixed(2)} lakh`],
+              ].map(([k, v]) => (
+                <div key={k} className="border-t border-ink/20 pt-1">
+                  <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">{k}</dt>
+                  <dd className="font-display text-xl tabular">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 bg-paper-deep px-2 py-1.5 font-mono text-[11px] leading-relaxed">{network.formula}</p>
+            <p className="mt-1 bg-paper-deep px-2 py-1.5 font-mono text-[11px] leading-relaxed">{network.costFormula}</p>
+            <p className="mt-2 text-xs text-ink-soft">Cost assumptions: {COST_SOURCE}</p>
+          </section>
+        ) : (
         <section aria-labelledby="brief-sites" className="mt-10 break-inside-avoid">
           <h2 id="brief-sites" className="border-b-2 border-ink pb-1 font-display text-2xl font-semibold">
             Recommended sites
@@ -202,6 +289,7 @@ export function Briefing({ cityId }: { cityId: string }) {
             </tbody>
           </table>
         </section>
+        )}
 
         <section aria-labelledby="brief-method" className="mt-10 break-inside-avoid text-sm leading-relaxed">
           <h2 id="brief-method" className="border-b-2 border-ink pb-1 font-display text-2xl font-semibold">
