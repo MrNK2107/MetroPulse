@@ -286,6 +286,6 @@ export function transitDesertShare(model: CityModel, covered: Coverage = existin
  */
 export function walkCoverage(model: CityModel, sites: SiteResult[] = []): number {
   const cover = existingCoverage(model);
-  for (const s of sites) serve(cover, catchment(model.grid, s.site, MODES.metro.walkKm));
+  for (const s of sites) serve(cover, catchment(model.grid, s.site, MODES[s.mode].walkKm));
   return residentShare(model, cover);
 }

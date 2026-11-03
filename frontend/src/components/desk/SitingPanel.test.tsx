@@ -102,7 +102,7 @@ describe("SitingPanel in line mode", () => {
   it("explains an empty line and offers to suggest one", async () => {
     const p = setup({ line: null, network: null, stationNames: [] });
     expect(screen.getByText(/click the map to add stations in order/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /suggest a line/i }));
+    await userEvent.click(screen.getByRole("button", { name: /suggest a corridor/i }));
     expect(p.onSuggest).toHaveBeenCalled();
   });
 

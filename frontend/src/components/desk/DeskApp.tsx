@@ -17,7 +17,7 @@ import { useDeskShortcuts } from "./useDeskShortcuts";
 import { cellDay, downloadText, incidentsToCsv } from "@/lib/pulse/export";
 import { CityData, clearCityData, loadCityData, saveCityData } from "@/lib/pulse/userdata";
 import { DataDrawer, dataStatus } from "./DataDrawer";
-import { encodeScenario, Scenario, scenarioFromSuggestions } from "@/lib/pulse/scenario";
+import { encodeScenario, Scenario, suggestCorridor } from "@/lib/pulse/scenario";
 import { useLineScenario } from "./useLineScenario";
 import { placeName } from "@/lib/pulse/placeName";
 
@@ -538,9 +538,8 @@ export function DeskApp({ initialCity, initialTab, initialIncident, initialSugge
               suggestions={suggestions}
               suggestionNames={suggestions.map((s) => placeName(model, model.grid.cells[s.cell]))}
               onSuggest={() => {
-                const picks = suggestSites(model, mode, 3, covered, model.calibration);
-                if (lineMode) lineApi.replace(scenarioFromSuggestions(model, mode, picks));
-                else setSuggestions(picks);
+                if (lineMode) lineApi.replace(suggestCorridor(model, mode, 4));
+                else setSuggestions(suggestSites(model, mode, 3, covered, model.calibration));
               }}
               onPickSuggestion={(k) => {
                 const c = model.grid.cells[suggestions[k].cell];

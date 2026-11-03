@@ -10,6 +10,7 @@ import {
   Scenario,
   scenarioFromSuggestions,
   SPACING_KM,
+  suggestCorridor,
 } from "./scenario";
 
 const city = getCity("chennai")!;
@@ -121,5 +122,25 @@ describe("decodeScenario limits", () => {
     expect(decodeScenario(`m.e.${pts}`, "chennai")).toBeNull();
     const ok = Array.from({ length: 60 }, (_, k) => `13.${String(1000 + k).slice(1)},80.2341`).join(";");
     expect(decodeScenario(`m.e.${ok}`, "chennai")?.stations).toHaveLength(60);
+  });
+});
+
+describe("coverage by mode", () => {
+  it("a feeder line covers fewer residents than the same metro line", () => {
+    const metro = evaluateScenario(model, base([A, B]));
+    const feeder = evaluateScenario(model, base([A, B], { mode: "feeder" }));
+    expect(feeder.coverageAfter).toBeLessThan(metro.coverageAfter);
+    expect(feeder.coverageAfter).toBeGreaterThan(feeder.coverageNow);
+  });
+});
+
+describe("suggestCorridor", () => {
+  it("proposes k stations whose consecutive spacing is inside the band", () => {
+    const s = suggestCorridor(model, "metro", 4);
+    expect(s.stations).toHaveLength(4);
+    const r = evaluateScenario(model, s);
+    expect(r.spacingCompliance).toBe(1);
+    expect(s.name).toBe("Suggested metro corridor");
+    expect(r.boardings).toBeGreaterThan(0);
   });
 });

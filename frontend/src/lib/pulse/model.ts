@@ -130,6 +130,12 @@ function pickAnchor(anchors: Anchor[], types: string[], fallback: number): Ancho
 }
 
 const cache = new Map<string, CityModel>();
+/** Each model holds several Float32Arrays of cells x 168; keep only the most recent few. */
+const CACHE_LIMIT = 8;
+
+export function modelCacheSize(): number {
+  return cache.size;
+}
 
 /** Memoised: the model is deterministic per city. */
 export function getCityModel(city: City, data?: CityData | null): CityModel {
@@ -138,6 +144,7 @@ export function getCityModel(city: City, data?: CityData | null): CityModel {
   if (!m) {
     m = buildCityModel(city, data);
     cache.set(key, m);
+    while (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
   }
   return m;
 }

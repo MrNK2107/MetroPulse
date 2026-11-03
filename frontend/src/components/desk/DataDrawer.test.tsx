@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import React from "react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getCity } from "@/lib/pulse/geo";
 import { buildCityModel } from "@/lib/pulse/model";
@@ -96,5 +97,21 @@ describe("dataStatus", () => {
       counts: { source: "c.csv", rows: loaded.hubs!.stations.map((s) => ({ station: s.name, dailyBoardings: 1000 })) },
     });
     expect(dataStatus(m)).toMatch(/^Stations: 3 from stations\.csv · Counts: 3 stations from c\.csv · Calibrated: metro on 3 stations \(×\d+\.\d\d\)$/);
+  });
+});
+
+describe("DataDrawer with two uploads in quick succession", () => {
+  function Stateful() {
+    const [data, setData] = React.useState<CityData | null>(null);
+    const model = buildCityModel(city, data);
+    return <DataDrawer open city={city} model={model} data={data} onChange={setData} onClose={() => {}} />;
+  }
+  it("keeps both sections", async () => {
+    render(<Stateful />);
+    const ring = JSON.stringify({ type: "Polygon", coordinates: [[[80.2, 13.0], [80.34, 13.0], [80.34, 13.16], [80.2, 13.16], [80.2, 13.0]]] });
+    fireEvent.change(screen.getByLabelText(/boundary file/i), { target: { files: [new File([ring], "b.geojson", { type: "application/json" })] } });
+    fireEvent.change(screen.getByLabelText(/stations file/i), { target: { files: [new File([stationsCsv], "stations.csv", { type: "text/csv" })] } });
+    await screen.findByText(/2 stations from stations\.csv/i);
+    await screen.findByText(/b\.geojson/i);
   });
 });

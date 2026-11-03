@@ -63,3 +63,17 @@ describe("describeCityData", () => {
     expect(describeCityData({ ...sample, boundary: undefined, counts: undefined })).toBe("Stations: 1 from gtfs.zip");
   });
 });
+
+describe("city data store after a failed save", () => {
+  it("serves the copy it accepted, not the stale stored one", () => {
+    saveCityData(sample);
+    const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("QuotaExceededError");
+    });
+    const newer = { ...sample, hubs: { source: "new.csv", stations: [] }, loadedAt: "2026-11-04T00:00:00.000Z" };
+    saveCityData(newer);
+    setItem.mockRestore();
+    expect(loadCityData("chennai")?.hubs?.source).toBe("new.csv");
+    clearCityData("chennai");
+  });
+});

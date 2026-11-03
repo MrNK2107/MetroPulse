@@ -43,9 +43,14 @@ export function Briefing({ cityId, scenario, scenarioId }: BriefingProps) {
   const city = getCity(cityId) ?? getCity("chennai")!;
   const [userData, setUserData] = useState<CityData | null>(null);
   const [line, setLine] = useState<Scenario | null>(scenario ?? null);
+  const [linkNotice, setLinkNotice] = useState(scenario === null ? "That shared line could not be read; showing the recommended sites instead." : "");
   useEffect(() => {
     setUserData(loadCityData(city.id));
-    if (scenarioId) setLine(getScenario(scenarioId, city.id));
+    if (scenarioId) {
+      const saved = getScenario(scenarioId, city.id);
+      setLine(saved);
+      if (!saved) setLinkNotice("That saved line is not on this device; showing the recommended sites instead.");
+    }
   }, [city.id, scenarioId]);
   const model = getCityModel(city, userData);
   const network = useMemo(() => (line && line.stations.length > 0 ? evaluateScenario(model, line) : null), [model, line]);
@@ -94,6 +99,11 @@ export function Briefing({ cityId, scenario, scenarioId }: BriefingProps) {
         </button>
       </div>
 
+      {linkNotice && (
+        <p role="status" className="no-print border-b border-signal bg-signal/10 px-4 py-1 font-mono text-[11px] text-signal-deep sm:px-8">
+          {linkNotice}
+        </p>
+      )}
       <article className="mx-auto max-w-[860px] px-5 py-8 sm:px-8">
         <header className="border-b-4 border-double border-ink pb-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

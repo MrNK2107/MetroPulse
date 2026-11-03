@@ -69,3 +69,11 @@ describe("Briefing", () => {
     expect(screen.queryByRole("heading", { name: /recommended sites/i })).not.toBeInTheDocument();
   });
 });
+
+describe("Briefing with a broken link", () => {
+  it("says when the shared line could not be read", () => {
+    render(<Briefing cityId="chennai" scenario={null} />);
+    expect(screen.getByText(/shared line could not be read/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /recommended sites/i })).toBeInTheDocument();
+  });
+});

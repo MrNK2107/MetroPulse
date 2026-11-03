@@ -80,3 +80,18 @@ describe("scoreSite with a calibration", () => {
     expect(withHubs(4).calibration).toEqual(UNCALIBRATED);
   });
 });
+
+describe("calibrate edge cases", () => {
+  it("treats a zero median as uncalibrated and counts a station once", () => {
+    const m = withHubs(4);
+    const rows = [
+      ...m.hubs.map((h) => ({ station: h.name, dailyBoardings: 0 })),
+      { station: "Central Metro", dailyBoardings: 0 },
+    ];
+    const c = calibrate(m, rows);
+    expect(c.factor.metro).toBe(1);
+    expect(c.matched).toHaveLength(4);
+    expect(c.matched.filter((x) => x.station === "Central")).toHaveLength(1);
+    expect(c.unmatched).toEqual([]);
+  });
+});

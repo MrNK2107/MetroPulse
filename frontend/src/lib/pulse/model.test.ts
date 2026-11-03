@@ -1,5 +1,5 @@
 import { buildHexGrid, getCity, listCities, hexDistanceKm } from "./geo";
-import { buildCityModel, getCityModel, HOURS_PER_WEEK, dayHourLabel } from "./model";
+import { buildCityModel, getCityModel, HOURS_PER_WEEK, dayHourLabel, modelCacheSize } from "./model";
 
 describe("sample city catalogue", () => {
   it("ships all 30 configured cities", () => {
@@ -108,5 +108,20 @@ describe("city model with the user's own data", () => {
     expect(getCityModel(city)).toBe(getCityModel(city));
     expect(getCityModel(city, data)).toBe(getCityModel(city, data));
     expect(getCityModel(city, data)).not.toBe(getCityModel(city));
+  });
+});
+
+describe("model cache", () => {
+  it("keeps at most 8 data-keyed models", () => {
+    const city = getCity("chennai")!;
+    for (let k = 0; k < 10; k++) {
+      getCityModel(city, {
+        version: 1,
+        cityId: "chennai",
+        hubs: { source: `s${k}.csv`, stations: [{ name: `S${k}`, lat: 13.0827, lng: 80.2707 + k * 0.001, mode: "metro" }] },
+        loadedAt: "2026-11-03T00:00:00.000Z",
+      });
+    }
+    expect(modelCacheSize()).toBeLessThanOrEqual(8);
   });
 });

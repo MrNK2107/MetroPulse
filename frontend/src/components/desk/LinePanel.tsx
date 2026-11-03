@@ -185,10 +185,11 @@ export function LinePanel(p: LinePanelProps) {
           onClick={p.onSuggest}
           className="w-full border-2 border-ink bg-ink px-3 py-2 text-sm font-semibold text-paper transition hover:border-supply hover:bg-supply focus:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         >
-          Suggest a line
+          Suggest a corridor
         </button>
         <p className="mt-1 text-xs text-ink-soft">
-          Three greedy picks loaded as a line. Each pick counts only demand the earlier picks and existing hubs do not already serve.
+          Starts at the best single site, then adds up to three more stations, each inside the spacing band of the last and
+          chosen for the new boardings it adds once the stations before it are served.
         </p>
       </div>
 

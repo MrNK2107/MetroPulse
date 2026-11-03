@@ -13,7 +13,7 @@
  */
 import { getCity, hexDistanceKm, Point } from "./geo";
 import type { CityModel } from "./model";
-import { catchment, Coverage, existingCoverage, ModeId, MODES, scoreSite, SiteResult, Suggestion, walkCoverage } from "./siting";
+import { catchment, Coverage, existingCoverage, ModeId, MODES, scoreSite, SiteResult, Suggestion, suggestSites, walkCoverage } from "./siting";
 
 export type Alignment = "elevated" | "underground" | "at-grade";
 
@@ -212,6 +212,59 @@ export function decodeScenario(text: string, cityId: string, centre?: [number, n
 function cityCentre(cityId: string): [number, number] | null {
   const city = getCity(cityId);
   return city ? city.center : null;
+}
+
+/**
+ * A corridor, not a hub network: the first station is the best single site; each next station
+ * is the cell inside the spacing band of the previous one that adds the most new boardings,
+ * with coverage updated as the line grows. Stops early if no cell in the band adds anything.
+ */
+export function suggestCorridor(model: CityModel, modeId: ModeId, k = 4): Scenario {
+  const mode = MODES[modeId];
+  const [minKm, maxKm] = SPACING_KM[modeId];
+  const covered = new Float32Array(existingCoverage(model));
+  const picks: Point[] = [];
+  const first = suggestSites(model, modeId, 1, covered, model.calibration)[0];
+  if (first) {
+    const c = model.grid.cells[first.cell];
+    picks.push({ x: c.x, y: c.y });
+    const feeder = catchment(model.grid, c, mode.feederKm);
+    serve(covered, feeder.cells, feeder.weights);
+  }
+  while (picks.length > 0 && picks.length < k) {
+    const last = picks[picks.length - 1];
+    let best: Point | null = null;
+    let bestValue = 0;
+    for (const idx of model.grid.within(last.x, last.y, maxKm)) {
+      const c = model.grid.cells[idx];
+      const d = hexDistanceKm(last, c);
+      if (d < minKm || d > maxKm) continue;
+      if (picks.some((p) => hexDistanceKm(p, c) < minKm)) continue;
+      const v = scoreSite(model, c, modeId, covered, model.calibration).newBoardings;
+      if (v > bestValue) {
+        bestValue = v;
+        best = { x: c.x, y: c.y };
+      }
+    }
+    if (!best) break;
+    picks.push(best);
+    const feeder = catchment(model.grid, best, mode.feederKm);
+    serve(covered, feeder.cells, feeder.weights);
+  }
+  const now = new Date().toISOString();
+  return {
+    id: newScenarioId(),
+    cityId: model.city.id,
+    name: `Suggested ${mode.label.split(" ")[0].toLowerCase()} corridor`,
+    mode: modeId,
+    alignment: "elevated",
+    stations: picks.map((p) => {
+      const { lat, lng } = model.grid.unproject(p);
+      return { lat: Math.round(lat * 1e4) / 1e4, lng: Math.round(lng * 1e4) / 1e4 };
+    }),
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 export function scenarioFromSuggestions(model: CityModel, modeId: ModeId, picks: Suggestion[]): Scenario {

@@ -19,12 +19,15 @@ export interface CityData {
 
 const PREFIX = "metropulse.citydata.";
 const memory = new Map<string, string>();
+/** Keys whose last write did not reach storage (quota, policy): the memory copy is the truth. */
+const unsynced = new Set<string>();
 
 export function cityDataStorageKey(cityId: string): string {
   return `${PREFIX}${cityId}.v1`;
 }
 
 function read(key: string): string | null {
+  if (unsynced.has(key)) return memory.get(key) ?? null;
   try {
     const v = window.localStorage.getItem(key);
     if (v !== null) return v;
@@ -40,8 +43,9 @@ function write(key: string, value: string | null): void {
   try {
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, value);
+    unsynced.delete(key);
   } catch {
-    /* blocked: memory copy already holds it */
+    unsynced.add(key);
   }
 }
 

@@ -67,3 +67,14 @@ describe("parseGtfsZip on heavy feeds", () => {
     expect(r.ok && r.value.filter((s) => s.mode === "metro")).toHaveLength(6);
   });
 });
+
+describe("GTFS extended route types", () => {
+  it("treats 100-117 (rail) and 400-404 (urban rail) as metro", () => {
+    const base = buildGtfsZip();
+    const files = (require("fflate") as typeof import("fflate")).unzipSync(base);
+    files["routes.txt"] = strToU8("route_id,route_short_name,route_type\r\nR1,Blue,401\r\nR2,500C,700\r\n");
+    const r = parseGtfsZip(zipSync(files, { level: 0 }), CHENNAI);
+    expect(r.ok && r.value.filter((s) => s.mode === "metro")).toHaveLength(6);
+    expect(r.ok && r.value.filter((s) => s.mode === "feeder")).toHaveLength(6);
+  });
+});

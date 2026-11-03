@@ -21,8 +21,8 @@ async function main() {
   // Line mode: a three-station line suggested by the greedy search.
   await page.goto(`${BASE}/desk?city=chennai&tab=siting`);
   await page.getByRole("radio", { name: /^line$/i }).click();
-  await page.getByRole("button", { name: /suggest a line/i }).click();
-  await page.getByText(/proposed line · 3 stations/i).waitFor();
+  await page.getByRole("button", { name: /suggest a corridor/i }).click();
+  await page.getByText(/proposed line · \d stations/i).waitFor();
   await page.screenshot({ path: `${OUT}/desk-line.png` });
 
   // Your data drawer with a stations CSV loaded.

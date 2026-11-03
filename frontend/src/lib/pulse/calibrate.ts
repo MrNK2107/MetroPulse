@@ -48,12 +48,15 @@ export function calibrate(model: CityModel, counts: { station: string; dailyBoar
   const matched: Calibration["matched"] = [];
   const unmatched: string[] = [];
   const modelledCache = new Map<number, number>();
+  const seen = new Set<number>();
   for (const row of counts) {
     const k = byKey.get(normaliseStationName(row.station));
     if (k === undefined) {
       unmatched.push(row.station);
       continue;
     }
+    if (seen.has(k)) continue; // two rows naming the same station: the first one counts
+    seen.add(k);
     const hub = model.hubs[k];
     let modelled = modelledCache.get(k);
     if (modelled === undefined) {
@@ -73,6 +76,7 @@ export function calibrate(model: CityModel, counts: { station: string; dailyBoar
     stations[mode] = ratios.length;
     if (ratios.length < MIN_STATIONS) continue;
     const median = quantile(ratios, 0.5);
+    if (!(median > 0)) continue; // all-zero counts cannot calibrate a mode
     factor[mode] = median;
     iqr[mode] = median > 0 ? (quantile(ratios, 0.75) - quantile(ratios, 0.25)) / median : 0;
   }

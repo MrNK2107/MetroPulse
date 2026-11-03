@@ -106,7 +106,8 @@ and the stations before it, so the line's boardings are its own. The panel shows
 boardings, new share, union walk-band coverage, length, station spacing against a per-mode band
 (metro 0.8-2.0 km) with warnings, an editable capital-cost sketch (₹ crore per km and per station
 by alignment, with its source stated), cost per daily boarding, and a network score with its
-formula. **Suggest a line** loads the three greedy picks.
+formula. **Suggest a corridor** starts at the best single site and adds up to three stations, each
+inside the spacing band of the last and chosen for the new boardings it adds.
 
 Lines are saved on this device (JSON export and import), and a **share link** carries the line in
 the URL itself: `/desk?city=chennai&s=m.e.13.0418,80.2341;13.0418,80.2452`.
@@ -226,7 +227,7 @@ build needs 7 source files, some behind a login; see [Data](#data)).
 | Realtime connectors | 6: Google News RSS, GDELT, 3 news-sentiment proxies (mobility, jobs, land value), static census |
 | LLM providers | MiMo (default), Gemini, OpenAI, Ollama. Set with `LLM_PROVIDER` |
 | Backend tests | 906 pytest tests (unit and integration), all passing on 2026-11-03, no network access |
-| Frontend tests | 271 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 6 Playwright smoke tests against the production build |
+| Frontend tests | 279 Jest + Testing Library tests (engines, parsers, calibration, scenarios, stores, desk, drawer, line panel, compare, briefing, city pages, API routes, landing) plus 6 Playwright smoke tests against the production build |
 | API latency | p50 0.8 to 2.6 ms, p99 at most 4.1 ms at concurrency 1, loopback, 1 worker. See [`docs/benchmarks.md`](docs/benchmarks.md) |
 
 ---
@@ -439,9 +440,6 @@ frontend/e2e/      Playwright smoke suite and the README screenshot script
 - Calibration scales boardings by one factor per mode. It is not a fitted model and has no error
   bars beyond the inter-quartile spread it reports.
 - The capital-cost sketch is an editable table of order-of-magnitude figures, not an estimate.
-- **Suggest a line** strings together the three greedy picks, which the search spreads out on
-  purpose; it proposes a network of hubs, not a corridor, and the spacing check says so. Build
-  corridors by clicking stations in order.
 - Saved lines and loaded data live in one browser. There are no accounts or cloud workspaces yet.
 - Every sample week carries the same three kinds of scripted incident.
 - `/ws/agent` uses one shared token. Per-user auth is planned (spec §4).

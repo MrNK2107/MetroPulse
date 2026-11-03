@@ -136,6 +136,9 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
   const [reports, setReports] = useState<Partial<Record<SectionId, string[]>>>({});
   const [busy, setBusy] = useState<SectionId | null>(null);
   const panel = useRef<HTMLDivElement>(null);
+  // Uploads are async; a second file must build on whatever the first one produced.
+  const latest = useRef<CityData | null>(data);
+  latest.current = data;
 
   useEffect(() => {
     if (!open) return;
@@ -149,7 +152,7 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
 
   if (!open) return null;
 
-  const base = (): CityData => data ?? { version: 1, cityId: city.id, loadedAt: new Date().toISOString() };
+  const base = (): CityData => latest.current ?? { version: 1, cityId: city.id, loadedAt: new Date().toISOString() };
 
   const apply = <T,>(id: SectionId, r: ParseResult<T>, build: (v: T) => Partial<CityData>) => {
     if (!r.ok) {
@@ -159,7 +162,9 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
     }
     setErrors((e) => ({ ...e, [id]: undefined }));
     setReports((x) => ({ ...x, [id]: r.report }));
-    onChange({ ...base(), ...build(r.value), loadedAt: new Date().toISOString() });
+    const next: CityData = { ...base(), ...build(r.value), loadedAt: new Date().toISOString() };
+    latest.current = next;
+    onChange(next);
   };
 
   const load = async (id: SectionId, file: File) => {
@@ -285,8 +290,8 @@ export function DataDrawer({ open, city, model, data, onChange, onClose }: Props
                     </tr>
                   </thead>
                   <tbody className="tabular">
-                    {cal.matched.map((m) => (
-                      <tr key={m.station} className="border-t border-ink/15">
+                    {cal.matched.map((m, k) => (
+                      <tr key={`${k}-${m.station}`} className="border-t border-ink/15">
                         <td className="py-1 pr-2">{m.station}</td>
                         <td className="py-1 text-right">{fmtInt(m.observed)}</td>
                         <td className="py-1 text-right">{fmtInt(m.modelled)}</td>

@@ -121,7 +121,7 @@ commissioner, in one sitting."
 
 ## 4:00 - Line mode, Your data, Compare (90 s, the 2.0 beats)
 
-- On **Siting**, click **Line**. Click three points along a corridor (or press **Suggest a line**).
+- On **Siting**, click **Line**. Click three points along a corridor (or press **Suggest a corridor**).
   Read the network figures: boardings net of the line's own cannibalisation, new share, length,
   the spacing warning if two stops are too close, the cost sketch and **cost per daily boarding**.
   "Every figure shows its formula, and the cost table is editable, so a DPR team can put their own

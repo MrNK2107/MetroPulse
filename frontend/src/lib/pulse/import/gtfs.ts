@@ -65,6 +65,11 @@ function normName(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/** GTFS route_type, including the extended (Google) codes: rail and urban rail are metro, the rest feeder. */
+export function isRailRouteType(t: number): boolean {
+  return t === 1 || t === 2 || (t >= 100 && t <= 117) || (t >= 400 && t <= 404);
+}
+
 export function parseGtfsZip(bytes: Uint8Array, centre: [number, number]): ParseResult<Station[]> {
   let files: Record<string, Uint8Array>;
   try {
@@ -122,6 +127,7 @@ export function parseGtfsZip(bytes: Uint8Array, centre: [number, number]): Parse
   const [cLat, cLng] = centre;
   const kx = 111.32 * Math.cos((cLat * Math.PI) / 180);
   const kept: Station[] = [];
+  const byNorm = new Map<string, Station[]>();
   let far = 0;
   let merged = 0;
   let children = 0;
@@ -145,17 +151,19 @@ export function parseGtfsZip(bytes: Uint8Array, centre: [number, number]): Parse
     const types = new Set<number>();
     for (const id of [r[iId], ...(childrenOf.get(r[iId]) ?? [])]) for (const t of stopTypes.get(id) ?? []) types.add(t);
     const mode: ModeId =
-      types.size > 0 ? (types.has(1) || types.has(2) ? "metro" : "feeder") : /metro|station/i.test(name) ? "metro" : "feeder";
+      types.size > 0 ? (Array.from(types).some(isRailRouteType) ? "metro" : "feeder") : /metro|station/i.test(name) ? "metro" : "feeder";
     const key = normName(name);
-    const dup = kept.find(
-      (s) => normName(s.name) === key && Math.hypot((s.lng - lng) * kx, (s.lat - lat) * KM_PER_DEG_LAT) <= DUP_KM
-    );
+    const same = byNorm.get(key) ?? [];
+    const dup = same.find((s) => Math.hypot((s.lng - lng) * kx, (s.lat - lat) * KM_PER_DEG_LAT) <= DUP_KM);
     if (dup) {
       merged++;
       if (mode === "metro") dup.mode = "metro";
       continue;
     }
-    kept.push({ name, lat, lng, mode });
+    const station = { name, lat, lng, mode };
+    kept.push(station);
+    same.push(station);
+    byNorm.set(key, same);
   }
   if (kept.length === 0) return fail("No stations within 60 km of the city centre in stops.txt");
   const metro = kept.filter((s) => s.mode === "metro").length;
