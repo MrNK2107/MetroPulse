@@ -17,3 +17,7 @@ owner's confirmation or a replacement. Remove an entry once it is settled.
 5. **`INGEST_TOKEN` deployment policy.** `POST /api/ingest` is open when `INGEST_TOKEN` is unset. Decide
    whether production deployments must set it (recommended for any publicly reachable backend), and
    whether the backend should refuse to start without it outside development.
+
+## Production domain
+
+`frontend/src/app/sitemap.ts`, `robots.ts` and the root `metadataBase` read `NEXT_PUBLIC_SITE_URL` and fall back to `http://localhost:3000`. Set it to the public domain in the deployment environment so the sitemap, robots file and Open Graph URLs are absolute and correct.

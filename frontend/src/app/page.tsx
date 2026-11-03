@@ -21,8 +21,8 @@ const LOOP = [
   {
     verb: "Decide",
     name: "Siting",
-    title: "what if a station opens here?",
-    body: "Drop a pin, pick metro, BRT or feeder. Get residents and jobs in the walk band, daily boardings, how much is new coverage, the peak hour and a 0-100 score with its formula. Or ask for the three best sites.",
+    title: "a stop, or a whole line?",
+    body: "Drop a pin, pick metro, BRT or feeder, and get boardings, new coverage, the peak hour and a 0-100 score with its formula. Switch to Line mode and the stations add up into a corridor: boardings net of the line's own cannibalisation, spacing checks, a cost sketch, cost per boarding. Save it, share it by link, compare two.",
   },
   {
     verb: "Persuade",
@@ -39,9 +39,15 @@ const TRUST = [
   ["Runs on a laptop", "The core loop runs in the browser. No GPU, no language model, no map-tile subscription."],
 ];
 
+const YOUR_DATA = [
+  ["Boundary", "A GeoJSON polygon of the planning area replaces the sample outline."],
+  ["Stations", "A GTFS static zip or a CSV of stations becomes the existing hubs: coverage and cannibalisation use your network, not two configured interchanges."],
+  ["Counts", "Observed daily boardings per station calibrate the siting numbers: the median observed-to-modelled ratio per mode, with its spread shown in the formula."],
+];
+
 const PLANS = [
-  ["Explorer", "Free", "Students, journalists, evaluation", "All 30 sample cities, Pulse, Siting, watermarked briefings"],
-  ["Desk", "₹3.5 lakh / city / yr", "Consultancies on a CMP or DPR", "Your data loaded, unlimited scenarios, unbranded briefings, exports, 3 seats"],
+  ["Explorer", "Free", "Students, journalists, evaluation", "Everything in the browser: all 30 sample cities, your own boundary, stations and counts (never uploaded), lines, compare, briefings"],
+  ["Desk", "₹3.5 lakh / city / yr", "Consultancies on a CMP or DPR", "Hosted workspaces, cloud-saved scenarios, team sharing, unbranded briefings, priority support, 3 seats"],
   ["Authority", "₹20-40 lakh / city / yr", "Metro corporations, UMTAs, SPVs", "Live feeds, alert routing, calibration against counts, SSO, on-prem, 25 seats"],
   ["API", "Usage-based", "Mobility operators, proptech", "Siting and catchment endpoints, embeddable map"],
 ];
@@ -78,7 +84,8 @@ export default function Landing() {
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
             MetroPulse shows where a city moves, hour by hour and hexagon by hexagon. It flags the hours that break pattern and
-            says why, scores a proposed metro, BRT or feeder stop in seconds, and turns the week into a briefing.
+            says why, scores a proposed metro, BRT or feeder stop in seconds, and turns the week into a briefing. Bring your own
+            data. Draw a line, not a stop. Compare alternatives.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link
@@ -91,7 +98,7 @@ export default function Landing() {
               Read a sample briefing
             </Link>
           </div>
-          <p className="mt-6 font-mono text-[11px] text-ink-faint">30 Indian cities · runs offline · no sign-up</p>
+          <p className="mt-6 font-mono text-[11px] text-ink-faint">30 Indian cities · runs offline · no sign-up · your data stays in the browser</p>
         </div>
         <div className="aspect-square w-full border-2 border-ink bg-paper shadow-[8px_8px_0_0_#16130F]">
           <HeroMap />
@@ -152,6 +159,31 @@ export default function Landing() {
         </section>
       )}
 
+      <section aria-labelledby="yourdata" className="border-t-2 border-ink bg-paper-deep/40">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-signal">Your city, your data</p>
+          <h2 id="yourdata" className="mt-2 max-w-2xl font-display text-3xl font-semibold leading-tight sm:text-4xl">
+            Load three files and the sample model becomes your city.
+          </h2>
+          <p className="mt-3 max-w-2xl text-ink-soft">
+            Open <strong className="text-ink">Your data</strong> on the desk. Files are parsed in your browser and only the derived
+            data stays on your device. Nothing is uploaded, and there is no upload endpoint.
+          </p>
+          <dl className="mt-8 grid gap-6 md:grid-cols-3">
+            {YOUR_DATA.map(([t, d]) => (
+              <div key={t} className="border-t-4 border-supply pt-3">
+                <dt className="font-display text-xl font-semibold">{t}</dt>
+                <dd className="mt-2 text-[15px] leading-relaxed text-ink-soft">{d}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-6 text-sm text-ink-soft">
+            Every city also has a public page (<Link href="/city/chennai" className="underline">/city/chennai</Link>) and the same
+            numbers are served as JSON (<Link href="/developers" className="underline">/developers</Link>).
+          </p>
+        </div>
+      </section>
+
       <section aria-labelledby="trust" className="bg-ink text-paper">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <h2 id="trust" className="font-display text-3xl font-semibold">Why planners can trust it</h2>
@@ -209,7 +241,8 @@ export default function Landing() {
             Pulse, Alerts, Siting and Briefings run on the <strong className="text-ink">sample city model</strong>: a seeded,
             synthetic demand field built from each city&rsquo;s real anchor points, published population and boundary, with
             scripted incidents so the detector has something to find. The algorithms are real. The numbers are illustrative until
-            a city&rsquo;s own data (AFC taps, GTFS, survey zones) is connected.
+            a city&rsquo;s own boundary, stations and counts are loaded under Your data; calibration then scales the siting numbers
+            to the observed counts. The demand field between stations stays a model until survey zones or OD data replace it.
           </p>
         </div>
       </section>

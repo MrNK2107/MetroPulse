@@ -130,6 +130,15 @@ npm run type-check
 
 ---
 
+### End-to-end smoke tests (optional)
+
+```bash
+cd frontend
+npm run e2e:install                 # once: downloads Chromium for Playwright
+NODE_OPTIONS=--max-old-space-size=2048 npm run build
+npm run e2e                         # starts `next start` on port 3100 and runs e2e/smoke.spec.ts
+```
+
 ## 4. Full stack (two terminals)
 
 | Terminal | Command | URL |

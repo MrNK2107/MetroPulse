@@ -67,7 +67,17 @@ but only by the build CLI.
 
 ```
 frontend/src/
-├── app/page.tsx                     Map page: map, search, place panel, agent chat
+├── app/page.tsx                     Landing page (computed from the sample model at build time)
+├── app/desk, brief, compare         The desk (Pulse, Alerts, Siting with Stop/Line), briefing, compare
+├── app/city/[id]                    30 static city pages + on-request Open Graph image
+├── app/api/v1/*                     JSON API route handlers (envelope in lib/api/envelope.ts)
+├── app/developers, privacy          API docs, privacy statement
+├── lib/pulse/*                      Browser engines: model, alerts, siting, scenario, calibrate,
+│                                    summary, alternatives, import/ parsers, userdata and
+│                                    scenarioStore (localStorage with in-memory fallback)
+├── components/desk/*                DeskApp, HexMap, Timeline, AlertFeed, SitingPanel, LinePanel,
+│                                    DataDrawer, useLineScenario
+├── app/twin/page.tsx                India Twin map page: map, search, place panel, agent chat
 ├── components/twin/IndiaMap.tsx     deck.gl GeoJsonLayer over /api/twin/boundaries/{level}
 ├── components/twin/PlaceSearch.tsx  /api/twin/places/resolve
 ├── components/twin/PlaceCard.tsx    Indicators with receipts for the selected place
@@ -308,3 +318,16 @@ behaviour most are `AGENT_WS_TOKEN`, `INGEST_TOKEN`, `WS_MAX_CONNECTIONS`, `LLM_
   districts created after 2011 are estimates.
 
 For data and modelling caveats, see `docs/LIMITATIONS.md` and `docs/DATA_CREDIBILITY.md`.
+
+## The desk's data path (2.0)
+
+Nothing a user loads leaves the browser. `DataDrawer` parses a GeoJSON boundary, a GTFS zip or a
+stations CSV, and a counts CSV with the parsers in `lib/pulse/import/`; only the derived
+`CityData` (ring, stations, daily counts) is written to `localStorage` under
+`metropulse.citydata.<city>.v1`. `getCityModel(city, data)` rebuilds the hexagon grid on the user's
+boundary, uses their stations as the existing hubs (each with its own mode's walk band) and, when
+counts match three or more stations of a mode, computes a calibration factor that `scoreSite`
+applies and prints in its formula. Without data the model is bit-identical to 1.x (pinned in
+`model.test.ts`). Lines (`lib/pulse/scenario.ts`) are saved under `metropulse.scenarios.v1` and
+encoded into share links as `s=<mode>.<alignment>.<lat,lng;...>`. The JSON API serves the sample
+model only; it never sees a user's data (ADR 0002, 0004).
