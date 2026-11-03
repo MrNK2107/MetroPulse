@@ -55,7 +55,7 @@ export function Briefing({ cityId }: { cityId: string }) {
     let max = 0;
     values.forEach((v) => (max = Math.max(max, v)));
     return { incidents, sites, coverNow, coverAfter, hubs, peak, dailyTrips, cores, values, max };
-  }, [model, city]);
+  }, [model]);
 
   const surge = data.incidents.filter((i) => i.kind === "surge").length;
   const drop = data.incidents.length - surge;
